@@ -13,8 +13,19 @@ import (
 	"github.com/disturb-yy/codemap/internal/model"
 )
 
+// registerTools registers all MCP tools on the server.
 func registerTools(server *mcp.Server, repo Repository, projectName, projectRoot string) {
-	// search_module — supports exact, fuzzy (substring), and empty query (list all).
+	registerSearchModule(server, repo)
+	registerRelatedModules(server, repo)
+	registerSearchRoute(server, repo)
+	registerSearchFlow(server, repo)
+	registerCallGraph(server, repo)
+	registerImpactAnalysis(server, repo)
+	registerGetProjectInfo(server, repo, projectName, projectRoot)
+	registerListModules(server, repo)
+}
+
+func registerSearchModule(server *mcp.Server, repo Repository) {
 	server.AddTool(
 		&mcp.Tool{
 			Name:        "search_module",
@@ -40,7 +51,6 @@ func registerTools(server *mcp.Server, repo Repository, projectName, projectRoot
 				}, "", "  ")
 				return textResult(string(data)), nil
 			}
-			// Multiple results — return list with paths.
 			var list []map[string]any
 			for _, m := range results {
 				list = append(list, map[string]any{
@@ -54,7 +64,9 @@ func registerTools(server *mcp.Server, repo Repository, projectName, projectRoot
 			return textResult(string(data)), nil
 		}),
 	)
+}
 
+func registerRelatedModules(server *mcp.Server, repo Repository) {
 	server.AddTool(
 		&mcp.Tool{
 			Name:        "related_modules",
@@ -91,7 +103,9 @@ func registerTools(server *mcp.Server, repo Repository, projectName, projectRoot
 			return textResult(string(data)), nil
 		}),
 	)
+}
 
+func registerSearchRoute(server *mcp.Server, repo Repository) {
 	server.AddTool(
 		&mcp.Tool{
 			Name:        "search_route",
@@ -127,7 +141,9 @@ func registerTools(server *mcp.Server, repo Repository, projectName, projectRoot
 			return textResult(b.String()), nil
 		}),
 	)
+}
 
+func registerSearchFlow(server *mcp.Server, repo Repository) {
 	server.AddTool(
 		&mcp.Tool{
 			Name:        "search_flow",
@@ -163,7 +179,9 @@ func registerTools(server *mcp.Server, repo Repository, projectName, projectRoot
 			return textResult(result), nil
 		}),
 	)
+}
 
+func registerCallGraph(server *mcp.Server, repo Repository) {
 	server.AddTool(
 		&mcp.Tool{
 			Name:        "call_graph",
@@ -192,7 +210,9 @@ func registerTools(server *mcp.Server, repo Repository, projectName, projectRoot
 			return textResult(b.String()), nil
 		}),
 	)
+}
 
+func registerImpactAnalysis(server *mcp.Server, repo Repository) {
 	server.AddTool(
 		&mcp.Tool{
 			Name:        "impact_analysis",
@@ -221,7 +241,9 @@ func registerTools(server *mcp.Server, repo Repository, projectName, projectRoot
 			return textResult(b.String()), nil
 		}),
 	)
+}
 
+func registerGetProjectInfo(server *mcp.Server, repo Repository, projectName, projectRoot string) {
 	server.AddTool(
 		&mcp.Tool{
 			Name:        "get_project_info",
@@ -243,9 +265,25 @@ func registerTools(server *mcp.Server, repo Repository, projectName, projectRoot
 	)
 }
 
-// safeHandler wraps a tool handler with panic recovery. If a tool panics,
-// the server returns a structured error instead of crashing the process,
-// preventing the "unsupported call" cascade on subsequent requests.
+func registerListModules(server *mcp.Server, repo Repository) {
+	server.AddTool(
+		&mcp.Tool{
+			Name:        "list_modules",
+			Description: "List all modules with their paths, dependencies, exported types, functions, methods, and key interfaces.",
+			InputSchema: json.RawMessage(`{"type":"object"}`),
+		},
+		safeHandler(func(_ context.Context, _ *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			modules, err := repo.SearchModule("")
+			if err != nil {
+				return errorResult("list_failed", "list modules: "+err.Error(), ""), nil
+			}
+			data, _ := json.MarshalIndent(modules, "", "  ")
+			return textResult(string(data)), nil
+		}),
+	)
+}
+
+// safeHandler wraps a tool handler with panic recovery.
 func safeHandler(fn func(context.Context, *mcp.CallToolRequest) (*mcp.CallToolResult, error)) func(context.Context, *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, req *mcp.CallToolRequest) (result *mcp.CallToolResult, err error) {
 		defer func() {
@@ -258,8 +296,7 @@ func safeHandler(fn func(context.Context, *mcp.CallToolRequest) (*mcp.CallToolRe
 	}
 }
 
-// callWithRetry executes a CallEdge-returning function with exponential
-// backoff (max 3 retries) to survive intermittent tool-channel failures.
+// callWithRetry executes a CallEdge-returning function with exponential backoff.
 func callWithRetry(fn func() ([]*model.CallEdge, error)) ([]*model.CallEdge, error) {
 	const maxRetries = 3
 	var lastErr error
@@ -276,9 +313,7 @@ func callWithRetry(fn func() ([]*model.CallEdge, error)) ([]*model.CallEdge, err
 	return nil, fmt.Errorf("after %d retries: %w", maxRetries, lastErr)
 }
 
-// resolveModulePath converts a module name to its filesystem path for accurate
-// call graph lookups. If the input already looks like a path (contains "/"),
-// it is used directly.
+// resolveModulePath converts a module name to its filesystem path.
 func resolveModulePath(repo Repository, nameOrPath string) string {
 	if strings.Contains(nameOrPath, "/") {
 		return nameOrPath
@@ -291,7 +326,6 @@ func resolveModulePath(repo Repository, nameOrPath string) string {
 }
 
 // errorResult returns a structured JSON error as a text result.
-// This gives callers machine-readable error info instead of just a string.
 func errorResult(code, reason, retryAfter string) *mcp.CallToolResult {
 	data, _ := json.MarshalIndent(map[string]any{
 		"error_code":  code,
@@ -303,6 +337,7 @@ func errorResult(code, reason, retryAfter string) *mcp.CallToolResult {
 	}
 }
 
+// textResult wraps text in a CallToolResult.
 func textResult(text string) *mcp.CallToolResult {
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{&mcp.TextContent{Text: text}},

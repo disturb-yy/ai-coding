@@ -1,8 +1,8 @@
 # CodeMap — Installation & Usage Guide
 
-CodeMap is an agent-oriented project knowledge layer. It indexes Go codebases into a SQLite database
-and exposes structured project knowledge (modules, dependencies, call graphs, flows, routes)
-through the MCP protocol.
+CodeMap is an agent-oriented project knowledge layer. It indexes Go and Java codebases into a
+SQLite database and exposes structured project knowledge (modules, dependencies, call graphs,
+flows, routes) through the MCP protocol. Language is auto-detected — no flags needed.
 
 ---
 
@@ -28,12 +28,24 @@ mkdir -p ~/.local/bin && mv codemap ~/.local/bin/
 
 ## 2. Index a Project
 
-Run inside any Go project root:
+The same command works for Go and Java — CodeMap detects the language automatically.
 
 ```bash
-cd /path/to/your-go-project
-codemap
+# Go project (detects go.mod)
+codemap -project /path/to/go-project
+
+# Java project (detects pom.xml / build.gradle / src/main/java)
+codemap -project /path/to/java-project
 ```
+
+**Language detection rules:**
+
+| Condition | Language |
+|-----------|----------|
+| `go.mod` exists | Go |
+| `pom.xml`, `build.gradle`, or `settings.gradle` exists | Java |
+| `src/main/java` directory exists | Java |
+| None of the above | Go (default) |
 
 This produces:
 
@@ -42,11 +54,11 @@ your-project/
 ├── .codemap/
 │   ├── codemap.db          # SQLite database (source of truth)
 │   ├── INDEX.md            # Project entry point
-│   ├── modules/            # Per-module Markdown docs
-│   ├── architecture/       # Overview + dependency graph
-│   ├── routes/             # HTTP route docs
-│   ├── flows/              # Cross-module call flows
-│   └── callgraph/          # Function-level call graph
+│   ├── modules/            # Per-module Markdown docs (deps, types, methods, interfaces)
+│   ├── architecture/       # Overview + dependency graph (Mermaid)
+│   ├── routes/             # HTTP route docs (Go only)
+│   ├── flows/              # Cross-module call flows (Go only)
+│   └── callgraph/          # Function-level call graph (Go only)
 ```
 
 A `.gitignore` entry for `.codemap/` is added automatically.
@@ -61,7 +73,7 @@ CodeMap exposes two kinds of MCP interfaces:
 
 | Channel | Method | What It Provides |
 |---------|--------|-----------------|
-| **Tools** | `tools/call` | 7 query tools (search, impact analysis, call graph, etc.) |
+| **Tools** | `tools/call` | 8 query tools (search, impact analysis, call graph, list, etc.) |
 | **Resources** | `resources/read` | 6 resource templates (Markdown docs, JSON module data) |
 
 ### 3.1 Codex / Codex++
@@ -163,17 +175,102 @@ Once the MCP server is configured and your tool has connected, the agent can que
 through natural language. You don't need to teach the agent special syntax — just ask about
 the project.
 
+### 4.0 Manual Testing (without an MCP client)
+
+You can test CodeMap tools directly from the command line without configuring any IDE.
+
+**Stop any running server first:**
+
+```bash
+pkill codemap
+rm -f .codemap/server.lock
+```
+
+#### One-shot: full MCP handshake + tool call
+
+The server speaks JSON-RPC over stdio. Send `initialize`, `notifications/initialized`,
+then `tools/call`. The last line of stdout is the tool result:
+
+```bash
+printf '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"cli","version":"1"}}}\n{"jsonrpc":"2.0","method":"notifications/initialized"}\n{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"list_modules"}}\n' \
+  | codemap -project . --serve 2>/dev/null \
+  | tail -1 | python3 -m json.tool | head -40
+```
+
+#### All 8 tools with their JSON arguments
+
+| Tool | Arguments |
+|------|-----------|
+| `get_project_info` | `{}` |
+| `list_modules` | `{}` |
+| `search_module` | `{"module":"market"}` |
+| `related_modules` | `{"module":"strategy"}` |
+| `search_route` | `{"query":"/api"}` |
+| `search_flow` | `{"query":"notify"}` |
+| `call_graph` | `{"module":"notify"}` |
+| `impact_analysis` | `{"function":"NewDispatcher"}` |
+
+Example — call `search_module` for "market":
+
+```bash
+printf '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"cli","version":"1"}}}\n{"jsonrpc":"2.0","method":"notifications/initialized"}\n{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"search_module","arguments":{"module":"market"}}}\n' \
+  | codemap -project . --serve 2>/dev/null \
+  | tail -1
+```
+
+#### Helper script (recommended)
+
+Save as `mcp-call.sh`:
+
+```bash
+#!/bin/bash
+# Usage: ./mcp-call.sh <tool_name> [json_args]
+#   ./mcp-call.sh list_modules
+#   ./mcp-call.sh search_module '{"module":"market"}'
+#   ./mcp-call.sh impact_analysis '{"function":"NewDispatcher"}'
+
+TOOL=${1:?tool name required}
+ARGS=${2:-"{}"}
+
+printf '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"cli","version":"1"}}}\n{"jsonrpc":"2.0","method":"notifications/initialized"}\n{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"%s","arguments":%s}}\n' "$TOOL" "$ARGS" \
+  | codemap -project . --serve 2>/dev/null \
+  | tail -1 | python3 -m json.tool 2>/dev/null || tail -1
+```
+
+```bash
+chmod +x mcp-call.sh
+./mcp-call.sh list_modules
+./mcp-call.sh search_module '{"module":"strategy"}'
+./mcp-call.sh impact_analysis '{"function":"NewDispatcher"}'
+```
+
+#### Direct SQLite queries (no server needed)
+
+```bash
+# List all modules
+sqlite3 .codemap/codemap.db "SELECT name, path FROM module ORDER BY path;"
+
+# Dependency counts
+sqlite3 .codemap/codemap.db \
+  "SELECT source_module, COUNT(*) c FROM module_dependency GROUP BY source_module ORDER BY c DESC;"
+
+# Callers of a function
+sqlite3 .codemap/codemap.db \
+  "SELECT caller_module || '.' || caller_func FROM call_edge WHERE callee_func LIKE '%Dispatch%';"
+```
+
 ### 4.1 Available MCP Tools
 
 | Tool | Description | Example Query |
 |------|-------------|--------------|
 | `get_project_info` | Project name, root path, module count | (no arguments) |
-| `search_module` | Find module by name; empty returns all | `{"module": "order"}` |
-| `related_modules` | What depends on X, and what X depends on | `{"module": "payment"}` |
-| `search_route` | Find HTTP routes by path/method/module | `{"query": "/api/orders"}` |
+| `list_modules` | List all modules with full details | (no arguments) |
+| `search_module` | Find module by name; empty returns all | `{"module": "market"}` |
+| `related_modules` | What depends on X, and what X depends on | `{"module": "strategy"}` |
+| `search_route` | Find HTTP routes by path/method/module | `{"query": "/api"}` |
 | `search_flow` | Find data/call flows by name or trigger | `{"query": "notify"}` |
-| `call_graph` | All functions a module calls | `{"module": "order"}` |
-| `impact_analysis` | Who calls a given function (reverse graph) | `{"function": "CreateOrder"}` |
+| `call_graph` | All functions a module calls | `{"module": "notify"}` |
+| `impact_analysis` | Who calls a given function (reverse graph) | `{"function": "NewDispatcher"}` |
 
 ### 4.2 Available Resources (Markdown/JSON)
 
@@ -218,11 +315,26 @@ Once CodeMap is connected, try these:
 
 ## 5. Supported Languages
 
-| Language | Status |
-|----------|--------|
-| Go | ✅ Full support (modules, routes, flows, call graph) |
-| Java | 🔜 Planned |
-| Python | 🔜 Planned |
+| Language | Status | Capabilities |
+|----------|--------|-------------|
+| **Go** | ✅ Full | Modules, dependencies, exported types/funcs/methods/interfaces, HTTP routes, call flows, call graph, impact analysis |
+| **Java** | ✅ Basic | Modules, dependencies (internal imports, filesystem-verified), exported types, methods (`ClassName.method`), key interfaces |
+| Python | 🔜 Planned | — |
+
+### 5.1 Go vs Java Analysis
+
+| Dimension | Go | Java |
+|-----------|----|------|
+| Module detection | Directory-based (`go.mod` internal imports) | Package-based (src directory tree) |
+| Dependency resolution | `go.mod` import path matching | Filesystem directory verification |
+| Route extraction | AST-level HTTP handler detection | Not yet supported |
+| Call flows | AST-level cross-module call chains | Not yet supported |
+| Call graph | Function-level edges | Not yet supported |
+| Type extraction | `ast.TypeSpec` (struct/interface) | `public class` / `public interface` / `public enum` |
+| Method extraction | `Receiver.Method` | `ClassName.method` (instance + static) |
+| Interface detection | `ast.InterfaceType` | `public interface` keyword |
+| Annotation handling | N/A | Skips `@Override`, `@Deprecated` etc. |
+| Multi-class files | One package per directory | One class per file (primary class only) |
 
 ---
 
