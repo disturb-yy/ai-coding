@@ -1,0 +1,4 @@
+interface:
+  display_name: "OODA Index"
+  short_description: "Generate OODA-compliant index files"
+  default_prompt: "Use $ooda-index to generate an OODA-compliant index file from project documentation."

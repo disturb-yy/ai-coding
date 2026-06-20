@@ -1,0 +1,4 @@
+interface:
+  display_name: "OODA Coding"
+  short_description: "Code with OODA-E validation flow"
+  default_prompt: "Use $ooda-coding to implement this coding change with an OODA-E validation loop."

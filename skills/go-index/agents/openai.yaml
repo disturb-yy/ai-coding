@@ -1,0 +1,4 @@
+interface:
+  display_name: "Go 仓库文档索引器"
+  short_description: "分析 Go 仓库并生成 Agent 可消费的架构与流程文档"
+  default_prompt: "分析此 Go 项目，生成认知层文档：.agent/index.md、docs/ARCHITECTURE.md、docs/modules.md、docs/dataflow.md。按 OODA-E 工作流执行：观察项目结构、定位代码模式、决策文档内容、起草四份文件、预检一致性、写入磁盘、评估可用性。"

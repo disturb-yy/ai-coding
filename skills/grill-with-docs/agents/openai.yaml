@@ -1,0 +1,4 @@
+interface:
+  display_name: "Grll With Me"
+  short_description: "Requirement analysis through guided grilling"
+  default_prompt: "Use $grll-with-me to analyze this requirement with me and produce clarified scope, rules, acceptance criteria, and open questions."
