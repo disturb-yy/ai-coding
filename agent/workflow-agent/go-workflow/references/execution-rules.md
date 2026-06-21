@@ -1,4 +1,4 @@
-# 执行规则
+﻿# 执行规则
 
 从 SKILL.md 提取的源码读取、Token 优化、失败恢复规则。
 
@@ -57,6 +57,7 @@ test-runner       │    永不      │
 | 补丁冲突 | Act | 返回 Draft；仅重新分析冲突文件 |
 | 测试失败 | Evaluate | 返回 Orient；重新评估影响范围；最多 3 次工作流迭代 |
 | spawn_agent 不可用 | 任意 | 回退到主 Agent 本地执行（见 SKILL.md 回退策略） |
+| spawn 成功但 wait 不可用（spawn_ok_wait_failed） | 任意 | **立即**回退到主 Agent 本地执行，不等待 subAgent 返回。等待超时会浪费大量时间。 |
 | 所有迭代已耗尽 | Evaluate | 向用户报告：已完成项、剩余项、失败原因 |
 
 ### 迭代限制

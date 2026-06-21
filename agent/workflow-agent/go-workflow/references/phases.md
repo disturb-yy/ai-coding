@@ -1,4 +1,4 @@
-# OODA-E 阶段规范
+﻿# OODA-E 阶段规范
 
 以下每个阶段定义了该工作流阶段的契约。阶段按顺序执行，由入口/出口条件控制。
 
@@ -25,7 +25,7 @@
     "available_tools": ["spawn_agent 可用/不可用"]
   },
   "chunks": [],
-  "decision_summary": "日志目录已初始化。spawn_agent 状态：<可用/不可用>。执行模式：<subagent/fallback_local>。",
+  "decision_summary": "日志目录已初始化。spawn_agent 状态：<可用/不可用/wait不可用>。执行模式：<subagent/fallback_local>。",
   "confidence": 0.0,
   "next_recommended_agent": "doc-index-reader | observe-phase（本地回退）"
 }
@@ -38,9 +38,10 @@
 - 日志目录 `.agent/workflow-logs/` 已创建（若不存在则 `mkdir -p`）。
 - 首条日志已写入：`[go-workflow] phase=Observe prev=start confidence=0.0`。
 - 已检测 `spawn_agent`（`multi_agent_v1_spawn_agent`）工具是否在可用工具列表中。
-- 若 spawn_agent 可用：已启动 `doc-index-reader` SubAgent。
+- 若 spawn_agent 可用 + wait_agent 可用：已启动 `doc-index-reader` SubAgent 并等待结果。
+- 若 spawn_agent 可用但 wait_agent 不可用：已写入 `spawn_ok_wait_failed` + `fallback_local` 两条日志，立即开始主 Agent 本地读取索引（**不等待**）。
 - 若 spawn_agent 不可用：已写入 `spawn_failed` + `fallback_local` 两条日志，然后开始主 Agent 本地读取索引。
-- **已写入日志**: 启动协议中的两条日志（spawn 尝试结果）。
+- **已写入日志**: 启动协议中的两条日志（spawn 尝试结果 + 回退）。
 
 ### 源码读取
 **禁止。**
@@ -49,7 +50,7 @@
 **禁止。**
 
 ### SubAgent 启动
-仅尝试 `doc-index-reader`。若失败则回退本地。
+仅尝试 `doc-index-reader`。若 spawn 失败或 wait 不可用则立即回退本地（不等待超时）。
 
 ### 日志写入示例
 ```bash
@@ -61,6 +62,10 @@ echo "[go-workflow] phase=Observe prev=start confidence=0.0" >> .agent/workflow-
 
 # 步骤 2（若 spawn_agent 不可用）
 echo "[go-workflow] agent=doc-index-reader event=spawn_failed phase=Observe reason=unsupported" >> <日志文件>
+echo "[go-workflow] agent=fallback event=fallback_local phase=Observe" >> <日志文件>
+
+# 步骤 2（spawn 成功但 wait_agent 不可用）
+echo "[go-workflow] agent=doc-index-reader event=spawn_ok_wait_failed phase=Observe reason=wait_agent_unsupported" >> <日志文件>
 echo "[go-workflow] agent=fallback event=fallback_local phase=Observe" >> <日志文件>
 ```
 
