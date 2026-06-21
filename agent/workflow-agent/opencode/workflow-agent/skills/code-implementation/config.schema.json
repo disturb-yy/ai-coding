@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "apply_changes": {
+      "type": "boolean",
+      "default": true
+    },
+    "format_after_edit": {
+      "type": "boolean",
+      "default": true
+    },
+    "max_files": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 50,
+      "default": 10
+    }
+  },
+  "required": ["apply_changes"]
+}

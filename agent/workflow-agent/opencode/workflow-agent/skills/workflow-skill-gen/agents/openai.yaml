@@ -1,0 +1,4 @@
+interface:
+  display_name: "Workflow Skill Gen"
+  short_description: "Convert existing skills for workflow use"
+  default_prompt: "Use $workflow-skill-gen to convert this existing skill into a workflow-compatible skill."

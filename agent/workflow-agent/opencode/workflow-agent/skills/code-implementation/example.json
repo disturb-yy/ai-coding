@@ -1,0 +1,12 @@
+{
+  "skill": "code-implementation",
+  "config": {
+    "apply_changes": true,
+    "format_after_edit": true,
+    "max_files": 10
+  },
+  "input": {
+    "solution_design": {},
+    "minimal_source_context": {}
+  }
+}

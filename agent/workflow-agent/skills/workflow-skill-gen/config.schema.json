@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "target_phase": {
+      "type": "string",
+      "enum": [
+        "Requirement Analysis",
+        "Project Understanding",
+        "Solution Design",
+        "Implementation",
+        "Testing",
+        "Verification",
+        "Summary",
+        "auto"
+      ],
+      "default": "auto"
+    },
+    "preserve_existing_resources": {
+      "type": "boolean",
+      "default": true
+    },
+    "generate_openai_metadata": {
+      "type": "boolean",
+      "default": true
+    },
+    "strict_context_rules": {
+      "type": "boolean",
+      "default": true
+    },
+    "output_mode": {
+      "type": "string",
+      "enum": ["patch", "files", "plan"],
+      "default": "files"
+    }
+  },
+  "required": ["target_phase"]
+}

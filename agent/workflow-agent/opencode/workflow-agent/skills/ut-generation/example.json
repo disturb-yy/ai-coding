@@ -1,0 +1,13 @@
+{
+  "skill": "ut-generation",
+  "config": {
+    "mode": "generate",
+    "run_tests": true,
+    "coverage_target": "normal"
+  },
+  "input": {
+    "solution_design": {},
+    "implementation_result": {},
+    "test_context": {}
+  }
+}

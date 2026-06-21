@@ -1,0 +1,12 @@
+{
+  "skill": "solution-design",
+  "config": {
+    "depth": "normal",
+    "include_risks": true,
+    "prefer_minimal_changes": true
+  },
+  "input": {
+    "requirement_analysis": {},
+    "project_understanding": {}
+  }
+}
