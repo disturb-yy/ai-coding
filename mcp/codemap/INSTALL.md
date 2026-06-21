@@ -1,8 +1,6 @@
 # CodeMap — Installation & Usage Guide
 
-CodeMap is an agent-oriented project knowledge layer. It indexes Go and Java codebases into a
-SQLite database and exposes structured project knowledge (modules, dependencies, call graphs,
-flows, routes, features, navigation hints) through the MCP protocol. Language is auto-detected — no flags needed.
+See [README.md](./README.md) for project introduction and architecture overview.
 
 ---
 
