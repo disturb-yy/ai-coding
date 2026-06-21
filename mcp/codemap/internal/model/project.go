@@ -44,3 +44,22 @@ type CallEdge struct {
 	CalleeModule string `json:"callee_module"`
 	CalleeFunc   string `json:"callee_func"`
 }
+
+// FeatureEntry represents a business feature for the get_feature_map MCP tool.
+type FeatureEntry struct {
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Modules     []string `json:"modules"`
+	Routes      []string `json:"routes"`
+	Flows       []string `json:"flows"`
+}
+
+// NavHintEntry represents a navigation hint for the get_navigation_hints MCP tool.
+type NavHintEntry struct {
+	Feature        string   `json:"feature"`
+	StartFiles     []string `json:"start_files"`
+	Routes         []string `json:"routes"`
+	RelatedModules []string `json:"related_modules"`
+	RelatedFlows   []string `json:"related_flows"`
+	Risk           []string `json:"risk"`
+}

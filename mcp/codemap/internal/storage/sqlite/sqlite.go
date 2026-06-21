@@ -67,6 +67,35 @@ CREATE TABLE IF NOT EXISTS call_edge (
 	callee_module TEXT,
 	callee_func   TEXT
 );
+
+CREATE TABLE IF NOT EXISTS feature (
+	id          INTEGER PRIMARY KEY,
+	name        TEXT NOT NULL,
+	description TEXT
+);
+
+CREATE TABLE IF NOT EXISTS feature_module (
+	feature_id  INTEGER NOT NULL,
+	module_name TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS feature_route (
+	feature_id INTEGER NOT NULL,
+	route      TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS feature_flow (
+	feature_id INTEGER NOT NULL,
+	flow_name  TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS navigation_hint (
+	feature_name TEXT NOT NULL,
+	start_file   TEXT NOT NULL,
+	route        TEXT,
+	flow         TEXT,
+	risk         TEXT
+);
 `
 
 func Open(path string) (*sql.DB, error) {
