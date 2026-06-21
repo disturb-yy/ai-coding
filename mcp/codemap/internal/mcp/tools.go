@@ -23,6 +23,8 @@ func registerTools(server *mcp.Server, repo Repository, projectName, projectRoot
 	registerImpactAnalysis(server, repo)
 	registerGetProjectInfo(server, repo, projectName, projectRoot)
 	registerListModules(server, repo)
+	registerGetFeatureMap(server, repo)
+	registerGetNavigationHints(server, repo)
 }
 
 func registerSearchModule(server *mcp.Server, repo Repository) {
@@ -147,8 +149,8 @@ func registerSearchFlow(server *mcp.Server, repo Repository) {
 	server.AddTool(
 		&mcp.Tool{
 			Name:        "search_flow",
-			Description: "Search for data/call flows by name, trigger module, or step content.",
-			InputSchema: json.RawMessage(`{"type":"object","properties":{"query":{"type":"string","description":"Search query for flow name or trigger."}},"required":["query"]}`),
+			Description: "Search for data/call flows by name or trigger.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{"query":{"type":"string","description":"Search query (flow name or trigger module)."}},"required":["query"]}`),
 		},
 		safeHandler(func(_ context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			var args struct{ Query string }
@@ -156,27 +158,30 @@ func registerSearchFlow(server *mcp.Server, repo Repository) {
 				return nil, err
 			}
 			if args.Query == "" {
-				return textResult("query required — provide a flow name, trigger module, or step content"), nil
+				return textResult("query required — provide a flow name fragment or trigger module"), nil
 			}
 			flows, err := repo.SearchFlow(args.Query)
 			if err != nil {
-				return errorResult("search_flows_failed", "search flows: "+err.Error(), ""), nil
+				return errorResult("search_flow_failed", "search flow: "+err.Error(), ""), nil
 			}
 			if len(flows) == 0 {
 				return textResult(fmt.Sprintf("no flows matching %q", args.Query)), nil
 			}
-			const maxFlows = 30
-			totalFlows := len(flows)
+			var b strings.Builder
+			const maxFlows = 60
+			total := len(flows)
 			f := flows
 			if len(f) > maxFlows {
+				fmt.Fprintf(&b, "%d flows total (showing first %d):\n", total, maxFlows)
 				f = f[:maxFlows]
 			}
-			data, _ := json.MarshalIndent(f, "", "  ")
-			result := string(data)
-			if totalFlows > maxFlows {
-				result += fmt.Sprintf("\n… truncated to %d of %d results", maxFlows, totalFlows)
+			for _, fl := range f {
+				fmt.Fprintf(&b, "%s [%s]\n", fl.Name, fl.Trigger)
+				for _, step := range fl.Steps {
+					fmt.Fprintf(&b, "  └ %s\n", step)
+				}
 			}
-			return textResult(result), nil
+			return textResult(b.String()), nil
 		}),
 	)
 }
@@ -185,8 +190,8 @@ func registerCallGraph(server *mcp.Server, repo Repository) {
 	server.AddTool(
 		&mcp.Tool{
 			Name:        "call_graph",
-			Description: "Get the call graph for a module — all functions it calls.",
-			InputSchema: json.RawMessage(`{"type":"object","properties":{"module":{"type":"string","description":"Module name or path."}},"required":["module"]}`),
+			Description: "Get the call graph for a module — which functions it calls.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{"module":{"type":"string","description":"Module name to query."}},"required":["module"]}`),
 		},
 		safeHandler(func(_ context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			var args struct{ Module string }
@@ -278,6 +283,42 @@ func registerListModules(server *mcp.Server, repo Repository) {
 				return errorResult("list_failed", "list modules: "+err.Error(), ""), nil
 			}
 			data, _ := json.MarshalIndent(modules, "", "  ")
+			return textResult(string(data)), nil
+		}),
+	)
+}
+
+func registerGetFeatureMap(server *mcp.Server, repo Repository) {
+	server.AddTool(
+		&mcp.Tool{
+			Name:        "get_feature_map",
+			Description: "Get the project's business feature map — features with their modules, routes, and flows.",
+			InputSchema: json.RawMessage(`{"type":"object"}`),
+		},
+		safeHandler(func(_ context.Context, _ *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			features, err := repo.GetFeatureMap()
+			if err != nil {
+				return errorResult("feature_map_failed", "get feature map: "+err.Error(), ""), nil
+			}
+			data, _ := json.MarshalIndent(map[string]any{"features": features}, "", "  ")
+			return textResult(string(data)), nil
+		}),
+	)
+}
+
+func registerGetNavigationHints(server *mcp.Server, repo Repository) {
+	server.AddTool(
+		&mcp.Tool{
+			Name:        "get_navigation_hints",
+			Description: "Get project navigation guidance — entry files, related modules, flows, and risk areas per feature.",
+			InputSchema: json.RawMessage(`{"type":"object"}`),
+		},
+		safeHandler(func(_ context.Context, _ *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			hints, err := repo.GetNavigationHints()
+			if err != nil {
+				return errorResult("navigation_hints_failed", "get navigation hints: "+err.Error(), ""), nil
+			}
+			data, _ := json.MarshalIndent(map[string]any{"features": hints}, "", "  ")
 			return textResult(string(data)), nil
 		}),
 	)

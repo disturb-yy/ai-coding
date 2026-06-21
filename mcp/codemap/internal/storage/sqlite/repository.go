@@ -3,6 +3,7 @@ package sqlite
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/disturb-yy/codemap/internal/model"
 	"github.com/disturb-yy/codemap/internal/storage"
@@ -208,7 +209,7 @@ func (r *Repository) loadModuleExtras(m *model.Module) error {
 
 func (r *Repository) SaveRoute(rt *model.Route) error {
 	_, err := r.db.Exec(
-		"INSERT OR REPLACE INTO route(path, method, handler, module) VALUES(?, ?, ?, ?)",
+		"INSERT INTO route(path, method, handler, module) VALUES(?, ?, ?, ?)",
 		rt.Path, rt.Method, rt.Handler, rt.Module,
 	)
 	if err != nil {
@@ -219,7 +220,7 @@ func (r *Repository) SaveRoute(rt *model.Route) error {
 
 func (r *Repository) FindRoutes(query string) ([]*model.Route, error) {
 	rows, err := r.db.Query(
-		"SELECT path, method, handler, module FROM route WHERE path LIKE ? OR method LIKE ? OR module LIKE ?",
+		"SELECT path, method, handler, module FROM route WHERE path LIKE ? OR module LIKE ? OR handler LIKE ?",
 		"%"+query+"%", "%"+query+"%", "%"+query+"%",
 	)
 	if err != nil {
@@ -417,4 +418,166 @@ func scanCallEdges(rows *sql.Rows) ([]*model.CallEdge, error) {
 		edges = append(edges, e)
 	}
 	return edges, rows.Err()
+}
+
+// GetFeatureMap derives business features from flows, routes, and modules.
+func (r *Repository) GetFeatureMap() ([]model.FeatureEntry, error) {
+	flowRows, err := r.db.Query("SELECT DISTINCT trigger FROM flow WHERE trigger != ''")
+	if err != nil {
+		return nil, fmt.Errorf("get feature map triggers: %w", err)
+	}
+	defer flowRows.Close()
+
+	var triggers []string
+	for flowRows.Next() {
+		var t string
+		if err := flowRows.Scan(&t); err != nil {
+			return nil, fmt.Errorf("scan trigger: %w", err)
+		}
+		triggers = append(triggers, t)
+	}
+	if err := flowRows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(triggers) == 0 {
+		return r.featureMapFromModules()
+	}
+
+	var features []model.FeatureEntry
+	seen := make(map[string]bool)
+	for _, trigger := range triggers {
+		name := flowNameToFeatureName(trigger)
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+
+		feat := model.FeatureEntry{Name: name, Modules: []string{trigger}}
+
+		flows, _ := r.SearchFlow(trigger)
+		for _, f := range flows {
+			feat.Flows = appendIfNew(feat.Flows, f.Name)
+		}
+
+		routes, _ := r.FindRoutes(trigger)
+		for _, rt := range routes {
+			feat.Routes = appendIfNew(feat.Routes, rt.Method+" "+rt.Path)
+		}
+
+		callees, _ := r.FindCallees(trigger)
+		for _, e := range callees {
+			feat.Modules = appendIfNew(feat.Modules, e.CalleeModule)
+		}
+
+		callers, _ := r.FindCallers(trigger)
+		for _, e := range callers {
+			feat.Modules = appendIfNew(feat.Modules, e.CallerModule)
+		}
+
+		features = append(features, feat)
+	}
+
+	return features, nil
+}
+
+func (r *Repository) featureMapFromModules() ([]model.FeatureEntry, error) {
+	modules, err := r.SearchModule("")
+	if err != nil {
+		return nil, fmt.Errorf("feature map from modules: %w", err)
+	}
+	var features []model.FeatureEntry
+	for _, m := range modules {
+		feat := model.FeatureEntry{
+			Name:    flowNameToFeatureName(m.Name),
+			Modules: []string{m.Path},
+		}
+		callees, _ := r.FindCallees(m.Path)
+		for _, e := range callees {
+			feat.Modules = appendIfNew(feat.Modules, e.CalleeModule)
+		}
+		features = append(features, feat)
+	}
+	return features, nil
+}
+
+// GetNavigationHints derives navigation guidance from flows, routes, call graph, and modules.
+func (r *Repository) GetNavigationHints() ([]model.NavHintEntry, error) {
+	feats, err := r.GetFeatureMap()
+	if err != nil {
+		return nil, fmt.Errorf("get navigation hints: %w", err)
+	}
+
+	var hints []model.NavHintEntry
+	for _, feat := range feats {
+		hint := model.NavHintEntry{
+			Feature:        feat.Name,
+			Routes:         feat.Routes,
+			RelatedModules: feat.Modules,
+			RelatedFlows:   feat.Flows,
+		}
+
+		for _, rt := range feat.Routes {
+			hint.StartFiles = appendIfNew(hint.StartFiles, routeToStartFile(rt))
+		}
+		if len(hint.StartFiles) == 0 {
+			for _, mod := range feat.Modules {
+				hint.StartFiles = appendIfNew(hint.StartFiles, mod+"/...")
+			}
+		}
+
+		hint.Risk = r.identifyRisks(feat.Modules)
+		hints = append(hints, hint)
+	}
+
+	return hints, nil
+}
+
+func (r *Repository) identifyRisks(modules []string) []string {
+	var risks []string
+	for _, mod := range modules {
+		callees, err := r.FindCallees(mod)
+		if err != nil {
+			continue
+		}
+		if len(callees) >= 3 {
+			risks = append(risks, mod)
+		}
+	}
+	return risks
+}
+
+func flowNameToFeatureName(s string) string {
+	s = strings.ReplaceAll(s, "_", " ")
+	s = strings.ReplaceAll(s, "/", " ")
+	words := strings.Fields(s)
+	for i, w := range words {
+		if len(w) > 0 {
+			words[i] = strings.ToUpper(w[:1]) + w[1:]
+		}
+	}
+	return strings.Join(words, " ")
+}
+
+func routeToStartFile(route string) string {
+	parts := strings.Fields(route)
+	if len(parts) < 2 {
+		return ""
+	}
+	path := parts[1]
+	if strings.HasPrefix(path, "/") {
+		path = path[1:]
+	}
+	path = strings.ReplaceAll(path, "-", "_")
+	path = strings.ReplaceAll(path, "/", "_")
+	return path
+}
+
+func appendIfNew(slice []string, s string) []string {
+	for _, existing := range slice {
+		if existing == s {
+			return slice
+		}
+	}
+	return append(slice, s)
 }

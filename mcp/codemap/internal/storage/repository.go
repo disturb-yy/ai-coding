@@ -17,4 +17,7 @@ type Repository interface {
 	SaveCallEdge(e *model.CallEdge) error
 	FindCallers(funcName string) ([]*model.CallEdge, error)
 	FindCallees(module string) ([]*model.CallEdge, error)
+
+	GetFeatureMap() ([]model.FeatureEntry, error)
+	GetNavigationHints() ([]model.NavHintEntry, error)
 }

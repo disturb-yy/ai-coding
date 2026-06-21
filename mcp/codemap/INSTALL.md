@@ -2,7 +2,7 @@
 
 CodeMap is an agent-oriented project knowledge layer. It indexes Go and Java codebases into a
 SQLite database and exposes structured project knowledge (modules, dependencies, call graphs,
-flows, routes) through the MCP protocol. Language is auto-detected — no flags needed.
+flows, routes, features, navigation hints) through the MCP protocol. Language is auto-detected — no flags needed.
 
 ---
 
@@ -73,7 +73,7 @@ CodeMap exposes two kinds of MCP interfaces:
 
 | Channel | Method | What It Provides |
 |---------|--------|-----------------|
-| **Tools** | `tools/call` | 8 query tools (search, impact analysis, call graph, list, etc.) |
+| **Tools** | `tools/call` | 10 query tools (search, impact analysis, call graph, list, etc.) |
 | **Resources** | `resources/read` | 6 resource templates (Markdown docs, JSON module data) |
 
 ### 3.1 Codex / Codex++
@@ -271,6 +271,8 @@ sqlite3 .codemap/codemap.db \
 | `search_flow` | Find data/call flows by name or trigger | `{"query": "notify"}` |
 | `call_graph` | All functions a module calls | `{"module": "notify"}` |
 | `impact_analysis` | Who calls a given function (reverse graph) | `{"function": "NewDispatcher"}` |
+| `get_feature_map` | Business feature map — features, modules, routes, flows | (no arguments) |
+| `get_navigation_hints` | Navigation guidance — entry files, related modules, risks | (no arguments) |
 
 ### 4.2 Available Resources (Markdown/JSON)
 
@@ -303,6 +305,12 @@ Once CodeMap is connected, try these:
 
 **Onboarding:**
 > I'm new to this project. Give me a 5-minute tour using the architecture docs.
+
+**Feature discovery:**
+> What business features does this project have? Show me the feature map.
+
+**Code navigation:**
+> I need to work on the payment feature. Where should I start? What files are the entry points?
 
 ### 4.4 Tips
 
