@@ -69,27 +69,6 @@ CodeMap = Project Knowledge
 
 ---
 
-### CodeGraph
-
-CodeGraph stores:
-
-```text
-Symbol
-Edge
-Relation
-```
-
-Example:
-
-```text
-OrderService
-    calls
-PaymentService
-```
-
-CodeGraph = Internal Data Layer
-
----
 
 ## 3. Architecture
 
