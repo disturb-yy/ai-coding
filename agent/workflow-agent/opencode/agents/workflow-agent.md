@@ -45,6 +45,39 @@ Expected support layout:
 - Write logs under `.agent/workflow-logs/<workflow_id>.log`.
 - Produce the final workflow summary.
 
+## Confidence Tracking
+
+- For **delegated** phases: extract the `confidence` field from the sub-agent's returned artifact JSON. Use this value directly in the phase summary — do NOT override it.
+- For **direct** phases: self-assess confidence based on completeness and certainty.
+- Record every confidence value in the log: `event=confidence phase=<phase> confidence=<value> source=subagent|main`
+
+## Execution Trace & Token Tracking
+
+Throughout the entire workflow, track the following data for the final summary:
+
+### Per-Phase Timing
+- Record phase start and end timestamps (ISO 8601).
+- Calculate per-phase duration.
+- Tag each phase entry with the agent that executed it (`main` or `subagent:<name>`).
+
+### Token Accounting
+- Track input, output, cache_read, and reasoning tokens PER phase.
+- For delegated phases: sum tokens from the sub-agent's execution PLUS the main agent's delegation overhead.
+- For direct phases: track tokens consumed by the main agent.
+- Record the total token budget consumed at workflow completion.
+
+### Sub-Agent Interaction Log
+For EVERY sub-agent spawn, record:
+- `phase` — which workflow phase
+- `skill` — which registered skill was delegated
+- `task_id` — the task tool's returned task identifier
+- `agent_type` — "worker" or the agent role used
+- `prompt_length_chars` — character count of the prompt sent
+- `result_summary` — one-line summary of the sub-agent's result
+- `confidence` — the sub-agent's self-assessed confidence value
+
+This data MUST appear in the final `workflow_summary.json` artifact under `execution_trace`, `token_breakdown`, and `subagent_interactions`.
+
 ## Step 0: Determine task_type
 
 **Read the user request. Decide before starting any phase:**
@@ -229,12 +262,37 @@ When the request is "add X" or "change X to Y" → feature.
 
 Record your decision in the first log line. Do not change mid-workflow.
 
+
+## Delegation Pre-Check (MANDATORY - do this FIRST for every phase)
+
+**Before you read ANY source file, run ANY grep, or explore ANY codebase:**
+
+1. Read config/workflow-skills.json.
+2. Find the current phase entry.
+3. Check execution.opencode.
+4. If delegated -> spawn a subAgent IMMEDIATELY. Do NOT explore the codebase yourself.
+5. If direct -> only then proceed with direct execution.
+
+**Violation of this rule caused the Project Understanding duplication bug:**
+the main agent read 10+ source files before checking the registry, then spawned
+a subAgent that had to re-read everything. This wastes tokens and time.
 ## Delegation Rules
 
 **If `execution.opencode` is `delegated`, you MUST use `task(agent="worker", ...)`. Never execute directly.**
 
-**If you find yourself reading source files, running grep, or editing code during a delegated phase — STOP. You are doing the subAgent's job. Spawn the subAgent instead.**
+**If you find yourself reading source files, running grep, or editing code during a delegated phase - STOP IMMEDIATELY. You are doing the subAgent job. Spawn the subAgent instead.**
 
+
+## Phase Execution Order (MUST follow for EVERY phase)
+
+Step 0: Read config/workflow-skills.json -> determine execution mode
+Step 1: If delegated -> jump to delegation procedure. Do NOT collect facts first.
+Step 2: If direct -> load skill SKILL.md and config.schema.json
+Step 3: Collect inputs from previous artifacts only
+Step 4: Execute (direct) or delegate (subAgent)
+Step 5: Validate + persist artifact
+
+**The registry is the gatekeeper. Always read it first.**
 ## Execution Rules
 
 - `workflow/WORKFLOW.md` is the single source of truth.
