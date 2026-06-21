@@ -60,7 +60,6 @@ Context Mode = 会话记忆（改了什么、做了什么决策）
 AI Agent = 结合两者，高效理解和修改代码
 ```
 
-内部数据层由 CodeGraph 提供符号级关系（Symbol → Edge → Relation）。
 
 ---
 
