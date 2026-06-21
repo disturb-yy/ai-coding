@@ -1,0 +1,4 @@
+interface:
+  display_name: "Go Coding"
+  short_description: "Go OODA-E: observe, draft, vet, test, self-correct"
+  default_prompt: "Use $go-coding for this Go task. Scan go.mod and project indexes first. Draft changes before editing files. Validate with go build, go vet, go test, and golangci-lint after each edit. Self-correct on failure."

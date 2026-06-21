@@ -1,0 +1,4 @@
+interface:
+  display_name: "Project Understanding"
+  short_description: "Build a cognitive model of the project using CodeMap"
+  default_prompt: "Use project-understanding to build a cognitive model of this project when CodeMap MCP facts/tools are available. Follow PROJECT_INDEX → CodeMap → Source Code. Execute the 5-step workflow: collect CodeMap facts into .agent/context/ by calling CodeMap MCP tools directly, discover business features, build .agent/context/context.json, generate PROJECT_INDEX/CHANGE_GUIDE/NAVIGATION/FEATURES docs using templates, then verify with scripts/verify-context.sh. Use scripts/collect-codemap.sh only as an optional mcp-call CLI helper."

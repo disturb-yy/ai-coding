@@ -1,0 +1,15 @@
+﻿{
+  "phase": "Project Understanding",
+  "artifact_type": "project_understanding",
+  "skill": "project-understanding",
+  "path": "skills/project-understanding",
+  "enabled": true,
+  "priority": 100,
+  "execution": {
+    "codex": "direct",
+    "opencode": "delegated"
+  },
+  "config": {
+    "depth": "normal"
+  }
+}

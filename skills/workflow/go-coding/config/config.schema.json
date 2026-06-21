@@ -1,0 +1,34 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Go Coding Skill Config",
+  "description": "Configuration for the go-coding workflow skill.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mode"],
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": ["implement", "refactor", "fix"],
+      "default": "implement",
+      "description": "Operation mode: implement a feature, refactor existing code, or fix a bug."
+    },
+    "run_tests": {
+      "type": "boolean",
+      "default": true,
+      "description": "When true, run go test and golangci-lint during evaluation."
+    },
+    "depth": {
+      "type": "string",
+      "enum": ["fast", "normal", "deep"],
+      "default": "normal",
+      "description": "Context scan depth: fast (go.mod only), normal (go.mod + indexes + conventions), deep (all plus full dependency graph)."
+    },
+    "max_files": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20,
+      "default": 5,
+      "description": "Maximum number of files to modify in a single implementation pass."
+    }
+  }
+}

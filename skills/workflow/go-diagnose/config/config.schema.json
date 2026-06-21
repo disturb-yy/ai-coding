@@ -1,0 +1,27 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Go Diagnose Skill Config",
+  "description": "Configuration for the go-diagnose workflow skill.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mode"],
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": ["diagnose", "diagnose_and_fix"],
+      "default": "diagnose_and_fix",
+      "description": "Operation mode: diagnose stops at root cause identification; diagnose_and_fix applies and verifies the fix."
+    },
+    "run_tests": {
+      "type": "boolean",
+      "default": true,
+      "description": "When true, run go build, go test, and go vet as part of diagnosis and verification."
+    },
+    "depth": {
+      "type": "string",
+      "enum": ["fast", "normal", "deep"],
+      "default": "normal",
+      "description": "Analysis depth: fast (read reported location only), normal (trace call path + run diagnostics), deep (all plus pprof profiling, goroutine analysis)."
+    }
+  }
+}

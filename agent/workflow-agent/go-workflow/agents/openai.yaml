@@ -1,6 +1,0 @@
-interface:
-  display_name: "Go Workflow"
-  display_name_zh: "Go 工作流"
-  short_description: "OODA-E workflow orchestration for Go projects"
-  short_description_zh: "Go 项目 OODA-E 多 Agent 工作流编排（开发/修复/重构/诊断）"
-  default_prompt: "Use $go-workflow to coordinate multi-agent development for Go tasks including feature development, bug fixes, refactoring, testing, code review, and diagnosis. Uses configurable code structure analysis tools to map project architecture. Configure via .agent/workflow-skills.yaml (CodeMap, codegraph, go-codemap, or none)."

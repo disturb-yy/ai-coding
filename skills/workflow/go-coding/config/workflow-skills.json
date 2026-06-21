@@ -1,0 +1,15 @@
+﻿{
+  "phase": "Implementation",
+  "artifact_type": "implementation_result",
+  "skill": "go-coding",
+  "path": "skills/go-coding",
+  "enabled": true,
+  "priority": 100,
+  "execution": {
+    "codex": "direct",
+    "opencode": "delegated"
+  },
+  "config": {
+    "mode": "implement"
+  }
+}

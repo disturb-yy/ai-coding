@@ -1,0 +1,12 @@
+﻿{
+  "skill": "project-understanding",
+  "config": {
+    "depth": "normal",
+    "allow_source_fallback": false,
+    "max_modules": 200,
+    "output_dir": ".agent"
+  },
+  "input": {
+    "previous_artifact": null
+  }
+}

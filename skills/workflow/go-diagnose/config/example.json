@@ -1,0 +1,13 @@
+﻿{
+  "skill": "go-diagnose",
+  "config": {
+    "mode": "diagnose_and_fix",
+    "run_tests": true,
+    "depth": "normal"
+  },
+  "input": {
+    "error_output": "<paste full error output, stack trace, or test failure>",
+    "reproduction_command": "<command that triggers the issue>",
+    "previous_artifact": null
+  }
+}

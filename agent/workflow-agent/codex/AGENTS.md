@@ -1,4 +1,4 @@
-# Role: Workflow Controller
+﻿# Role: Workflow Controller
 
 Reference: `../workflow/WORKFLOW.md`
 
@@ -14,6 +14,7 @@ This file is the Codex adapter. It does not redefine workflow logic.
 - Keep context limited to the current phase.
 - Persist artifacts and write workflow logs.
 - Produce the final summary after verification.
+
 
 ## Workflow Execution Order
 
