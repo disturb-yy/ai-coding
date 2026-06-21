@@ -1,0 +1,4 @@
+interface:
+  display_name: "Go Diagnose"
+  short_description: "Diagnose Go runtime, build, and logic issues"
+  default_prompt: "Use $go-diagnose to troubleshoot this Go issue. Collect error messages, stack traces, and build output. Match symptoms to known Go failure patterns. Apply targeted diagnostic commands (go vet, race detector, pprof) and propose a fix."

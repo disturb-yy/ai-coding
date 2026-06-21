@@ -1,0 +1,13 @@
+﻿{
+  "skill": "go-coding",
+  "config": {
+    "mode": "implement",
+    "run_tests": true,
+    "depth": "normal",
+    "max_files": 5
+  },
+  "input": {
+    "task_description": "<feature request, bug report, or refactoring goal>",
+    "previous_artifact": null
+  }
+}

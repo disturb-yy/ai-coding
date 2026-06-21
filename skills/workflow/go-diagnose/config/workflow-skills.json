@@ -1,0 +1,15 @@
+﻿{
+  "phase": "Verification",
+  "artifact_type": "verification_result",
+  "skill": "go-diagnose",
+  "path": "skills/go-diagnose",
+  "enabled": true,
+  "priority": 90,
+  "execution": {
+    "codex": "direct",
+    "opencode": "delegated"
+  },
+  "config": {
+    "mode": "diagnose_and_fix"
+  }
+}
