@@ -71,7 +71,7 @@ CodeMap exposes two kinds of MCP interfaces:
 
 | Channel | Method | What It Provides |
 |---------|--------|-----------------|
-| **Tools** | `tools/call` | 10 query tools (search, impact analysis, call graph, list, etc.) |
+| **Tools** | `tools/call` | 11 query tools (search, impact analysis, call graph, decision planning, list, etc.) |
 | **Resources** | `resources/read` | 6 resource templates (Markdown docs, JSON module data) |
 
 ### 3.1 Codex / Codex++
@@ -195,7 +195,7 @@ printf '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion
   | tail -1 | python3 -m json.tool | head -40
 ```
 
-#### All 8 tools with their JSON arguments
+#### Common tools with their JSON arguments
 
 | Tool | Arguments |
 |------|-----------|
@@ -207,6 +207,9 @@ printf '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion
 | `search_flow` | `{"query":"notify"}` |
 | `call_graph` | `{"module":"notify"}` |
 | `impact_analysis` | `{"function":"NewDispatcher"}` |
+| `get_feature_map` | `{}` |
+| `get_navigation_hints` | `{}` |
+| `find_change_points` | `{"requirement":"Add order cancellation functionality","top_k":5}` |
 
 Example — call `search_module` for "market":
 
@@ -271,6 +274,7 @@ sqlite3 .codemap/codemap.db \
 | `impact_analysis` | Who calls a given function (reverse graph) | `{"function": "NewDispatcher"}` |
 | `get_feature_map` | Business feature map — features, modules, routes, flows | (no arguments) |
 | `get_navigation_hints` | Navigation guidance — entry files, related modules, risks | (no arguments) |
+| `find_change_points` | Decision planning for a requirement: likely modules, files, routes, flows, risks, and next actions | `{"requirement": "Add order cancellation functionality", "top_k": 5}` |
 
 ### 4.2 Available Resources (Markdown/JSON)
 
@@ -309,6 +313,9 @@ Once CodeMap is connected, try these:
 
 **Code navigation:**
 > I need to work on the payment feature. Where should I start? What files are the entry points?
+
+**Change planning:**
+> Use `find_change_points` for "Add SMS login" and tell me which modules/files to inspect first.
 
 ### 4.4 Tips
 

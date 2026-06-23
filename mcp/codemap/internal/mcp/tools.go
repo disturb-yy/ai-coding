@@ -10,6 +10,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/disturb-yy/codemap/internal/cognitive"
 	"github.com/disturb-yy/codemap/internal/model"
 )
 
@@ -25,6 +26,7 @@ func registerTools(server *mcp.Server, repo Repository, projectName, projectRoot
 	registerListModules(server, repo)
 	registerGetFeatureMap(server, repo)
 	registerGetNavigationHints(server, repo)
+	registerFindChangePoints(server, cognitive.NewService(repo))
 }
 
 func registerSearchModule(server *mcp.Server, repo Repository) {
@@ -319,6 +321,28 @@ func registerGetNavigationHints(server *mcp.Server, repo Repository) {
 				return errorResult("navigation_hints_failed", "get navigation hints: "+err.Error(), ""), nil
 			}
 			data, _ := json.MarshalIndent(map[string]any{"features": hints}, "", "  ")
+			return textResult(string(data)), nil
+		}),
+	)
+}
+
+func registerFindChangePoints(server *mcp.Server, service *cognitive.CognitiveService) {
+	server.AddTool(
+		&mcp.Tool{
+			Name:        "find_change_points",
+			Description: "Find likely modules, files, routes, flows and risks for implementing a requirement. Use before opening source code or planning changes.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{"requirement":{"type":"string","description":"User requirement text."},"top_k":{"type":"integer","description":"Maximum number of candidates to return."}},"required":["requirement"]}`),
+		},
+		safeHandler(func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			var args cognitive.FindChangePointsRequest
+			if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
+				return nil, err
+			}
+			result, err := service.FindChangePoints(ctx, args)
+			if err != nil {
+				return errorResult("find_change_points_failed", "find change points: "+err.Error(), ""), nil
+			}
+			data, _ := json.MarshalIndent(result, "", "  ")
 			return textResult(string(data)), nil
 		}),
 	)
