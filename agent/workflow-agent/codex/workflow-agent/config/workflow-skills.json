@@ -10,7 +10,7 @@
       "priority": 100,
       "execution": {
         "codex": "direct",
-        "opencode": "direct"
+        "opencode": "delegated"
       },
       "config": {
         "depth": "normal"
@@ -42,7 +42,7 @@
       "priority": 100,
       "execution": {
         "codex": "direct",
-        "opencode": "direct"
+        "opencode": "delegated"
       },
       "config": {
         "depth": "normal",
@@ -93,7 +93,7 @@
       "priority": 100,
       "execution": {
         "codex": "direct",
-        "opencode": "direct"
+        "opencode": "delegated"
       },
       "config": {
         "mode": "understand",

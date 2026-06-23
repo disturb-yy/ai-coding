@@ -689,6 +689,52 @@ Required summary content:
     }
   ],
   "confidence_timeline": [],
+  "execution_trace": {
+    "workflow_id": "",
+    "started_at": "",
+    "completed_at": "",
+    "duration_seconds": 0,
+    "phases": [
+      {
+        "phase": "",
+        "started_at": "",
+        "completed_at": "",
+        "duration_seconds": 0,
+        "agent": "main|subagent:<name>",
+        "mode": "direct|delegated",
+        "skill": ""
+      }
+    ]
+  },
+  "token_breakdown": {
+    "total_input": 0,
+    "total_output": 0,
+    "total_cache_read": 0,
+    "total_reasoning": 0,
+    "phases": [
+      {
+        "phase": "",
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cache_read_tokens": 0,
+        "reasoning_tokens": 0,
+        "agent": "main|subagent:<name>"
+      }
+    ]
+  },
+  "subagent_interactions": [
+    {
+      "phase": "",
+      "skill": "",
+      "task_id": "",
+      "agent_type": "",
+      "spawned_at": "",
+      "completed_at": "",
+      "prompt_length_chars": 0,
+      "result_summary": "",
+      "confidence": 0.0
+    }
+  ],
   "retry_count": 0,
   "risks": [],
   "follow_ups": []
@@ -700,9 +746,12 @@ Summary rules:
 - Include `task_type`.
 - Include every phase, including skipped phases.
 - Explain why each skipped phase was skipped.
-- Include confidence per phase.
+- Include confidence per phase. For delegated phases, use the confidence value returned by the sub-agent (NOT a self-assigned value from the main agent). For direct phases, the main agent self-assesses. Record the source of each confidence value.
 - Include retry count and final status.
 - Include artifact and log locations.
+- Include `execution_trace` with per-phase timing, agent attribution, and mode.
+- Include `token_breakdown` with per-phase and per-agent token consumption.
+- Include `subagent_interactions` with spawn chain: task_id, agent type, prompt length, result summary, confidence.
 
 ## Completion Rules
 

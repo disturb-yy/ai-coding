@@ -4,6 +4,16 @@
 
 This file defines the exact procedure for executing a workflow skill in delegated mode on OpenCode. When workflow-skills.json says "opencode": "delegated", the workflow-agent MUST follow this file — not improvise.
 
+
+## CRITICAL: Always Check Registry FIRST
+
+**Before any codebase exploration, read config/workflow-skills.json and check execution.opencode for the current phase. If delegated, spawn the subAgent immediately. Do not pre-explore the codebase yourself.**
+
+The main agent must NOT:
+- Read source files before checking the registry
+- grep/search the codebase before checking the registry
+- Collect facts or context by exploring the codebase before checking the registry
+
 ## When this file applies
 
 This file applies for EVERY phase where:
@@ -43,8 +53,10 @@ Use this to construct the config block for the subAgent.
 ### Step 3: Collect inputs
 
 Gather from previous artifacts:
-- For **Project Understanding**: user_request from equirement_analysis artifact
-- For **Solution Design**: equirement_analysis + project_understanding artifacts
+- For **Project Understanding**: user_request from 
+equirement_analysis artifact
+- For **Solution Design**: 
+equirement_analysis + project_understanding artifacts
 - For **Implementation**: solution_design artifact
 - For **Testing**: solution_design + implementation_result artifacts
 
@@ -79,6 +91,7 @@ You are executing the workflow skill {skill_name} for phase {phase}.
   "artifact_type": "{artifact_type}",
   "created_at": "{iso_timestamp}",
   "phase": "{phase}",
+  "confidence": {confidence},
   "content": {
     ... skill-specific content ...
   }
@@ -87,7 +100,8 @@ You are executing the workflow skill {skill_name} for phase {phase}.
 
 5. Do NOT modify files outside the skill's scope.
 6. Do NOT decide workflow phase transitions.
-7. Return ONLY the final artifact JSON. No extra commentary.
+7. Include your self-assessed confidence (0.0-1.0) as a top-level `confidence` field in the artifact. Base this on: completeness of your analysis, certainty of your conclusions, and any unknowns encountered.
+8. Return ONLY the final artifact JSON. No extra commentary.
 ``
 
 ### Step 5: Call the task tool
@@ -165,6 +179,7 @@ Log the event:
 | Edit files directly during Implementation phase | Spawn subAgent to edit |
 | Write tests directly during Testing phase | Spawn subAgent to write tests |
 | Skip delegation because "it's faster direct" | ALWAYS delegate when registry says delegated |
+| **Explore codebase before reading registry** | **Read registry FIRST, then decide** |
 | Start executing before reading this file | ALWAYS read this file first |
 
 ## Quick Reference Card

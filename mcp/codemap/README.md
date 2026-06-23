@@ -125,6 +125,7 @@ codemap -project /path/to/your-project --serve
 | `impact_analysis` | 函数影响分析 |
 | `get_feature_map` | 业务功能地图 |
 | `get_navigation_hints` | 代码导航提示 |
+| `find_change_points` | 决策层：根据需求推断候选模块、文件、路由、流程、风险和下一步动作 |
 
 ---
 
@@ -141,3 +142,4 @@ codemap -project /path/to/your-project --serve
 
 - [DESIGN.md](./feature/DESIGN.md) — v1 设计规范
 - [DESIGNV2.md](./feature/DESIGNV2.md) — v2 认知层设计
+- [DESIGNV3.md](./feature/DESIGNV3.md) — v3 决策层 / find_change_points 设计

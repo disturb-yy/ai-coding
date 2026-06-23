@@ -155,6 +155,37 @@ func TestHandleToolsList(t *testing.T) {
 	}
 }
 
+func TestFindChangePointsTool(t *testing.T) {
+	repo, cleanup := newRepo(t)
+	defer cleanup()
+
+	if err := repo.SaveRoute(&model.Route{Method: "POST", Path: "/orders", Handler: "internal/order/handler.go", Module: "order"}); err != nil {
+		t.Fatalf("SaveRoute: %v", err)
+	}
+	if err := repo.SaveFlow(&model.Flow{ID: "create_order", Name: "create_order_flow", Trigger: "order", Steps: []string{"validate order"}}); err != nil {
+		t.Fatalf("SaveFlow: %v", err)
+	}
+
+	server := mcp.NewServer(&mcp.Implementation{Name: "test", Version: "0.1.0"}, nil)
+	registerTools(server, repo, "test-project", "/tmp/test")
+
+	result, err := callTool(server, "find_change_points", map[string]any{"requirement": "add order cancellation", "top_k": 3})
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := result.Content[0].(*mcp.TextContent).Text
+	var parsed map[string]any
+	if err := json.Unmarshal([]byte(text), &parsed); err != nil {
+		t.Fatalf("parse result: %v\n%s", err, text)
+	}
+	if parsed["requirement"] != "add order cancellation" {
+		t.Errorf("unexpected requirement: %v", parsed["requirement"])
+	}
+	if len(parsed["candidate_modules"].([]any)) == 0 {
+		t.Fatal("expected candidate modules")
+	}
+}
+
 func TestNotificationIgnored(t *testing.T) {
 	repo, cleanup := newRepo(t)
 	defer cleanup()
