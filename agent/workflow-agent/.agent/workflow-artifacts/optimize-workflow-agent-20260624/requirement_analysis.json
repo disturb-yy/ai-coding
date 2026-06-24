@@ -1,0 +1,24 @@
+﻿{
+    "artifact_type":  "requirement_analysis",
+    "created_at":  "2026-06-24T00:00:00Z",
+    "phase":  "Requirement Analysis",
+    "content":  {
+                    "goal":  "Analyze and optimize the workflow-agent support project.",
+                    "constraints":  [
+                                        "Follow workflow/WORKFLOW.md phase order",
+                                        "Keep changes scoped to workflow-agent files",
+                                        "Preserve Codex/OpenCode artifact contract compatibility",
+                                        "Do not modify unrelated dirty worktree changes"
+                                    ],
+                    "assumptions":  [
+                                        "优化 means practical maintainability/reliability improvements, not a redesign",
+                                        "No external Codemap/Understand tool is currently exposed, so project understanding uses focused source inspection"
+                                    ],
+                    "acceptance_criteria":  [
+                                                "Identify concrete risks in current workflow-agent scripts/docs",
+                                                "Apply minimal optimizations that improve reliability or portability",
+                                                "Validate scripts with representative commands",
+                                                "Persist workflow artifacts and logs"
+                                            ]
+                }
+}

@@ -1,6 +1,14 @@
 #!/bin/bash
 # validate-mode.sh
-PHASE="$1"
-if [ -z "$PHASE" ]; then echo "USAGE: validate-mode.sh <phase-name>"; exit 2; fi
-python3 ~/.config/opencode/workflow-agent/scripts/_check_mode.py "$PHASE"
-exit $?
+set -euo pipefail
+
+PHASE="${1:-}"
+PLATFORM="${2:-${WORKFLOW_AGENT_PLATFORM:-opencode}}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ -z "$PHASE" ]; then
+    echo "USAGE: validate-mode.sh <phase-name> [platform]"
+    exit 2
+fi
+
+python3 "$SCRIPT_DIR/_check_mode.py" "$PHASE" "$PLATFORM"
