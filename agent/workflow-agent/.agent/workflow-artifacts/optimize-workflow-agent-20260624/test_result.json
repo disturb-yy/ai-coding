@@ -1,0 +1,32 @@
+﻿{
+    "artifact_type":  "test_result",
+    "created_at":  "2026-06-24T00:00:00Z",
+    "phase":  "Testing",
+    "content":  {
+                    "test_files":  [
+
+                                   ],
+                    "test_scenarios":  [
+                                           "Shell syntax and Python bytecode compile checks",
+                                           "Artifact validator accepts valid workflow artifacts",
+                                           "Artifact validator rejects wrong expected type",
+                                           "Mode validator resolves Codex direct and OpenCode delegated entries",
+                                           "Delegate prompt generator works with a temporary skill root",
+                                           "Zone.Identifier cleanup leaves no matching files"
+                                       ],
+                    "commands_run":  [
+                                         "bash -n codex/workflow-agent/scripts/*.sh opencode/workflow-agent/scripts/*.sh",
+                                         "python3 -m py_compile codex/workflow-agent/scripts/_check_mode.py opencode/workflow-agent/scripts/_check_mode.py",
+                                         "opencode/workflow-agent/scripts/check-artifact.sh .agent/workflow-artifacts/optimize-workflow-agent-20260624/requirement_analysis.json requirement_analysis",
+                                         "codex/workflow-agent/scripts/check-artifact.sh .agent/workflow-artifacts/optimize-workflow-agent-20260624/project_understanding.json project_understanding",
+                                         "codex/workflow-agent/scripts/validate-mode.sh \"Requirement Analysis\" codex",
+                                         "opencode/workflow-agent/scripts/validate-mode.sh \"Requirement Analysis\" opencode returned delegated sentinel exit code 1",
+                                         "WORKFLOW_AGENT_SKILLS_DIR=/tmp/workflow-agent-skill-test ... delegate-skill.sh demo-skill Testing test_result"
+                                     ],
+                    "coverage_notes":  "No unit test framework exists for this support-file project; validation uses targeted script behavior checks.",
+                    "failures":  [
+                                     "PowerShell-to-WSL quoting caused two attempted test commands to be malformed; commands were rerun using safer invocation or existing artifacts",
+                                     "Validator initially rejected BOM-authored JSON artifacts; implementation was updated to use utf-8-sig"
+                                 ]
+                }
+}

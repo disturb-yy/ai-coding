@@ -1,0 +1,45 @@
+﻿{
+    "artifact_type":  "implementation_result",
+    "created_at":  "2026-06-24T00:00:00Z",
+    "phase":  "Implementation",
+    "content":  {
+                    "modified_files":  [
+                                           "codex/workflow-agent/scripts/check-artifact.sh",
+                                           "codex/workflow-agent/scripts/_check_mode.py",
+                                           "codex/workflow-agent/scripts/validate-mode.sh",
+                                           "codex/workflow-agent/scripts/delegate-skill.sh",
+                                           "opencode/workflow-agent/scripts/check-artifact.sh",
+                                           "opencode/workflow-agent/scripts/_check_mode.py",
+                                           "opencode/workflow-agent/scripts/validate-mode.sh",
+                                           "opencode/workflow-agent/scripts/delegate-skill.sh"
+                                       ],
+                    "created_files":  [
+
+                                      ],
+                    "deleted_files":  [
+                                          "codex/workflow-agent/config/workflow-skills.example.json:Zone.Identifier",
+                                          "codex/workflow-agent/config/workflow-skills.json:Zone.Identifier",
+                                          "codex/workflow-agent/runtime/skill-delegator.md:Zone.Identifier",
+                                          "codex/workflow-agent/runtime/skill-executor.md:Zone.Identifier",
+                                          "codex/workflow-agent/runtime/skill-registry.md:Zone.Identifier",
+                                          "codex/workflow-agent/scripts/_check_mode.py:Zone.Identifier",
+                                          "codex/workflow-agent/scripts/check-artifact.sh:Zone.Identifier",
+                                          "codex/workflow-agent/scripts/delegate-skill.sh:Zone.Identifier",
+                                          "codex/workflow-agent/scripts/validate-mode.sh:Zone.Identifier",
+                                          "codex/workflow-agent/workflow/WORKFLOW.md:Zone.Identifier",
+                                          "codex/workflow-agent/workflow/artifact-schema.md:Zone.Identifier",
+                                          "codex/workflow-agent/workflow/state-machine.md:Zone.Identifier"
+                                      ],
+                    "change_summary":  [
+                                           "Hardened artifact validation with argv-based Python, strict shell mode, JSON error reporting, BOM-compatible decoding, and content object validation",
+                                           "Made mode validation resolve registry from script location or WORKFLOW_AGENT_HOME/WORKFLOW_AGENT_REGISTRY and select codex/opencode platform explicitly",
+                                           "Made validate-mode.sh call its sibling Python helper instead of hardcoded ~/.config/opencode path",
+                                           "Made delegate-skill.sh configurable via WORKFLOW_AGENT_HOME/WORKFLOW_AGENT_SKILLS_DIR with argument/input checks and stricter artifact prompt instructions",
+                                           "Removed Windows Zone.Identifier metadata files and added executable bits to scripts"
+                                       ],
+                    "deviations_from_design":  [
+                                                   "Added BOM-compatible JSON decoding after verification found PowerShell-authored artifacts with UTF-8 BOM",
+                                                   "Added executable permissions after direct invocation test exposed Permission denied"
+                                               ]
+                }
+}

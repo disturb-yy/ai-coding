@@ -1,0 +1,37 @@
+﻿{
+    "artifact_type":  "solution_design",
+    "created_at":  "2026-06-24T00:00:00Z",
+    "phase":  "Solution Design",
+    "content":  {
+                    "files_to_modify":  [
+                                            "codex/workflow-agent/scripts/check-artifact.sh",
+                                            "codex/workflow-agent/scripts/_check_mode.py",
+                                            "codex/workflow-agent/scripts/validate-mode.sh",
+                                            "codex/workflow-agent/scripts/delegate-skill.sh",
+                                            "opencode/workflow-agent/scripts/check-artifact.sh",
+                                            "opencode/workflow-agent/scripts/_check_mode.py",
+                                            "opencode/workflow-agent/scripts/validate-mode.sh",
+                                            "opencode/workflow-agent/scripts/delegate-skill.sh"
+                                        ],
+                    "files_to_create":  [
+
+                                        ],
+                    "implementation_plan":  [
+                                                "Replace inline Python argument interpolation with argv-based validation",
+                                                "Resolve script base directory from WORKFLOW_AGENT_HOME or the script location",
+                                                "Let _check_mode.py accept platform mode via WORKFLOW_AGENT_PLATFORM or CLI arg",
+                                                "Add argument validation and configurable skill root to delegate-skill.sh",
+                                                "Remove Zone.Identifier metadata files"
+                                            ],
+                    "test_strategy":  [
+                                          "Run artifact validator against valid, wrong-type, and path-with-quote cases",
+                                          "Run mode validator for codex and opencode platform selection",
+                                          "Run delegate prompt generation against a temporary skill root",
+                                          "Verify no Zone.Identifier files remain"
+                                      ],
+                    "risks":  [
+                                  "No real SKILL.md registry paths are present in this repo, so delegate validation uses a temporary fixture",
+                                  "Scripts must remain POSIX shell compatible"
+                              ]
+                }
+}
