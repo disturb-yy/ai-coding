@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "skills": [
+    {
+      "phase": "Problem Understanding",
+      "artifact_type": "problem_understanding",
+      "skill": "problem-diagnosis",
+      "path": "skills/problem-diagnosis",
+      "enabled": true,
+      "priority": 100,
+      "execution": {
+        "codex": "direct",
+        "opencode": "delegated"
+      },
+      "config": {
+        "mode": "understand",
+        "allow_code_modification": false,
+        "persist_handoff": true
+      }
+    },
+    {
+      "phase": "Root Cause Analysis",
+      "artifact_type": "root_cause_analysis",
+      "skill": "problem-diagnosis",
+      "path": "skills/problem-diagnosis",
+      "enabled": true,
+      "priority": 100,
+      "execution": {
+        "codex": "direct",
+        "opencode": "delegated"
+      },
+      "config": {
+        "mode": "analyze",
+        "allow_code_modification": false,
+        "persist_handoff": true,
+        "load_domain_reference": "auto"
+      }
+    },
+    {
+      "phase": "Regression Check",
+      "artifact_type": "regression_check",
+      "skill": "problem-diagnosis",
+      "path": "skills/problem-diagnosis",
+      "enabled": true,
+      "priority": 100,
+      "execution": {
+        "codex": "direct",
+        "opencode": "delegated"
+      },
+      "config": {
+        "mode": "verify",
+        "allow_code_modification": false,
+        "load_domain_reference": "auto",
+        "run_tests": true,
+        "reproduce": true
+      }
+    }
+  ]
+}

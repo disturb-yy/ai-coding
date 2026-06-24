@@ -1,0 +1,5 @@
+interface:
+  display_name: "Problem Diagnosis"
+  short_description: "Investigate issues without modifying code"
+  default_prompt: "Use $problem-diagnosis to investigate this issue, preserve evidence, and produce a handoff artifact without changing code."
+
