@@ -1,0 +1,4 @@
+interface:
+  display_name: "Exploring Project"
+  short_description: "Explore a codebase with CodeMap-guided investigation"
+  default_prompt: "Use $exploring-project to understand this project before making changes."
