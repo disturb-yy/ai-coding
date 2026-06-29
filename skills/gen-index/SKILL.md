@@ -1,6 +1,6 @@
 ---
 name: gen-index
-description: Generate or update agent-facing project indexes from .codemap files, CodeMap facts, targeted source reads, and human-maintained docs. Use when asked to create PROJECT_INDEX.md, NAVIGATION.md, CHANGE_GUIDE.md, AI-readable repository indexes, optional root INDEX.md, or clarification-backed project index docs.
+description: Generate or update agent-facing project indexes from .codemap files, CodeMap facts, targeted source reads, and human-maintained docs. Use when asked to create PROJECT_INDEX.md, NAVIGATION.md, CHANGE_GUIDE.md, FEATURES.md, AI-readable repository indexes, optional root INDEX.md, or clarification-backed project index docs.
 ---
 
 # Gen Index
@@ -21,13 +21,13 @@ Prefer inputs in this order:
 1. CodeMap-generated files or MCP facts, including files under `.codemap/` when present. Treat `.codemap/architecture/`, `.codemap/callgraph/`, `.codemap/flows/`, `.codemap/modules/`, and `.codemap/routes/` as primary generated inputs for architecture, call chains, feature flows, module maps, and route entry points.
 2. Targeted source reads for important behavior, entry points, tests, and file-path verification.
 3. Human-maintained project docs: `README.md`, architecture docs, ADRs, glossary files, contribution guides, and other docs that capture project intent.
-4. Existing generated index files, such as `.agent/PROJECT_INDEX.md`, `.agent/NAVIGATION.md`, `.agent/CHANGE_GUIDE.md`, or `INDEX.md`, only as prior drafts for incremental updates. Do not treat them as the fact layer.
+4. Existing generated index files, such as `.agent/PROJECT_INDEX.md`, `.agent/NAVIGATION.md`, `.agent/CHANGE_GUIDE.md`, `.agent/FEATURES.md`, or `INDEX.md`, only as prior drafts for incremental updates. Do not treat them as the fact layer.
 5. User clarification only when project meaning cannot be inferred safely.
 
 ## Outputs
 
 - Primary output: `.agent/PROJECT_INDEX.md`.
-- Companion outputs: `.agent/NAVIGATION.md` and `.agent/CHANGE_GUIDE.md`.
+- Companion outputs: `.agent/NAVIGATION.md`, `.agent/CHANGE_GUIDE.md`, and `.agent/FEATURES.md`.
 - Optional outputs: `.agent/GLOSSARY.md`, `.agent/adr/*.md`, and `.agent/ARCHITECTURE.md` or `.agent/architecture/*.md` when clarification creates durable project knowledge.
 - Root `INDEX.md`: generate only when the user explicitly asks for a root-level human-facing index or the repository already uses it as a convention.
 
@@ -38,9 +38,10 @@ Prefer inputs in this order:
 3. Read targeted source files and human-maintained docs to verify behavior and capture intent.
 4. If existing generated index files are present, read them only to preserve useful structure and user-added notes during incremental updates.
 5. If the missing information is conceptual rather than factual, run a `/grilling` session using `/domain-modeling` to clarify it. If that path is unavailable, ask focused clarification questions directly and record durable answers in `.agent/GLOSSARY.md`, `.agent/adr/*.md`, or `.agent/ARCHITECTURE.md`.
-6. Write the index as a navigation artifact, not an exhaustive code walkthrough.
-7. Verify that listed paths exist or are explicitly marked `unknown`, `generated`, `external`, or `planned`. Use `rg --files` or `test -e <path>` for repository paths before finishing.
-8. Report changed files, assumptions, and any sections that need refresh after CodeMap is regenerated.
+6. Write the index files as navigation artifacts, not exhaustive code walkthroughs.
+7. Use stable section names and compact bullets/tables so other skills can consume the files without guessing the format.
+8. Verify that listed paths exist or are explicitly marked `unknown`, `generated`, `external`, or `planned`. Use `rg --files` or `test -e <path>` for repository paths before finishing.
+9. Report changed files, assumptions, and any sections that need refresh after CodeMap is regenerated.
 
 ## Index Shape
 
@@ -52,8 +53,83 @@ Include these sections unless the project context makes one irrelevant:
 - Architecture: style, runtime units, data stores, integrations, and cross-cutting concerns.
 - Navigation: common tasks and where to start.
 - Risk Areas: auth, payment, migrations, schedulers, critical flows, or other high-impact areas.
+- Freshness: generated date only if known from file metadata, CodeMap output, or user context; CodeMap source paths or tools used; and stale-when conditions. If the date is not known, write `unknown`.
 - Evidence: CodeMap files/facts, docs, and targeted source files used.
 - Unknowns: facts that need confirmation or CodeMap regeneration.
+
+## Companion File Shapes
+
+Write companion files with these stable fields when the facts are available. Use `unknown` or `None found in CodeMap` instead of omitting a field.
+
+### `.agent/NAVIGATION.md`
+
+For each feature or workflow, include:
+
+```text
+Feature:
+Start From:
+Related Modules:
+Related Routes:
+Related Flows:
+Tests:
+Risk:
+Source Evidence:
+```
+
+### `.agent/CHANGE_GUIDE.md`
+
+Group common change types by touch points:
+
+```text
+Change Type:
+Touch:
+Typical Flow:
+Tests:
+Risk:
+```
+
+Include common project-specific change types such as adding an API, changing persistence, adding a job, adding an event, changing auth, or modifying a critical integration.
+
+### `.agent/FEATURES.md`
+
+For each business capability, include:
+
+```text
+Feature:
+Description:
+Entry Points:
+Modules:
+Routes:
+Flows:
+Tests:
+Unknowns:
+```
+
+### Minimal Example
+
+```text
+# Feature Navigation
+
+Feature: User Login
+Start From: src/routes/login.ts
+Related Modules: auth, users
+Related Routes: POST /login
+Related Flows: Login request -> AuthService -> UserRepository
+Tests: tests/auth/login.test.ts
+Risk: Auth behavior and session creation
+Source Evidence: .codemap/routes/auth.json; src/routes/login.ts
+
+# Feature Catalog
+
+Feature: User Login
+Description: Authenticates a user and creates a session.
+Entry Points: src/routes/login.ts
+Modules: auth, users
+Routes: POST /login
+Flows: Login request -> AuthService -> UserRepository
+Tests: tests/auth/login.test.ts
+Unknowns: unknown
+```
 
 ## Rules
 
@@ -62,6 +138,7 @@ Include these sections unless the project context makes one irrelevant:
 - Use existing user-maintained docs over inferred naming when they conflict with generated facts.
 - Treat existing generated index files as previous outputs, not as authoritative inputs.
 - Use `unknown`, `not found in CodeMap`, or `needs confirmation` instead of guessing.
+- Keep `.agent/FEATURES.md` focused on business capabilities and `.agent/NAVIGATION.md` focused on where to start reading or changing code.
 - Do not call another skill implicitly except for the explicit `/grilling` and `/domain-modeling` clarification path described above.
 
 ## Examples
@@ -80,7 +157,7 @@ Expected behavior:
 Read `.codemap/architecture/`, `.codemap/modules/`, `.codemap/routes/`,
 `.codemap/flows/`, and `.codemap/callgraph/`; verify important entry files
 with targeted source reads; write `.agent/PROJECT_INDEX.md`,
-`.agent/NAVIGATION.md`, and `.agent/CHANGE_GUIDE.md`.
+`.agent/NAVIGATION.md`, `.agent/CHANGE_GUIDE.md`, and `.agent/FEATURES.md`.
 ```
 
 ### Example 2: Incremental Update
@@ -94,10 +171,10 @@ Update the project index after regenerating CodeMap.
 Expected behavior:
 
 ```text
-Treat existing `.agent/PROJECT_INDEX.md`, `.agent/NAVIGATION.md`, and
-`.agent/CHANGE_GUIDE.md` as prior drafts only. Preserve useful user-added
-notes, but verify structure and paths against `.codemap/` and source files
-before rewriting.
+Treat existing `.agent/PROJECT_INDEX.md`, `.agent/NAVIGATION.md`,
+`.agent/CHANGE_GUIDE.md`, and `.agent/FEATURES.md` as prior drafts only.
+Preserve useful user-added notes, but verify structure and paths against
+`.codemap/` and source files before rewriting.
 ```
 
 ### Example 3: Conceptual Gap

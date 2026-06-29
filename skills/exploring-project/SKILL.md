@@ -44,16 +44,28 @@ When the `codemap` MCP server is available for the current project, use it befor
 
 Treat CodeMap output as a navigation aid, not proof. Verify important claims by reading the referenced implementation or tests before explaining behavior or editing code.
 
+## Generated Index Bridge
+
+When `.agent/PROJECT_INDEX.md`, `.agent/NAVIGATION.md`, `.agent/CHANGE_GUIDE.md`, or `.agent/FEATURES.md` exist, use them as a scope filter before broad discovery.
+
+1. Choose the smallest useful guide first: `.agent/FEATURES.md` for business capability, `.agent/NAVIGATION.md` for start files and related modules, `.agent/CHANGE_GUIDE.md` for change touch points, and `.agent/PROJECT_INDEX.md` for overall system context.
+2. Read only the sections relevant to the user's requested feature, module, route, flow, or change type.
+3. Extract candidate `Feature`, `Start From`, `Related Modules`, `Related Routes`, `Related Flows`, `Tests`, `Risk`, and `Source Evidence` fields when present.
+4. Convert extracted names into focused CodeMap calls: modules -> `search_module` or `related_modules`; routes -> `search_route`; flows -> `search_flow` or `call_graph`; broad changes -> `find_change_points`.
+5. If `.agent/CHANGE_GUIDE.md` matches the requested change type, use its `Touch`, `Typical Flow`, `Tests`, and `Risk` entries to choose the first files to verify.
+6. If an index field is missing, stale, or conflicts with CodeMap/source files, say so and trust verified source over generated docs.
+
 ## Core Workflow
 
-1. Start from existing project guides if present: `README`, `.agent/PROJECT_INDEX.md`, `.agent/NAVIGATION.md`, docs, architecture notes, or contribution guides.
+1. Start from existing project guides if present: `README`, `.agent/PROJECT_INDEX.md`, `.agent/NAVIGATION.md`, `.agent/CHANGE_GUIDE.md`, `.agent/FEATURES.md`, docs, architecture notes, or contribution guides.
 2. Apply the clarification gate if the request is ambiguous enough to affect exploration or implementation.
-3. Run the CodeMap first pass when available to identify likely chains, functions, and files before reading source code.
-4. Identify the project shape with lightweight commands: file tree, manifests, package files, routes, tests, and main entry points.
-5. Name the target feature, module, or behavior in business terms before opening many files.
-6. Follow references from entry point to implementation: route/command/UI -> service/use case -> model/storage/integration -> tests.
-7. Open only files that are relevant to the target area. Avoid repository-wide scanning unless the first pass fails.
-8. Summarize findings as actionable context: relevant files, ownership boundaries, data/control flow, risks, and next edit locations.
+3. Use the generated index bridge when `.agent/` index files exist.
+4. Run the CodeMap first pass when available to identify likely chains, functions, and files before reading source code.
+5. Identify the project shape with lightweight commands only when guides and CodeMap do not provide enough scope: file tree, manifests, package files, routes, tests, and main entry points.
+6. Name the target feature, module, or behavior in business terms before opening many files.
+7. Follow references from entry point to implementation: route/command/UI -> service/use case -> model/storage/integration -> tests.
+8. Open only files that are relevant to the target area. Avoid repository-wide scanning unless the first pass fails.
+9. Summarize findings as actionable context: relevant files, ownership boundaries, data/control flow, risks, and next edit locations.
 
 ## Checkpoints
 
@@ -66,6 +78,7 @@ Treat CodeMap output as a navigation aid, not proof. Verify important claims by 
 - Prefer `rg` and `rg --files` for discovery.
 - Prefer CodeMap over raw file reading for the first pass when it is available and relevant.
 - Prefer existing indexes and generated docs over rediscovering everything.
+- Use generated index files as navigation aids, not as proof; verify their key paths and behavior against CodeMap, source files, or tests.
 - Use dependency edges, imports, route registrations, test names, and configuration files to narrow the search.
 - Treat names from code as evidence, not proof; verify behavior in the implementation or tests.
 - Keep uncertainty explicit. Say `unknown` or `not found` instead of guessing.
@@ -138,5 +151,5 @@ Find where invoices are generated in this project.
 Expected behavior:
 
 ```text
-Try CodeMap first. If unavailable, stale, unsupported, or too vague, read `README`, `.agent/PROJECT_INDEX.md`, project docs, manifests, routes, and tests, then use `rg`/`rg --files` to locate invoice entry points. Verify the final answer by reading the relevant implementation or tests.
+Try CodeMap first. If unavailable, stale, unsupported, or too vague, read `README`, `.agent/PROJECT_INDEX.md`, `.agent/NAVIGATION.md`, `.agent/CHANGE_GUIDE.md`, `.agent/FEATURES.md`, project docs, manifests, routes, and tests, then use `rg`/`rg --files` to locate invoice entry points. Verify the final answer by reading the relevant implementation or tests.
 ```
