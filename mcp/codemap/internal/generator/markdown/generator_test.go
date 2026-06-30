@@ -69,3 +69,33 @@ func TestGenerate(t *testing.T) {
 		t.Error("INDEX.md should link to payment module")
 	}
 }
+
+func TestGenerateRemovesStaleGeneratedDocs(t *testing.T) {
+	repo := newTestRepo(t)
+	root := t.TempDir()
+	out := filepath.Join(root, ".codemap")
+
+	if err := os.MkdirAll(filepath.Join(out, "modules"), 0755); err != nil {
+		t.Fatalf("mkdir modules: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(out, "modules", "stale.md"), []byte("old"), 0644); err != nil {
+		t.Fatalf("write stale module: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(out, "codemap.db"), []byte("db"), 0644); err != nil {
+		t.Fatalf("write db marker: %v", err)
+	}
+
+	if err := repo.SaveModule(&model.Module{Name: "order", Path: "internal/order"}); err != nil {
+		t.Fatalf("SaveModule: %v", err)
+	}
+	if err := Generate(repo, root); err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(out, "modules", "stale.md")); !os.IsNotExist(err) {
+		t.Fatalf("stale module doc still exists or stat failed: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(out, "codemap.db")); err != nil {
+		t.Fatalf("codemap.db should be preserved: %v", err)
+	}
+}

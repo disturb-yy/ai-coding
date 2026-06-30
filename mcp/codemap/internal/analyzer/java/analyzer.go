@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	baseanalyzer "github.com/disturb-yy/codemap/internal/analyzer"
 	"github.com/disturb-yy/codemap/internal/model"
 )
 
@@ -88,6 +89,9 @@ func (a *Analyzer) Analyze(ctx context.Context, root string) (*model.Project, er
 			case <-ctx.Done():
 				return ctx.Err()
 			default:
+			}
+			if baseanalyzer.ShouldSkipDir(info) {
+				return filepath.SkipDir
 			}
 			if info.IsDir() || filepath.Ext(path) != ".java" {
 				return nil
@@ -169,6 +173,9 @@ func containsJava(root string) bool {
 	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil || found {
 			return nil
+		}
+		if baseanalyzer.ShouldSkipDir(info) {
+			return filepath.SkipDir
 		}
 		if !info.IsDir() && filepath.Ext(path) == ".java" {
 			found = true

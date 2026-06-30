@@ -77,6 +77,9 @@ func main() {
 	defer db.Close()
 
 	repo := sqlite.NewRepository(db)
+	if err := repo.Reset(); err != nil {
+		log.Fatalf("reset index: %v", err)
+	}
 
 	for _, m := range proj.Modules {
 		if err := repo.SaveModule(m); err != nil {

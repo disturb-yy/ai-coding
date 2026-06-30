@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"sort"
 	"testing"
+
+	"github.com/disturb-yy/codemap/internal/model"
 )
 
 func TestResolveModulePath(t *testing.T) {
@@ -92,6 +94,36 @@ func Pay() { order.Do() }
 	}
 }
 
+func TestAnalyze_SkipsGeneratedAndDependencyDirs(t *testing.T) {
+	root := t.TempDir()
+
+	writeFile(t, root, "go.mod", "module example.com/test\n\ngo 1.22\n")
+	writeFile(t, root, "main.go", "package main\nfunc main() {}\n")
+
+	vendorDir := filepath.Join(root, "vendor", "example.com", "dep")
+	if err := os.MkdirAll(vendorDir, 0755); err != nil {
+		t.Fatalf("mkdir vendor: %v", err)
+	}
+	writeFile(t, vendorDir, "dep.go", "package dep\nfunc Do() {}\n")
+
+	codemapDir := filepath.Join(root, ".codemap", "generated")
+	if err := os.MkdirAll(codemapDir, 0755); err != nil {
+		t.Fatalf("mkdir .codemap: %v", err)
+	}
+	writeFile(t, codemapDir, "generated.go", "package generated\nfunc Do() {}\n")
+
+	project, err := New().Analyze(context.Background(), root)
+	if err != nil {
+		t.Fatalf("Analyze: %v", err)
+	}
+	if len(project.Modules) != 1 {
+		t.Fatalf("modules = %+v, want only root module", project.Modules)
+	}
+	if project.Modules[0].Path != "." {
+		t.Fatalf("module path = %q, want .", project.Modules[0].Path)
+	}
+}
+
 func writeFile(t *testing.T, dir, name, content string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0644); err != nil {
@@ -108,6 +140,7 @@ import "net/http"
 func main() {
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {})
 	http.Handle("/api/data", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	http.HandleFunc("GET /ready", func(w http.ResponseWriter, r *http.Request) {})
 }
 `)
 
@@ -117,8 +150,8 @@ func main() {
 		t.Fatalf("Analyze: %v", err)
 	}
 
-	if len(project.Routes) != 2 {
-		t.Fatalf("expected 2 routes, got %d", len(project.Routes))
+	if len(project.Routes) != 3 {
+		t.Fatalf("expected 3 routes, got %d", len(project.Routes))
 	}
 
 	paths := make(map[string]bool)
@@ -131,4 +164,93 @@ func main() {
 	if !paths["/api/data"] {
 		t.Error("missing /api/data route")
 	}
+	if !hasGoRoute(project.Routes, "GET", "/ready") {
+		t.Error("missing GET /ready route")
+	}
+}
+
+func TestAnalyze_Routes_CommonGoRouters(t *testing.T) {
+	root := t.TempDir()
+
+	writeFile(t, root, "go.mod", "module example.com/api\n\ngo 1.22\n")
+	writeFile(t, root, "main.go", `package main
+import "net/http"
+
+type Router struct{}
+func (Router) Get(string, any) {}
+func (Router) Post(string, any) {}
+func (Router) MethodFunc(string, string, any) {}
+func (Router) Register(string, string, any) {}
+func (Router) Handle(string, string, any) {}
+func (Router) Group(string) Router { return Router{} }
+func (Router) PathPrefix(string) Router { return Router{} }
+func (Router) Subrouter() Router { return Router{} }
+func (Router) HandleFunc(string, any) Router { return Router{} }
+func (Router) Methods(...string) Router { return Router{} }
+
+func listUsers(w http.ResponseWriter, r *http.Request) {}
+func createUser(w http.ResponseWriter, r *http.Request) {}
+func deleteUser(w http.ResponseWriter, r *http.Request) {}
+func getAdmin(w http.ResponseWriter, r *http.Request) {}
+func updateUser(w http.ResponseWriter, r *http.Request) {}
+func listTeams(w http.ResponseWriter, r *http.Request) {}
+func patchTeam(w http.ResponseWriter, r *http.Request) {}
+
+func main() {
+	const usersPath = "/users"
+	r := Router{}
+	api := r.Group("/api")
+	api.Get(usersPath, listUsers)
+	api.Post(usersPath, createUser)
+	r.MethodFunc(http.MethodDelete, "/users/{id}", deleteUser)
+	r.Register("PUT", "/users/{id}", updateUser)
+	r.HandleFunc("/teams", listTeams).Methods(http.MethodGet, "POST")
+	r.Handle("PATCH", "/teams/{id}", patchTeam)
+
+	admin := r.PathPrefix("/admin").Subrouter()
+	admin.Get("/stats", getAdmin)
+}
+`)
+
+	a := New()
+	project, err := a.Analyze(context.Background(), root)
+	if err != nil {
+		t.Fatalf("Analyze: %v", err)
+	}
+
+	tests := []struct {
+		method string
+		path   string
+	}{
+		{"GET", "/api/users"},
+		{"POST", "/api/users"},
+		{"DELETE", "/users/{id}"},
+		{"PUT", "/users/{id}"},
+		{"GET", "/teams"},
+		{"POST", "/teams"},
+		{"PATCH", "/teams/{id}"},
+		{"GET", "/admin/stats"},
+	}
+	for _, tt := range tests {
+		if !hasGoRoute(project.Routes, tt.method, tt.path) {
+			t.Errorf("missing %s %s; routes=%v", tt.method, tt.path, goRouteStrings(project.Routes))
+		}
+	}
+}
+
+func hasGoRoute(routes []*model.Route, method, path string) bool {
+	for _, r := range routes {
+		if r.Method == method && r.Path == path {
+			return true
+		}
+	}
+	return false
+}
+
+func goRouteStrings(routes []*model.Route) []string {
+	result := make([]string, 0, len(routes))
+	for _, r := range routes {
+		result = append(result, r.Method+" "+r.Path)
+	}
+	return result
 }

@@ -3,6 +3,8 @@ package storage
 import "github.com/disturb-yy/codemap/internal/model"
 
 type Repository interface {
+	Reset() error
+
 	SaveModule(m *model.Module) error
 	FindModule(name string) (*model.Module, error)
 	SearchModule(query string) ([]*model.Module, error)

@@ -17,6 +17,39 @@ func NewRepository(db *sql.DB) *Repository {
 	return &Repository{db: db}
 }
 
+func (r *Repository) Reset() error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("reset begin tx: %w", err)
+	}
+	defer tx.Rollback()
+
+	tables := []string{
+		"navigation_hint",
+		"feature_flow",
+		"feature_route",
+		"feature_module",
+		"feature",
+		"call_edge",
+		"flow_step",
+		"flow",
+		"route",
+		"module_key_interface",
+		"module_exported_method",
+		"module_exported_func",
+		"module_exported_type",
+		"module_dependency",
+		"module",
+	}
+	for _, table := range tables {
+		if _, err := tx.Exec("DELETE FROM " + table); err != nil {
+			return fmt.Errorf("reset table %s: %w", table, err)
+		}
+	}
+
+	return tx.Commit()
+}
+
 func (r *Repository) SaveModule(m *model.Module) error {
 	tx, err := r.db.Begin()
 	if err != nil {

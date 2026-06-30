@@ -108,3 +108,56 @@ func TestSaveModule_EmptyDependencies(t *testing.T) {
 		t.Errorf("expected empty deps, got %v", got.Dependencies)
 	}
 }
+
+func TestResetClearsIndexedFacts(t *testing.T) {
+	repo := newTestRepo(t)
+
+	if err := repo.SaveModule(&model.Module{Name: "order", Path: "internal/order", Dependencies: []string{"internal/payment"}}); err != nil {
+		t.Fatalf("SaveModule: %v", err)
+	}
+	if err := repo.SaveRoute(&model.Route{Method: "POST", Path: "/orders", Handler: "internal/order.Create", Module: "internal/order"}); err != nil {
+		t.Fatalf("SaveRoute: %v", err)
+	}
+	if err := repo.SaveFlow(&model.Flow{ID: "order_to_payment", Name: "order calls payment", Trigger: "internal/order", Steps: []string{"internal/order -> internal/payment"}}); err != nil {
+		t.Fatalf("SaveFlow: %v", err)
+	}
+	if err := repo.SaveCallEdge(&model.CallEdge{CallerModule: "internal/order", CallerFunc: "Create", CalleeModule: "internal/payment", CalleeFunc: "Charge"}); err != nil {
+		t.Fatalf("SaveCallEdge: %v", err)
+	}
+
+	if err := repo.Reset(); err != nil {
+		t.Fatalf("Reset: %v", err)
+	}
+
+	modules, err := repo.SearchModule("")
+	if err != nil {
+		t.Fatalf("SearchModule: %v", err)
+	}
+	if len(modules) != 0 {
+		t.Fatalf("modules after reset = %v, want empty", modules)
+	}
+
+	routes, err := repo.FindRoutes("")
+	if err != nil {
+		t.Fatalf("FindRoutes: %v", err)
+	}
+	if len(routes) != 0 {
+		t.Fatalf("routes after reset = %v, want empty", routes)
+	}
+
+	flows, err := repo.SearchFlow("")
+	if err != nil {
+		t.Fatalf("SearchFlow: %v", err)
+	}
+	if len(flows) != 0 {
+		t.Fatalf("flows after reset = %v, want empty", flows)
+	}
+
+	edges, err := repo.FindCallees("internal/order")
+	if err != nil {
+		t.Fatalf("FindCallees: %v", err)
+	}
+	if len(edges) != 0 {
+		t.Fatalf("call edges after reset = %v, want empty", edges)
+	}
+}

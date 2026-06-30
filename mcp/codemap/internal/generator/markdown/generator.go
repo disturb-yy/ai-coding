@@ -28,6 +28,9 @@ func Generate(repo storage.Repository, root string) error {
 		filepath.Join(out, "flows"),
 		filepath.Join(out, "callgraph"),
 	}
+	if err := cleanGeneratedDirs(dirs); err != nil {
+		return err
+	}
 	for _, d := range dirs {
 		if err := os.MkdirAll(d, 0755); err != nil {
 			return fmt.Errorf("mkdir %s: %w", d, err)
@@ -51,6 +54,15 @@ func Generate(repo storage.Repository, root string) error {
 	}
 	if err := writeCallGraph(repo, out); err != nil {
 		return err
+	}
+	return nil
+}
+
+func cleanGeneratedDirs(dirs []string) error {
+	for _, d := range dirs {
+		if err := os.RemoveAll(d); err != nil {
+			return fmt.Errorf("clean %s: %w", d, err)
+		}
 	}
 	return nil
 }
