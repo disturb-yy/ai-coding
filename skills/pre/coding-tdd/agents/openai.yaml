@@ -1,0 +1,4 @@
+interface:
+  display_name: "Coding TDD"
+  short_description: "Test-first coding workflow with coding-project implementation"
+  default_prompt: "Use $coding-tdd for this test-first coding task. Write one focused failing behavior test, use $coding-project for the smallest language-aware implementation, validate, refactor only while green, and finish with entry-to-output verification when applicable."
