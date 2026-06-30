@@ -1,0 +1,4 @@
+interface:
+  display_name: "Gen Index"
+  short_description: "Generate .agent indexes from .codemap facts"
+  default_prompt: "Use $gen-index to generate or update .agent/PROJECT_INDEX.md and companion agent indexes from .codemap facts, source code, and human-maintained docs."
