@@ -187,6 +187,7 @@ func (Router) PathPrefix(string) Router { return Router{} }
 func (Router) Subrouter() Router { return Router{} }
 func (Router) HandleFunc(string, any) Router { return Router{} }
 func (Router) Methods(...string) Router { return Router{} }
+func (Router) To(any) Router { return Router{} }
 
 func listUsers(w http.ResponseWriter, r *http.Request) {}
 func createUser(w http.ResponseWriter, r *http.Request) {}
@@ -195,6 +196,7 @@ func getAdmin(w http.ResponseWriter, r *http.Request) {}
 func updateUser(w http.ResponseWriter, r *http.Request) {}
 func listTeams(w http.ResponseWriter, r *http.Request) {}
 func patchTeam(w http.ResponseWriter, r *http.Request) {}
+func getProfile(w http.ResponseWriter, r *http.Request) {}
 
 func main() {
 	const usersPath = "/users"
@@ -202,6 +204,7 @@ func main() {
 	api := r.Group("/api")
 	api.Get(usersPath, listUsers)
 	api.Post(usersPath, createUser)
+	api.Get("/profile").To(getProfile)
 	r.MethodFunc(http.MethodDelete, "/users/{id}", deleteUser)
 	r.Register("PUT", "/users/{id}", updateUser)
 	r.HandleFunc("/teams", listTeams).Methods(http.MethodGet, "POST")
@@ -224,6 +227,7 @@ func main() {
 	}{
 		{"GET", "/api/users"},
 		{"POST", "/api/users"},
+		{"GET", "/api/profile"},
 		{"DELETE", "/users/{id}"},
 		{"PUT", "/users/{id}"},
 		{"GET", "/teams"},

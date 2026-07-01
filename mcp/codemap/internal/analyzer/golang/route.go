@@ -57,6 +57,11 @@ func matchRouteCalls(call *ast.CallExpr, modulePath, receiverName string, ctx ro
 		return matchChainedMethods(call, modulePath, receiverName, ctx)
 	}
 
+	// go-restful/custom: route.GET("/path").To(handler)
+	if method == "To" {
+		return matchChainedTo(call, modulePath, receiverName, ctx)
+	}
+
 	// chi/gorilla/custom: Method("GET", "/path", handler), Handle(http.MethodPost, "/path", handler)
 	if len(call.Args) >= 3 {
 		if httpMethod := methodName(call.Args[0], ctx.strings); httpMethod != "" {
@@ -110,6 +115,38 @@ func matchRouteCalls(call *ast.CallExpr, modulePath, receiverName string, ctx ro
 	}
 
 	return nil
+}
+
+func matchChainedTo(call *ast.CallExpr, modulePath, receiverName string, ctx routeContext) []*model.Route {
+	if len(call.Args) == 0 {
+		return nil
+	}
+	sel := call.Fun.(*ast.SelectorExpr)
+	baseCall, ok := sel.X.(*ast.CallExpr)
+	if !ok {
+		return nil
+	}
+	baseSel, ok := baseCall.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return nil
+	}
+	httpMethod, ok := routeMethodFromSelector(baseSel.Sel.Name)
+	if !ok {
+		return nil
+	}
+	if len(baseCall.Args) == 0 {
+		return nil
+	}
+	path := stringValue(baseCall.Args[0], ctx.strings)
+	if path == "" {
+		return nil
+	}
+	return []*model.Route{{
+		Path:    joinRoutePath(receiverPrefix(baseSel.X, ctx.prefixes), path),
+		Method:  httpMethod,
+		Handler: handlerName(call.Args[0], modulePath, receiverName),
+		Module:  modulePath,
+	}}
 }
 
 func matchChainedMethods(call *ast.CallExpr, modulePath, receiverName string, ctx routeContext) []*model.Route {
