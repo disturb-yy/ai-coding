@@ -1,0 +1,7 @@
+{
+  "id": "jinx-arcane2",
+  "displayName": "Jinx-Arcane2",
+  "description": "A Codex pet version of Chibi Shattered Jinx from Arcane 2.",
+  "spritesheetPath": "spritesheet.webp",
+  "kind": "person"
+}

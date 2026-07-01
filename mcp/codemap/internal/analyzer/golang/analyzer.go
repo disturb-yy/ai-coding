@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	baseanalyzer "github.com/disturb-yy/codemap/internal/analyzer"
 	"github.com/disturb-yy/codemap/internal/model"
 )
 
@@ -45,6 +46,9 @@ func (a *Analyzer) Analyze(ctx context.Context, root string) (*model.Project, er
 			return ctx.Err()
 		default:
 		}
+		if baseanalyzer.ShouldSkipDir(info) {
+			return filepath.SkipDir
+		}
 		if info.IsDir() || filepath.Ext(path) != ".go" {
 			return nil
 		}
@@ -67,6 +71,9 @@ func (a *Analyzer) Analyze(ctx context.Context, root string) (*model.Project, er
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
+		}
+		if baseanalyzer.ShouldSkipDir(info) {
+			return filepath.SkipDir
 		}
 		if info.IsDir() || filepath.Ext(path) != ".go" {
 			return nil
