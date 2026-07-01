@@ -1,0 +1,77 @@
+{
+  "workflow_id": "java-analysis-20260624",
+  "request": "完善 Java 分析功能，使其接近已实现的 Go 分析能力",
+  "phases": [
+    {
+      "name": "Requirement Analysis",
+      "confidence": 0.82,
+      "selected_skill": "none",
+      "execution_mode": "direct",
+      "artifact": "summary.json",
+      "status": "completed",
+      "notes": "用户要求补齐 Java analyzer；目标聚焦模块、依赖、路由、调用边、flow。"
+    },
+    {
+      "name": "Project Understanding",
+      "confidence": 0.8,
+      "selected_skill": "none",
+      "execution_mode": "direct",
+      "artifact": "summary.json",
+      "status": "completed",
+      "notes": "未发现可调用 Codemap/Understand 工具；通过源码阅读比较 Go analyzer、Java analyzer、MCP 和 Markdown 消费侧。"
+    },
+    {
+      "name": "Solution Design",
+      "confidence": 0.78,
+      "selected_skill": "none",
+      "execution_mode": "direct",
+      "artifact": "summary.json",
+      "status": "completed",
+      "notes": "采用无外部依赖的两阶段轻量 Java 扫描：先建包/类/模块索引，再提取导入依赖、Spring 路由、调用边和 flow。"
+    },
+    {
+      "name": "Implementation",
+      "confidence": 0.86,
+      "selected_skill": "none",
+      "execution_mode": "direct",
+      "artifact": "summary.json",
+      "status": "completed",
+      "notes": "重写 internal/analyzer/java/analyzer.go；新增 internal/analyzer/java/analyzer_test.go。"
+    },
+    {
+      "name": "Testing",
+      "confidence": 0.9,
+      "selected_skill": "none",
+      "execution_mode": "direct",
+      "artifact": "summary.json",
+      "status": "completed",
+      "notes": "在 Windows 本地临时副本执行 go test ./internal/analyzer/java 和 go test ./...。"
+    },
+    {
+      "name": "Verification",
+      "confidence": 0.88,
+      "selected_skill": "none",
+      "execution_mode": "direct",
+      "artifact": "summary.json",
+      "status": "completed",
+      "notes": "全量测试通过；UNC 路径和 WSL 进程限制导致不能直接在原路径执行测试，已用本地临时副本验证相同代码。"
+    },
+    {
+      "name": "Summary",
+      "confidence": 0.86,
+      "selected_skill": "none",
+      "execution_mode": "direct",
+      "artifact": "summary.json",
+      "status": "completed",
+      "notes": "Java analyzer 现在支持模块导出、内部依赖、Spring 路由、跨模块/本地调用边和 flow 派生。"
+    }
+  ],
+  "verification": {
+    "commands": [
+      "go test ./internal/analyzer/java",
+      "go test ./..."
+    ],
+    "result": "passed",
+    "execution_note": "Commands were run from a Windows local temp copy because Go fails to lock go.mod on \\\\wsl.localhost and WSL hit errno=11 process limits."
+  }
+}
