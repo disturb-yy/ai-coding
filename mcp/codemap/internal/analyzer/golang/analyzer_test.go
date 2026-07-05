@@ -141,7 +141,10 @@ func main() {
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {})
 	http.Handle("/api/data", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	http.HandleFunc("GET /ready", func(w http.ResponseWriter, r *http.Request) {})
+	v1 := service.NewRouteGroup("/api/v1").Authentication(true).AppTOkenRequired(true)
+	v1.POST("/auth/login").To(Login)
 }
+func Login() {}
 `)
 
 	a := New()
@@ -150,8 +153,8 @@ func main() {
 		t.Fatalf("Analyze: %v", err)
 	}
 
-	if len(project.Routes) != 3 {
-		t.Fatalf("expected 3 routes, got %d", len(project.Routes))
+	if len(project.Routes) != 4 {
+		t.Fatalf("expected 4 routes, got %d", len(project.Routes))
 	}
 
 	paths := make(map[string]bool)
@@ -166,6 +169,9 @@ func main() {
 	}
 	if !hasGoRoute(project.Routes, "GET", "/ready") {
 		t.Error("missing GET /ready route")
+	}
+	if !hasGoRoute(project.Routes, "POST", "/api/v1/auth/login") {
+		t.Error("missing POST /api/v1/auth/login route")
 	}
 }
 

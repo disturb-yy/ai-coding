@@ -230,6 +230,11 @@ func routePrefixFromExpr(expr ast.Expr, ctx routeContext) string {
 		return ""
 	}
 	switch sel.Sel.Name {
+	case "NewRouteGroup":
+		if len(call.Args) == 0 {
+			return ""
+		}
+		return stringValue(call.Args[0], ctx.strings)
 	case "Group", "GroupPrefix", "Route", "Path", "PathPrefix", "Prefix":
 		if len(call.Args) == 0 {
 			return ""
@@ -242,7 +247,7 @@ func routePrefixFromExpr(expr ast.Expr, ctx routeContext) string {
 	case "Subrouter":
 		return routePrefixFromExpr(sel.X, ctx)
 	default:
-		return ""
+		return routePrefixFromExpr(sel.X, ctx)
 	}
 }
 
