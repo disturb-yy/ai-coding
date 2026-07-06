@@ -18,31 +18,46 @@ import (
 	"github.com/disturb-yy/codemap/internal/generator/markdown"
 	"github.com/disturb-yy/codemap/internal/mcp"
 	"github.com/disturb-yy/codemap/internal/storage/sqlite"
+	"github.com/disturb-yy/codemap/internal/workspace"
 )
 
 func main() {
 	serve := flag.Bool("serve", false, "Start MCP server (reads .codemap/codemap.db)")
+	workspaceMode := flag.Bool("workspace", false, "Start workspace-aware MCP server for child projects")
 	project := flag.String("project", ".", "Project root directory")
 	flag.Parse()
 
-	codemapDir := filepath.Join(*project, ".codemap")
+	projectRoot, err := resolveProjectRootForMode(*project, *serve && *workspaceMode)
+	if err != nil {
+		log.Fatalf("resolve project root: %v", err)
+	}
+
+	codemapDir := filepath.Join(projectRoot, ".codemap")
 
 	if *serve {
-		absProject, err := filepath.Abs(*project)
-		if err != nil {
-			log.Fatalf("resolve project path: %v", err)
+		if *workspaceMode {
+			registry, err := workspace.New(projectRoot)
+			if err != nil {
+				log.Fatalf("open workspace: %v", err)
+			}
+			defer registry.Close()
+			if err := mcp.ServeWorkspace(registry); err != nil {
+				log.Fatal(err)
+			}
+			return
 		}
-		if err := os.MkdirAll(filepath.Join(absProject, ".codemap"), 0755); err != nil {
+
+		if err := os.MkdirAll(codemapDir, 0755); err != nil {
 			log.Fatalf("mkdir .codemap: %v", err)
 		}
-		lockPath := filepath.Join(absProject, ".codemap", "server.lock")
+		lockPath := filepath.Join(codemapDir, "server.lock")
 		unlock, err := acquireLock(lockPath)
 		if err != nil {
 			log.Fatalf("acquire lock: %v", err)
 		}
 		defer unlock()
 
-		dbPath := filepath.Join(absProject, ".codemap", "codemap.db")
+		dbPath := filepath.Join(codemapDir, "codemap.db")
 		db, err := sqlite.Open(dbPath)
 		if err != nil {
 			log.Fatalf("open db: %v (run 'codemap' first to build index)", err)
@@ -50,18 +65,18 @@ func main() {
 		defer db.Close()
 
 		repo := sqlite.NewRepository(db)
-		projectName := filepath.Base(absProject)
-		if err := mcp.Serve(repo, projectName, absProject); err != nil {
+		projectName := filepath.Base(projectRoot)
+		if err := mcp.Serve(repo, projectName, projectRoot); err != nil {
 			log.Fatal(err)
 		}
 		return
 	}
 
-	lang := detectLanguage(*project)
+	lang := detectLanguage(projectRoot)
 	fmt.Printf("Language: %s\n", lang)
 	a := newAnalyzer(lang)
 
-	proj, err := a.Analyze(context.Background(), *project)
+	proj, err := a.Analyze(context.Background(), projectRoot)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -105,11 +120,11 @@ func main() {
 	fmt.Printf("Project: %s (%d modules, %d routes, %d flows, %d call edges saved)\n",
 		proj.Name, len(proj.Modules), len(proj.Routes), len(proj.Flows), len(proj.CallEdges))
 
-	if err := markdown.Generate(repo, *project); err != nil {
+	if err := markdown.Generate(repo, projectRoot); err != nil {
 		log.Fatalf("generate markdown: %v", err)
 	}
 
-	ensureGitignore(*project)
+	ensureGitignore(projectRoot)
 
 	fmt.Printf("Docs: %s\n", filepath.Join(codemapDir, "INDEX.md"))
 
@@ -147,6 +162,69 @@ func newAnalyzer(lang string) analyzer.Analyzer {
 	default:
 		return golang.New()
 	}
+}
+
+func resolveProjectRootForMode(path string, workspaceMode bool) (string, error) {
+	if workspaceMode {
+		return resolveWorkspaceRoot(path)
+	}
+	return resolveProjectRoot(path)
+}
+
+func resolveWorkspaceRoot(path string) (string, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	info, err := os.Stat(abs)
+	if err != nil {
+		return "", err
+	}
+	if !info.IsDir() {
+		return filepath.Dir(abs), nil
+	}
+	return abs, nil
+}
+
+func resolveProjectRoot(path string) (string, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	info, err := os.Stat(abs)
+	if err != nil {
+		return "", err
+	}
+	if !info.IsDir() {
+		abs = filepath.Dir(abs)
+	}
+
+	for dir := abs; ; dir = filepath.Dir(dir) {
+		if hasProjectMarker(dir) {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return abs, nil
+		}
+	}
+}
+
+func hasProjectMarker(dir string) bool {
+	markers := []string{
+		filepath.Join(".codemap", "codemap.db"),
+		"go.mod",
+		"pom.xml",
+		"build.gradle",
+		"settings.gradle",
+		".git",
+	}
+	for _, marker := range markers {
+		if _, err := os.Stat(filepath.Join(dir, marker)); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 func acquireLock(path string) (func(), error) {

@@ -365,9 +365,15 @@ func handlerName(expr ast.Expr, modulePath, receiverName string) string {
 		return fmt.Sprintf("%s/%s.%s", modulePath, receiverName, e.Name)
 	case *ast.SelectorExpr:
 		return fmt.Sprintf("%s/%s.%s", modulePath, receiverName, e.Sel.Name)
+	case *ast.CallExpr:
+		for i := len(e.Args) - 1; i >= 0; i-- {
+			switch e.Args[i].(type) {
+			case *ast.Ident, *ast.SelectorExpr, *ast.FuncLit, *ast.CallExpr:
+				return handlerName(e.Args[i], modulePath, receiverName)
+			}
+		}
 	case *ast.FuncLit:
 		return fmt.Sprintf("%s/%s.anonymous", modulePath, receiverName)
-	default:
-		return fmt.Sprintf("%s/%s.unknown", modulePath, receiverName)
 	}
+	return fmt.Sprintf("%s/%s.unknown", modulePath, receiverName)
 }

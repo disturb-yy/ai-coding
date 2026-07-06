@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/disturb-yy/codemap/internal/model"
@@ -142,7 +143,7 @@ func main() {
 	http.Handle("/api/data", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	http.HandleFunc("GET /ready", func(w http.ResponseWriter, r *http.Request) {})
 	v1 := service.NewRouteGroup("/api/v1").Authentication(true).AppTOkenRequired(true)
-	v1.POST("/auth/login").To(Login)
+	v1.POST("/auth/login").To(Filter(registerApi.Login))
 }
 func Login() {}
 `)
@@ -172,6 +173,9 @@ func Login() {}
 	}
 	if !hasGoRoute(project.Routes, "POST", "/api/v1/auth/login") {
 		t.Error("missing POST /api/v1/auth/login route")
+	}
+	if !hasGoRouteHandler(project.Routes, "POST", "/api/v1/auth/login", ".Login") {
+		t.Errorf("missing Login handler for POST /api/v1/auth/login; routes=%v", goRouteStrings(project.Routes))
 	}
 }
 
@@ -257,10 +261,19 @@ func hasGoRoute(routes []*model.Route, method, path string) bool {
 	return false
 }
 
+func hasGoRouteHandler(routes []*model.Route, method, path, handlerSuffix string) bool {
+	for _, r := range routes {
+		if r.Method == method && r.Path == path && strings.HasSuffix(r.Handler, handlerSuffix) {
+			return true
+		}
+	}
+	return false
+}
+
 func goRouteStrings(routes []*model.Route) []string {
 	result := make([]string, 0, len(routes))
 	for _, r := range routes {
-		result = append(result, r.Method+" "+r.Path)
+		result = append(result, r.Method+" "+r.Path+" -> "+r.Handler)
 	}
 	return result
 }
