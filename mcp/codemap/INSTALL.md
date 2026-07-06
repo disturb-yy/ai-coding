@@ -22,6 +22,45 @@ sudo mv codemap /usr/local/bin/
 mkdir -p ~/.local/bin && mv codemap ~/.local/bin/
 ```
 
+### 1.1 Agent-Assisted Install
+
+If you are already using OpenCode, Codex, or another coding agent inside this
+repository, you can ask the agent to install CodeMap for you.
+
+For OpenCode single-project mode, give the agent this instruction:
+
+```text
+Build CodeMap from the current repository, install it to
+~/tool/ai-coding/mcp/codemap, chmod it executable, and update OpenCode so the
+codemap MCP command is ["~/tool/ai-coding/mcp/codemap", "--serve"]. Do not add
+-project; use the directory where OpenCode starts.
+```
+
+For OpenCode workspace mode:
+
+```text
+Build CodeMap from the current repository, install it to
+~/tool/ai-coding/mcp/codemap, chmod it executable, and update OpenCode so the
+codemap MCP command is ["~/tool/ai-coding/mcp/codemap", "--serve", "--workspace"].
+Do not add -project; use the directory where OpenCode starts as the workspace root.
+```
+
+For Codex, ask the agent to install the binary and update `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.codemap]
+command = "/home/you/tool/ai-coding/mcp/codemap"
+args = ["--serve"]
+```
+
+For Codex workspace mode:
+
+```toml
+args = ["--serve", "--workspace"]
+```
+
+Restart the agent session after editing MCP configuration.
+
 ---
 
 ## 2. Index a Project
@@ -115,6 +154,36 @@ Add to `.opencode/mcp.json` in your project root:
   }
 }
 ```
+
+Use the repository root as `-project`. CodeMap normalizes subdirectories back to
+the nearest project root (`.codemap/codemap.db`, `go.mod`, Java build files, or
+`.git`), so OpenCode web sessions started from different working directories
+share the same `.codemap/server.lock` instead of creating separate CodeMap roots.
+
+For a workspace that contains multiple child projects, such as `/projects/auth`
+and `/projects/login`, index each child project first:
+
+```bash
+codemap -project /projects/auth
+codemap -project /projects/login
+```
+
+Then expose one workspace-aware MCP server:
+
+```json
+{
+  "mcpServers": {
+    "codemap": {
+      "command": "/usr/local/bin/codemap",
+      "args": ["-project", "/projects", "--serve", "--workspace"]
+    }
+  }
+}
+```
+
+Workspace tools add an optional `project` argument. When the user mentions a
+child service such as `auth`, agents should pass `"project": "auth"`; if the
+query text contains the child project name, CodeMap can also infer it.
 
 ### 3.4 Claude Desktop
 
@@ -366,6 +435,11 @@ If the server crashed, delete the lock file manually:
 ```bash
 rm .codemap/server.lock
 ```
+
+For OpenCode, make sure every session uses the same repository root in
+`.opencode/mcp.json`. Relative paths can resolve differently depending on the
+session working directory; CodeMap will normalize subdirectories when possible,
+but an absolute repository path is still the most predictable configuration.
 
 ### Index hangs or is slow
 
