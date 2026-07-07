@@ -16,6 +16,8 @@ Before work begins, decide whether the orchestrator should:
 - run final verification directly
 - synthesize terminal specialist outputs
 
+For Large implementation work, the orchestrator must not write implementation files by default. It may only do so after stating why direct implementation is safer than delegation.
+
 Completion criterion: the orchestrator owns coordination and verification; specialists own bounded work when delegation adds clear value.
 
 ## Dependency Graph
@@ -35,6 +37,8 @@ Completion criterion: no task is delegated without knowing whether it is indepen
 Every delegated task must be self-contained:
 
 ```yaml
+role: ""
+phase: context | design | implementation | review | verification
 objective: ""
 constraints: []
 required_skills:
@@ -42,6 +46,14 @@ required_skills:
     source: available_skill # available_skill | file_path | repo_skill | none
     path: ""
     required: true
+    reason: ""
+required_mcp:
+  - name: ""
+    required: false
+    reason: ""
+required_tools:
+  - name: ""
+    required: false
     reason: ""
 search_scope: []
 ownership:
@@ -54,13 +66,15 @@ expected_output:
   required_fields: []
   must_report:
     - skills_loaded
+    - mcp_used
+    - tools_used
     - skill_instructions_followed
     - deviations
 validation: []
-what_not_to_do: []
+stop_if: []
 ```
 
-Completion criterion: the specialist can work without guessing scope, permissions, required skills, expected output, or validation.
+Completion criterion: the specialist can work without guessing role, phase, scope, permissions, required skills, required MCP/tools, expected output, stop conditions, or validation.
 
 ## Skill Routing
 
@@ -76,6 +90,20 @@ Rules:
 - Require the specialist to report `skills_loaded`, whether instructions were followed, and any deviations.
 
 Completion criterion: every delegated task that depends on specialized procedure names the skill, its source, why it is needed, and how the orchestrator will confirm it was used.
+
+## MCP and Tool Routing
+
+When a specialist depends on a connector, MCP server, code navigation tool, search tool, browser, build tool, or framework command, declare it in `required_mcp` or `required_tools`.
+
+Rules:
+
+- Use `required_mcp` for named MCP/connectors such as GitHub, CodeMap, Graphify, web readers, issue trackers, or database tools.
+- Use `required_tools` for shell commands, language tooling, test runners, formatters, package managers, browsers, or local CLIs.
+- Mark `required: true` when skipping the capability would materially change correctness.
+- Require the specialist to report `mcp_used`, `tools_used`, and deviations.
+- If the required capability is unavailable, the specialist must stop instead of substituting an unapproved path.
+
+Completion criterion: every delegated task that depends on external capability names the capability, why it is needed, and how the orchestrator will confirm it was used.
 
 ## Ownership Boundaries
 
@@ -99,10 +127,15 @@ Track delegated work as a small job board:
 tasks:
   - id: ""
     specialist: ""
+    phase: ""
     objective: ""
     state: running # running | completed | error | cancelled | timed_out
     required_skills: []
     skills_confirmed: []
+    required_mcp: []
+    mcp_confirmed: []
+    required_tools: []
+    tools_confirmed: []
     ownership:
       files: []
       areas: []
@@ -132,11 +165,12 @@ When a task completes:
 1. Compare the result against the original user goal.
 2. Check conflicts with other task outputs.
 3. Check whether required skills were loaded and whether deviations are justified.
-4. Decide whether to accept, revise, reject, or dispatch follow-up work.
-5. Update the task board.
-6. Preserve useful decisions in the next handoff.
+4. Check whether required MCP/tools were used and whether deviations are justified.
+5. Decide whether to accept, revise, reject, or dispatch follow-up work.
+6. Update the task board.
+7. Preserve useful decisions in the next handoff.
 
-Completion criterion: final work does not rely on unreviewed specialist output or unverified required-skill use.
+Completion criterion: final work does not rely on unreviewed specialist output, unverified required-skill use, or unverified required-capability use.
 
 ## Conservative Reflection
 
@@ -157,6 +191,7 @@ Before final response:
 
 - all required tasks are terminal
 - dependent work consumed the outputs it waited for
+- required skills, MCP, and tools were confirmed or deviations were accepted explicitly
 - file ownership conflicts are resolved
 - relevant checks ran, or skipped checks are explained
 - residual risks are explicit

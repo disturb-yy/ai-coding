@@ -95,6 +95,8 @@ Exit when every slice has gone failing test -> minimal implementation -> green -
 ### Requirements Clarification
 
 ```yaml
+role: requirements_interviewer
+phase: context
 objective: "Clarify the user requirement until it is implementable."
 required_skills:
   - name: grilling
@@ -102,6 +104,8 @@ required_skills:
     path: /home/jadon/tool/ai-coding/skills/model-skill/grilling/SKILL.md
     required: true
     reason: "Requirements still affect the implementation route and need one-question-at-a-time clarification."
+required_mcp: []
+required_tools: []
 edits_allowed: false
 expected_output:
   format: clarification_state
@@ -112,13 +116,19 @@ expected_output:
     - open_questions
   must_report:
     - skills_loaded
+    - mcp_used
+    - tools_used
     - skill_instructions_followed
     - deviations
+stop_if:
+  - "The repository or source artifacts can answer the question better than the user."
 ```
 
 ### Problem Framing
 
 ```yaml
+role: problem_framer
+phase: context
 objective: "Frame the problem and produce a handoff."
 required_skills:
   - name: diagnosing-problem
@@ -126,6 +136,8 @@ required_skills:
     path: /home/jadon/tool/ai-coding/skills/model-skill/diagnosing-problem/SKILL.md
     required: true
     reason: "The task needs selected interpretation, assumptions, evidence standard, and handoff before execution."
+required_mcp: []
+required_tools: []
 edits_allowed: false
 expected_output:
   format: problem_framing
@@ -138,13 +150,19 @@ expected_output:
     - handoff
   must_report:
     - skills_loaded
+    - mcp_used
+    - tools_used
     - skill_instructions_followed
     - deviations
+stop_if:
+  - "The task becomes concrete implementation before the problem frame is accepted."
 ```
 
 ### Project Exploration
 
 ```yaml
+role: codebase_explorer
+phase: context
 objective: "Locate entry points, call chain, candidate change points, and nearby tests."
 required_skills:
   - name: exploring-project
@@ -152,6 +170,14 @@ required_skills:
     path: /home/jadon/tool/ai-coding/skills/model-skill/exploring-project/SKILL.md
     required: true
     reason: "The project path and safe edit boundary must be verified before coding."
+required_mcp:
+  - name: CodeMap or Graphify
+    required: false
+    reason: "Use when available for architecture, call-chain, or cross-area navigation."
+required_tools:
+  - name: rg
+    required: true
+    reason: "Fast source search is required to verify candidate files and flows."
 edits_allowed: false
 expected_output:
   format: change_point_report
@@ -164,13 +190,19 @@ expected_output:
     - next_change_location
   must_report:
     - skills_loaded
+    - mcp_used
+    - tools_used
     - skill_instructions_followed
     - deviations
+stop_if:
+  - "Implementation is requested before candidate files, flows, risks, and tests are verified."
 ```
 
 ### Ordinary Implementation
 
 ```yaml
+role: implementation_worker
+phase: implementation
 objective: "Implement the confirmed code change and run validation."
 required_skills:
   - name: coding-project
@@ -178,6 +210,11 @@ required_skills:
     path: /home/jadon/tool/ai-coding/skills/model-skill/coding-project/SKILL.md
     required: true
     reason: "Existing repository code must be changed using language, project convention, and validation rules."
+required_mcp: []
+required_tools:
+  - name: project test/build commands
+    required: true
+    reason: "Validation must use the target project's own tooling."
 edits_allowed: true
 ownership:
   writable_paths: []
@@ -192,13 +229,21 @@ expected_output:
     - residual_risks
   must_report:
     - skills_loaded
+    - mcp_used
+    - tools_used
     - skill_instructions_followed
     - deviations
+stop_if:
+  - "Required skills or validation tools are unavailable."
+  - "The change requires files outside ownership."
+  - "Architecture, schema, migration, auth, payment, deployment, or user-visible behavior risk appears outside the contract."
 ```
 
 ### TDD Implementation
 
 ```yaml
+role: tdd_worker
+phase: implementation
 objective: "Complete one visible behavior or small module with TDD."
 required_skills:
   - name: coding-tdd
@@ -206,6 +251,11 @@ required_skills:
     path: /home/jadon/tool/ai-coding/skills/model-skill/coding-tdd/SKILL.md
     required: true
     reason: "The user requested test-first or red-green-refactor; the TDD loop must be protected."
+required_mcp: []
+required_tools:
+  - name: project test commands
+    required: true
+    reason: "The red-green-refactor loop needs executable tests."
 edits_allowed: true
 ownership:
   writable_paths: []
@@ -221,8 +271,14 @@ expected_output:
     - final_entry_to_output_check
   must_report:
     - skills_loaded
+    - mcp_used
+    - tools_used
     - skill_instructions_followed
     - deviations
+stop_if:
+  - "A failing test cannot be made red for the intended behavior."
+  - "The implementation scope expands beyond one behavior slice."
+  - "Required validation tooling is unavailable."
 ```
 
 ## Parallelization Rules
@@ -238,6 +294,7 @@ expected_output:
 Before accepting specialist output, check:
 
 - `skills_loaded` includes every `required: true` skill from the task contract.
+- `mcp_used` and `tools_used` include every `required: true` capability from the task contract.
 - `skill_instructions_followed` is reported.
 - Any `deviations` are justified and do not break the task goal.
 - The output includes every `expected_output.required_fields` item.

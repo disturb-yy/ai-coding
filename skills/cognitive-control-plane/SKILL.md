@@ -1,6 +1,6 @@
 ---
 name: cognitive-control-plane
-description: "Control-plane router for complex AI collaboration. Use when process control would materially change the next action: ambiguous context, load-bearing assumptions, a concrete plan that needs challenge, multi-agent or staged handoff, or a deliverable contract for another consumer; also use when another skill needs to route work through context, epistemic, adversarial, output, or orchestration control."
+description: "Control-plane router for complex AI collaboration. Use when process control should decide the next move: unclear context, risky assumptions, plan critique, handoff format, or multi-stage orchestration."
 ---
 
 # Cognitive Control Plane
@@ -74,7 +74,7 @@ Completion criterion: the task can finish without discovering scope, making arch
 
 ### Large
 
-Read [`references/orchestration-state.md`](references/orchestration-state.md) before delegation when any large signal appears:
+Treat the task as Large when any large signal appears:
 
 - ambiguous or broad requirements
 - unknown scope or "first find where this lives"
@@ -88,7 +88,28 @@ Read [`references/orchestration-state.md`](references/orchestration-state.md) be
 
 Uncertainty upgrades the task. Small must be proven; large needs only one signal.
 
-Completion criterion: large or uncertain work has an orchestration state, ownership boundaries, and verification gate before implementation.
+Large classification does not by itself require orchestration state. Route by the active bottleneck first:
+
+- unclear goal, state, constraints, or scope boundary -> Context control
+- risky assumptions, weak evidence, causality, or confidence -> Epistemic control
+- concrete plan, design, architecture, prompt, skill, or implementation approach needs attack -> Adversarial control
+- handoff, implementation contract, machine consumption, or final delivery format -> Output control
+- multiple agents, parallel lanes, background work, staged implementation, persistent state, or delegation contracts -> orchestration state
+
+Completion criterion: large or uncertain work has the control surface or orchestration state needed before implementation; ownership boundaries and verification gates are explicit when they affect correctness.
+
+## Implementation Guard
+
+For Large implementation work, the control-plane agent must not silently become the implementation worker.
+
+Before editing source files, generated artifacts, schemas, migrations, tests, or implementation-facing docs, do one of these:
+
+1. Delegate with a task contract that names the phase, required skills, required MCP/tools, ownership boundaries, validation, and stop conditions.
+2. State why direct implementation is safer than delegation, then switch explicitly from routing to implementation.
+
+This guard does not block minimal routing reads, final verification commands, or tiny local edits that only update the control artifact itself.
+
+Completion criterion: every Large implementation edit is preceded by a visible delegation contract or an explicit direct-implementation exception.
 
 ## Route
 
@@ -101,9 +122,9 @@ Pick the first surface that would materially change the next action:
 
 If multiple surfaces apply, start with the earliest unsatisfied one: Context -> Epistemic -> Adversarial -> Output.
 
-When the next action needs multiple agents, parallel lanes, background work, or staged implementation, read [`references/orchestration-state.md`](references/orchestration-state.md). It is the runtime layer for scheduler-first execution, task contracts, ownership boundaries, persistent state, and conservative reflection.
+When the next action needs multiple agents, parallel lanes, background work, staged implementation, persistent state, or delegation contracts, read [`references/orchestration-state.md`](references/orchestration-state.md). It is the runtime layer for scheduler-first execution, task contracts, ownership boundaries, persistent state, and conservative reflection.
 
-When delegation depends on specialized skills, read [`references/skill-orchestration.md`](references/skill-orchestration.md) to choose the required skills and task-contract shape.
+When delegation requires choosing among specialized skills or composing multiple skills into task contracts, read [`references/skill-orchestration.md`](references/skill-orchestration.md).
 
 When modifying this skill, read [`references/maintenance.md`](references/maintenance.md) before editing canonical files or mirrors.
 
@@ -111,19 +132,22 @@ When modifying this skill, read [`references/maintenance.md`](references/mainten
 
 1. Apply the Work Classification Gate and classify the task as Tiny, Small, or Large.
    Completion criterion: Small is chosen only when every Small condition is true; any Large signal or uncertainty upgrades the task.
-2. Select one active surface and, only if needed, read its reference.
+2. Apply the Implementation Guard before any Large implementation edit.
+   Completion criterion: direct implementation is blocked unless a delegation contract exists or an explicit exception is justified.
+3. Select one active surface and, only if needed, read its reference.
    Completion criterion: the selected surface is sufficient for the next move; unused surfaces stay unloaded.
-3. Choose execution mode: Tiny direct interaction, Small direct execution or bounded delegation, or Large orchestration-state delegation.
-   Completion criterion: direct work, delegation, or orchestration is justified by task size and risk.
-4. Apply the selected surface or orchestration state until its completion criterion is met.
+4. Choose execution mode: Tiny direct interaction, Small direct execution or bounded delegation, or Large selected-surface work with orchestration state only when needed.
+   Completion criterion: direct work, delegation, surface control, or orchestration is justified by task size and risk.
+5. Apply the selected surface or orchestration state until its completion criterion is met.
    Completion criterion: the task has a clearer scope, stronger evidence, challenged plan, deliverable contract, or explicit task board.
-5. Hand off to the concrete next action: ask a blocking question, call another skill, edit files, delegate bounded work, run verification, or produce the deliverable.
+6. Hand off to the concrete next action: ask a blocking question, call another skill, edit files, delegate bounded work, run verification, or produce the deliverable.
    Completion criterion: the user can see what will happen next and why.
 
 ## Do Not
 
 - Do not turn every task into a full four-stage ceremony.
 - Do not delegate small work unless delegation adds clear value.
+- Do not implement Large work as the control-plane agent unless the direct-implementation exception is explicit.
 - Do not ask for information the repository, wiki, tests, logs, or source files can answer.
 - Do not critique before assumptions are explicit.
 - Do not force JSON, tables, or checklists while the task is still exploratory.
