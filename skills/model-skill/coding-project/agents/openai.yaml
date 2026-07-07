@@ -1,0 +1,4 @@
+interface:
+  display_name: "Coding Project"
+  short_description: "Language-aware project coding workflow"
+  default_prompt: "Use $coding-project for this coding task. Detect the project language, load matching code and unit-test references when relevant, implement narrowly, and validate with the project toolchain."
