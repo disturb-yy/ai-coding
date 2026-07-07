@@ -1,3 +1,11 @@
+---
+access:
+  audience: human
+  model_read: false
+  model_write: true
+  purpose: zh_mirror
+---
+
 # Skill 编排
 
 当委派工作依赖专门 skills 时，使用这个 reference。它定义从任务状态到 required skill、reference、MCP 和 tool 的默认路由，以及 specialist 必须收到的任务契约形状。

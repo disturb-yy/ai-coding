@@ -1,3 +1,11 @@
+---
+access:
+  audience: model
+  model_read: true
+  model_write: true
+  purpose: skill_reference
+---
+
 # Orchestration State
 
 Use orchestration state when work requires multiple agents, background tasks, parallel coding lanes, or staged reconciliation.

@@ -1,3 +1,11 @@
+---
+access:
+  audience: human
+  model_read: false
+  model_write: true
+  purpose: zh_mirror
+---
+
 # 对抗控制
 
 当方案已经具体到可以被攻击时，使用对抗控制。

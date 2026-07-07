@@ -1,3 +1,9 @@
+access:
+  audience: human
+  model_read: false
+  model_write: true
+  purpose: zh_mirror
+
 version: 2
 updated: "2026-07-07"
 description: "Default routing map for assigning skills, references, MCP, and tools to main-agent and subAgent tasks."

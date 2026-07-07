@@ -1,3 +1,11 @@
+---
+access:
+  audience: model
+  model_read: true
+  model_write: true
+  purpose: skill_reference
+---
+
 # Skill Orchestration
 
 Use this reference when delegating work that depends on specialized skills. It defines the default route from task state to required skill and the task-contract shape specialists must receive.

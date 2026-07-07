@@ -1,3 +1,11 @@
+---
+access:
+  audience: human
+  model_read: false
+  model_write: true
+  purpose: zh_mirror
+---
+
 # 上下文控制
 
 当缺失或噪声上下文会导致跑偏时，使用上下文控制。

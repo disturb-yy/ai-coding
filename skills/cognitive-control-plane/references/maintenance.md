@@ -1,3 +1,11 @@
+---
+access:
+  audience: model
+  model_read: true
+  model_write: true
+  purpose: skill_reference
+---
+
 # Maintenance
 
 Use this reference only when modifying the Cognitive Control Plane skill or its bundled guards.

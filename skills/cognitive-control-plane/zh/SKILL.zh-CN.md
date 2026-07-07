@@ -1,6 +1,12 @@
 ---
 name: cognitive-control-plane
 description: "复杂 AI 协作的控制平面路由器。当过程控制应决定下一步行动时使用：上下文不清、假设有风险、计划需要批判、交接格式，或多阶段编排。"
+metadata:
+  access:
+    audience: human
+    model_read: false
+    model_write: true
+    purpose: zh_mirror
 ---
 
 # 认知控制平面

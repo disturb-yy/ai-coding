@@ -1,3 +1,11 @@
+---
+access:
+  audience: model
+  model_read: true
+  model_write: true
+  purpose: skill_reference
+---
+
 # Output Control
 
 Use output control when the work is ready for handoff, implementation, or machine consumption.

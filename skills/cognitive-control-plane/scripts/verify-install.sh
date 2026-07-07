@@ -36,6 +36,7 @@ json_contains() {
 
 check "skill directory exists" dir_exists "$SKILL_DIR"
 check "SKILL.md exists" file_exists "$SKILL_DIR/SKILL.md"
+check "README.md exists" file_exists "$SKILL_DIR/README.md"
 check "references directory exists" dir_exists "$SKILL_DIR/references"
 check "zh mirror root exists" dir_exists "$SKILL_DIR/zh"
 check "zh references mirror directory exists" dir_exists "$SKILL_DIR/zh/references"
@@ -46,6 +47,7 @@ check "Codex hook script exists" file_exists "$CODEX_HOOK"
 check "Codex hook syntax" node --check "$CODEX_HOOK"
 check "Codex Pre/Post hook registered" json_contains "$CODEX_HOOKS_JSON" "cognitive-control-plane-guard.js"
 check "Codex hook blocks zh reads" bash -c "printf '%s' '{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Bash\",\"tool_input\":{\"cmd\":\"rg test $SKILL_DIR/zh/SKILL.zh-CN.md\"}}' | '$CODEX_HOOK' >/dev/null 2>&1; test \"\$?\" -eq 2"
+check "Codex hook blocks README reads" bash -c "printf '%s' '{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Bash\",\"tool_input\":{\"cmd\":\"sed -n 1,20p $SKILL_DIR/README.md\"}}' | '$CODEX_HOOK' >/dev/null 2>&1; test \"\$?\" -eq 2"
 check "Codex hook allows zh writes" bash -c "printf '%s' '{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$SKILL_DIR/zh/SKILL.zh-CN.md\"}}' | '$CODEX_HOOK' >/dev/null 2>&1"
 check "Codex hook mirror post-check" bash -c "printf '%s' '{\"hook_event_name\":\"PostToolUse\",\"tool_name\":\"Edit\",\"tool_input\":{}}' | '$CODEX_HOOK' >/dev/null 2>&1"
 

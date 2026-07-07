@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 
 const SKILL_DIR = path.resolve(process.env.CCP_SKILL_DIR || "/home/jadon/tool/ai-coding/skills/user-skill/cognitive-control-plane");
-const { checkMirrors } = require(path.join(SKILL_DIR, "scripts", "check-mirrors.js"));
+const { checkMirrors, protectedReadFiles } = require(path.join(SKILL_DIR, "scripts", "check-mirrors.js"));
 const READ_COMMAND_RE = /\b(cat|sed|awk|grep|rg|head|tail|less|more|nl|bat|open|xdg-open|code|vim|nvim|nano|emacs)\b/i;
 const READ_TOOL_RE = /^(read|open|grep|glob|find|view|view_image|webfetch|websearch)$/i;
 const WRITE_TOOL_RE = /^(write|edit|apply_patch|notebookedit)$/i;
@@ -76,11 +76,31 @@ function toolInput(payload) {
   );
 }
 
-function mentionsMirror(text) {
+function normalizedProtectedReadFiles() {
+  return protectedReadFiles().map((file) => file.replace(/\\/g, "/"));
+}
+
+function commandTokens(text) {
+  if (typeof text !== "string") return false;
+  return text
+    .replace(/["'`]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((token) => token.replace(/\\/g, "/"));
+}
+
+function mentionsProtectedReadTarget(text) {
   if (typeof text !== "string") return false;
   const normalized = text.replace(/\\/g, "/");
-  const skillRoot = SKILL_DIR.replace(/\\/g, "/");
-  return normalized.includes(`${skillRoot}/zh/`) || normalized.includes(".zh-CN.md");
+  const protectedFiles = normalizedProtectedReadFiles();
+  if (protectedFiles.some((file) => normalized.includes(file))) return true;
+  for (const token of commandTokens(text)) {
+    const clean = token.replace(/[,:;)\]}]+$/g, "");
+    if (protectedFiles.some((file) => file === clean || file.startsWith(`${clean.replace(/\/+$/, "")}/`))) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function isReadLikeTool(name) {
@@ -95,15 +115,16 @@ function shouldBlockPreTool(payload) {
   const name = toolName(payload);
   const input = toolInput(payload);
   const strings = collectStrings(input);
-  if (!strings.some(mentionsMirror)) return null;
 
-  const commandish = strings.find((s) => mentionsMirror(s) && READ_COMMAND_RE.test(s));
-  if (commandish) {
-    return "Blocked: Chinese mirror files under zh/ are write-only user artifacts. Do not read/search/open them.";
-  }
+  if (strings.some(mentionsProtectedReadTarget)) {
+    const commandish = strings.find((s) => mentionsProtectedReadTarget(s) && READ_COMMAND_RE.test(s));
+    if (commandish) {
+      return "Blocked: target file metadata sets access.model_read=false. Models must not read/search/open it.";
+    }
 
-  if (isReadLikeTool(name)) {
-    return "Blocked: read/search/open tool attempted to access a Chinese mirror under zh/.";
+    if (isReadLikeTool(name)) {
+      return "Blocked: read/search/open tool attempted to access a file with access.model_read=false.";
+    }
   }
 
   return null;

@@ -1,6 +1,12 @@
 ---
 name: cognitive-control-plane
 description: "Control-plane router for complex AI collaboration. Use when process control should decide the next move: unclear context, risky assumptions, plan critique, handoff format, or multi-stage orchestration."
+metadata:
+  access:
+    audience: model
+    model_read: true
+    model_write: true
+    purpose: skill_runtime
 ---
 
 # Cognitive Control Plane

@@ -1,3 +1,11 @@
+---
+access:
+  audience: human
+  model_read: false
+  model_write: true
+  purpose: zh_mirror
+---
+
 # 认识论控制
 
 当错误假设会主导结果时，使用认识论控制。

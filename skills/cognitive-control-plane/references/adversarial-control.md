@@ -1,3 +1,11 @@
+---
+access:
+  audience: model
+  model_read: true
+  model_write: true
+  purpose: skill_reference
+---
+
 # Adversarial Control
 
 Use adversarial control when a plan is concrete enough to attack.

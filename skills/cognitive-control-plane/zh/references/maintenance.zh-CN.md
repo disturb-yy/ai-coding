@@ -1,3 +1,11 @@
+---
+access:
+  audience: human
+  model_read: false
+  model_write: true
+  purpose: zh_mirror
+---
+
 # 维护
 
 仅在修改 Cognitive Control Plane skill 或其捆绑 guard 时使用此 reference。

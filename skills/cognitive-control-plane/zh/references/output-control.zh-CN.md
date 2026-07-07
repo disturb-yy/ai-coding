@@ -1,3 +1,11 @@
+---
+access:
+  audience: human
+  model_read: false
+  model_write: true
+  purpose: zh_mirror
+---
+
 # 输出控制
 
 当工作准备进入交接、实现或机器消费时，使用输出控制。

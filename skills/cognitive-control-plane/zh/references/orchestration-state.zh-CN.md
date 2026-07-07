@@ -1,3 +1,11 @@
+---
+access:
+  audience: human
+  model_read: false
+  model_write: true
+  purpose: zh_mirror
+---
+
 # 编排状态
 
 当工作需要多个代理、后台任务、并行编码通道或阶段性协调时，使用编排状态。

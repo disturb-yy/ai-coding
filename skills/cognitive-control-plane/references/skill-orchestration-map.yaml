@@ -1,3 +1,9 @@
+access:
+  audience: model
+  model_read: true
+  model_write: true
+  purpose: orchestration_map
+
 version: 2
 updated: "2026-07-07"
 description: "Default routing map for assigning skills, references, MCP, and tools to main-agent and subAgent tasks."

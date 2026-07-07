@@ -1,3 +1,11 @@
+---
+access:
+  audience: model
+  model_read: true
+  model_write: true
+  purpose: skill_reference
+---
+
 # Epistemic Control
 
 Use epistemic control when wrong assumptions would dominate the outcome.

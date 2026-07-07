@@ -1,7 +1,7 @@
 import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
-const { checkMirrors, SKILL_DIR } = require("./check-mirrors.cjs");
+const { checkMirrors, protectedReadFiles } = require("./check-mirrors.cjs");
 
 const READ_COMMAND_RE = /\b(cat|sed|awk|grep|rg|head|tail|less|more|nl|bat|open|xdg-open|code|vim|nvim|nano|emacs)\b/i;
 const READ_TOOL_RE = /^(read|open|grep|glob|find|view|webfetch|websearch)$/i;
@@ -22,11 +22,31 @@ function collectStrings(value, out = []) {
   return out;
 }
 
-function mentionsMirror(text) {
+function normalizedProtectedReadFiles() {
+  return protectedReadFiles().map((file) => file.replace(/\\/g, "/"));
+}
+
+function commandTokens(text) {
+  if (typeof text !== "string") return false;
+  return text
+    .replace(/["'`]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((token) => token.replace(/\\/g, "/"));
+}
+
+function mentionsProtectedReadTarget(text) {
   if (typeof text !== "string") return false;
   const normalized = text.replace(/\\/g, "/");
-  const skillRoot = SKILL_DIR.replace(/\\/g, "/");
-  return normalized.includes(`${skillRoot}/zh/`) || normalized.includes(".zh-CN.md");
+  const protectedFiles = normalizedProtectedReadFiles();
+  if (protectedFiles.some((file) => normalized.includes(file))) return true;
+  for (const token of commandTokens(text)) {
+    const clean = token.replace(/[,:;)\]}]+$/g, "");
+    if (protectedFiles.some((file) => file === clean || file.startsWith(`${clean.replace(/\/+$/, "")}/`))) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function isReadLikeTool(name) {
@@ -37,16 +57,17 @@ function isReadLikeTool(name) {
   return /read|open|grep|search|find|view|fetch/i.test(normalized);
 }
 
-function mirrorReadError() {
-  return new Error("Blocked: Chinese mirror files under zh/ are write-only user artifacts. Do not read/search/open them.");
+function protectedReadError() {
+  return new Error("Blocked: target file metadata sets access.model_read=false. Models must not read/search/open it.");
 }
 
 function assertNoMirrorRead(tool, args) {
   const strings = collectStrings(args);
-  if (!strings.some(mentionsMirror)) return;
-  if (isReadLikeTool(tool)) throw mirrorReadError();
-  if (strings.some((s) => mentionsMirror(s) && READ_COMMAND_RE.test(s))) {
-    throw mirrorReadError();
+  if (strings.some(mentionsProtectedReadTarget)) {
+    if (isReadLikeTool(tool)) throw protectedReadError();
+    if (strings.some((s) => mentionsProtectedReadTarget(s) && READ_COMMAND_RE.test(s))) {
+      throw protectedReadError();
+    }
   }
 }
 
