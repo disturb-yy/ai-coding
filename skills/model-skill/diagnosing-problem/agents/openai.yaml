@@ -1,0 +1,4 @@
+interface:
+  display_name: "Diagnosing Problem"
+  short_description: "Diagnose unclear problems with gates"
+  default_prompt: "Use $diagnosing-problem to frame this problem, test assumptions, choose an evidence standard, and produce an answer-ready handoff."

@@ -1,0 +1,9 @@
+interface:
+  display_name: "Exploring Project"
+  short_description: "Explore code paths before changing them"
+  default_prompt: "Use $exploring-project to map the relevant area with Graphify when useful, navigate code with CodeMap, and verify the path with targeted rg/source reads before making changes."
+metadata:
+  author: disturb-yy
+  version: "1.0"
+policy:
+  allow_implicit_invocation: true
