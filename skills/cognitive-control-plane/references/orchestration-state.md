@@ -64,7 +64,7 @@ Completion criterion: the specialist can work without guessing scope, permission
 
 ## Skill Routing
 
-When a specialist should use a skill, declare it in `required_skills`; do not rely on an implicit natural-language hint.
+When a specialist should use a skill, declare it in `required_skills`; do not rely on an implicit natural-language hint. For the default skill routing map, read [`skill-orchestration.md`](skill-orchestration.md).
 
 Rules:
 

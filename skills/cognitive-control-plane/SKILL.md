@@ -103,6 +103,8 @@ If multiple surfaces apply, start with the earliest unsatisfied one: Context -> 
 
 When the next action needs multiple agents, parallel lanes, background work, or staged implementation, read [`references/orchestration-state.md`](references/orchestration-state.md). It is the runtime layer for scheduler-first execution, task contracts, ownership boundaries, persistent state, and conservative reflection.
 
+When delegation depends on specialized skills, read [`references/skill-orchestration.md`](references/skill-orchestration.md) to choose the required skills and task-contract shape.
+
 When modifying this skill, read [`references/maintenance.md`](references/maintenance.md) before editing canonical files or mirrors.
 
 ## Operating Steps

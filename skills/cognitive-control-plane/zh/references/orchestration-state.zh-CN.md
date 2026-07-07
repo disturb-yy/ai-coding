@@ -64,7 +64,7 @@ what_not_to_do: []
 
 ## Skill 路由
 
-当 specialist 应该使用某个 skill 时，在 `required_skills` 中声明；不要依赖隐含的自然语言提示。
+当 specialist 应该使用某个 skill 时，在 `required_skills` 中声明；不要依赖隐含的自然语言提示。默认 skill 路由表见 [`skill-orchestration.md`](skill-orchestration.md)。
 
 规则：
 
