@@ -47,6 +47,10 @@ required_skills:
     path: ""
     required: true
     reason: ""
+required_references:
+  - path: ""
+    required: false
+    reason: ""
 required_mcp:
   - name: ""
     required: false
@@ -66,6 +70,7 @@ expected_output:
   required_fields: []
   must_report:
     - skills_loaded
+    - references_loaded
     - mcp_used
     - tools_used
     - skill_instructions_followed
@@ -74,7 +79,7 @@ validation: []
 stop_if: []
 ```
 
-Completion criterion: the specialist can work without guessing role, phase, scope, permissions, required skills, required MCP/tools, expected output, stop conditions, or validation.
+Completion criterion: the specialist can work without guessing role, phase, scope, permissions, required skills, required references, required MCP/tools, expected output, stop conditions, or validation.
 
 ## Skill Routing
 
@@ -90,6 +95,19 @@ Rules:
 - Require the specialist to report `skills_loaded`, whether instructions were followed, and any deviations.
 
 Completion criterion: every delegated task that depends on specialized procedure names the skill, its source, why it is needed, and how the orchestrator will confirm it was used.
+
+## Reference Routing
+
+When a specialist depends on a control-surface file, design guide, project guide, ADR, schema document, or other non-skill reference, declare it in `required_references`.
+
+Rules:
+
+- Use `required_references` for files that must be read but are not standalone skills.
+- Mark `required: true` when skipping the reference would materially change the result.
+- Require the specialist to report `references_loaded` and deviations.
+- If a required reference is unavailable, the specialist must stop instead of reconstructing it from memory.
+
+Completion criterion: every delegated task that depends on non-skill reference material names the file, why it is needed, and how the orchestrator will confirm it was used.
 
 ## MCP and Tool Routing
 
@@ -132,6 +150,8 @@ tasks:
     state: running # running | completed | error | cancelled | timed_out
     required_skills: []
     skills_confirmed: []
+    required_references: []
+    references_confirmed: []
     required_mcp: []
     mcp_confirmed: []
     required_tools: []
@@ -165,12 +185,13 @@ When a task completes:
 1. Compare the result against the original user goal.
 2. Check conflicts with other task outputs.
 3. Check whether required skills were loaded and whether deviations are justified.
-4. Check whether required MCP/tools were used and whether deviations are justified.
-5. Decide whether to accept, revise, reject, or dispatch follow-up work.
-6. Update the task board.
-7. Preserve useful decisions in the next handoff.
+4. Check whether required references were loaded and whether deviations are justified.
+5. Check whether required MCP/tools were used and whether deviations are justified.
+6. Decide whether to accept, revise, reject, or dispatch follow-up work.
+7. Update the task board.
+8. Preserve useful decisions in the next handoff.
 
-Completion criterion: final work does not rely on unreviewed specialist output, unverified required-skill use, or unverified required-capability use.
+Completion criterion: final work does not rely on unreviewed specialist output, unverified required-skill use, unverified required-reference use, or unverified required-capability use.
 
 ## Conservative Reflection
 
@@ -191,7 +212,7 @@ Before final response:
 
 - all required tasks are terminal
 - dependent work consumed the outputs it waited for
-- required skills, MCP, and tools were confirmed or deviations were accepted explicitly
+- required skills, references, MCP, and tools were confirmed or deviations were accepted explicitly
 - file ownership conflicts are resolved
 - relevant checks ran, or skipped checks are explained
 - residual risks are explicit

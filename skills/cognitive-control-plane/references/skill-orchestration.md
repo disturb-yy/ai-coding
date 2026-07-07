@@ -13,6 +13,7 @@ Machine-readable map: [`skill-orchestration-map.yaml`](skill-orchestration-map.y
 | `exploring-project` | codebase_explorer | `available_skill` | `/home/jadon/tool/ai-coding/skills/model-skill/exploring-project/SKILL.md` | Explore project structure, behavior paths, modules, routes, functions, tests, and change points. |
 | `coding-project` | implementation_worker | `available_skill` | `/home/jadon/tool/ai-coding/skills/model-skill/coding-project/SKILL.md` | Implement ordinary code changes, test changes, validation, generated artifacts, and language-aware project work. |
 | `coding-tdd` | tdd_worker | `available_skill` | `/home/jadon/tool/ai-coding/skills/model-skill/coding-tdd/SKILL.md` | Execute test-first, red-green-refactor, regression-test-first, and behavior-sliced implementation. |
+| `adversarial-control` | adversarial_reviewer | `file_reference` | `/home/jadon/tool/ai-coding/skills/user-skill/cognitive-control-plane/references/adversarial-control.md` | Attack concrete plans, designs, architecture, prompts, skills, implementation approaches, or agent traces before acceptance. |
 
 `diagnosing-problem` frames the problem and handoff. Code navigation still routes to `exploring-project`. If a dedicated root-cause or runtime failure skill exists, route to it from the `diagnosing-problem` handoff.
 
@@ -25,6 +26,7 @@ Pick the first matching route:
 | User goal, acceptance criteria, constraints, or business rules are unclear. | `grilling` | usually no | Ask one question at a time; if the repository can answer, explore instead of asking. |
 | User asks why, what is wrong, how to locate a problem, or how to analyze a phenomenon, and the problem is not framed yet. | `diagnosing-problem` | optional read-only | Produce framed problem, assumptions, evidence standard, and handoff. |
 | Existing project structure, entry point, call chain, route, module, function, tests, or change points are unclear. | `exploring-project` | optional read-only | Produce verified flow, candidate files, risks, and nearby tests. |
+| A concrete plan, design, architecture, prompt, skill, implementation approach, diff, PR, or agent run needs critique. | `adversarial-control` | optional read-only | Produce criterion-based critique, valid failures, mitigations, and residual risks. |
 | Requirements are clear and existing code or tests need ordinary edits. | `coding-project` | optional bounded write | Implement narrowly and validate. |
 | User asks for TDD, test-first, red-green-refactor, or regression test first. | `coding-tdd` | optional bounded write | Run red -> green -> refactor for each behavior slice. |
 
@@ -35,6 +37,7 @@ intake
   -> grilling                   # requirements unclear
   -> diagnosing-problem          # problem or phenomenon not framed
   -> exploring-project           # project path or change points unclear
+  -> adversarial-control          # concrete plan or agent output needs attack
   -> coding-tdd | coding-project # choose by test-first requirement
   -> verification
   -> ExecutionRun / VerifiedExperience / KnowledgeAsset
@@ -81,6 +84,16 @@ Enter when:
 
 Exit when narrow changes are complete and relevant validation passed, failed for a concrete unrelated reason, or is blocked with a concrete cause.
 
+### Adversarial Review
+
+Enter when:
+
+- A concrete plan, design, architecture, prompt, skill, implementation approach, diff, PR, or agent run needs critique.
+- The user asks for review, risk analysis, pre-mortem, red-team, or asks whether an agent violated process.
+- Failure modes matter more than producing new implementation.
+
+Exit when the critique names its criteria, separates valid failures from weak attacks, gives mitigations, and leaves explicit residual risk.
+
 ### Coding TDD
 
 Enter when:
@@ -104,6 +117,7 @@ required_skills:
     path: /home/jadon/tool/ai-coding/skills/model-skill/grilling/SKILL.md
     required: true
     reason: "Requirements still affect the implementation route and need one-question-at-a-time clarification."
+required_references: []
 required_mcp: []
 required_tools: []
 edits_allowed: false
@@ -116,6 +130,7 @@ expected_output:
     - open_questions
   must_report:
     - skills_loaded
+    - references_loaded
     - mcp_used
     - tools_used
     - skill_instructions_followed
@@ -136,6 +151,7 @@ required_skills:
     path: /home/jadon/tool/ai-coding/skills/model-skill/diagnosing-problem/SKILL.md
     required: true
     reason: "The task needs selected interpretation, assumptions, evidence standard, and handoff before execution."
+required_references: []
 required_mcp: []
 required_tools: []
 edits_allowed: false
@@ -150,6 +166,7 @@ expected_output:
     - handoff
   must_report:
     - skills_loaded
+    - references_loaded
     - mcp_used
     - tools_used
     - skill_instructions_followed
@@ -170,6 +187,7 @@ required_skills:
     path: /home/jadon/tool/ai-coding/skills/model-skill/exploring-project/SKILL.md
     required: true
     reason: "The project path and safe edit boundary must be verified before coding."
+required_references: []
 required_mcp:
   - name: CodeMap or Graphify
     required: false
@@ -190,12 +208,63 @@ expected_output:
     - next_change_location
   must_report:
     - skills_loaded
+    - references_loaded
     - mcp_used
     - tools_used
     - skill_instructions_followed
     - deviations
 stop_if:
   - "Implementation is requested before candidate files, flows, risks, and tests are verified."
+```
+
+### Adversarial Review
+
+```yaml
+role: adversarial_reviewer
+phase: review
+objective: "Attack the concrete plan, design, implementation approach, diff, PR, skill, prompt, or agent run before acceptance."
+required_skills:
+  - name: none
+    source: none
+    path: ""
+    required: false
+    reason: "The review depends on a control-surface reference rather than a standalone skill."
+required_references:
+  - path: /home/jadon/tool/ai-coding/skills/user-skill/cognitive-control-plane/references/adversarial-control.md
+    required: true
+    reason: "The specialist must use criterion-based critique, red-team separation, and pre-mortem structure."
+required_mcp:
+  - name: GitHub
+    required: false
+    reason: "Use when the artifact under review is a PR, issue, commit, or review thread."
+required_tools:
+  - name: rg
+    required: false
+    reason: "Use when local source, diffs, logs, or traces need targeted evidence checks."
+edits_allowed: false
+ownership:
+  writable_paths: []
+  read_only_paths: []
+  forbidden_paths: []
+expected_output:
+  format: adversarial_review
+  required_fields:
+    - review_criteria
+    - valid_failures
+    - weak_or_irrelevant_attacks
+    - mitigations
+    - residual_risk
+  must_report:
+    - skills_loaded
+    - references_loaded
+    - mcp_used
+    - tools_used
+    - skill_instructions_followed
+    - deviations
+stop_if:
+  - "The artifact is too vague to attack with criteria."
+  - "Required evidence is inaccessible."
+  - "The review would require editing instead of critique."
 ```
 
 ### Ordinary Implementation
@@ -210,6 +279,7 @@ required_skills:
     path: /home/jadon/tool/ai-coding/skills/model-skill/coding-project/SKILL.md
     required: true
     reason: "Existing repository code must be changed using language, project convention, and validation rules."
+required_references: []
 required_mcp: []
 required_tools:
   - name: project test/build commands
@@ -229,6 +299,7 @@ expected_output:
     - residual_risks
   must_report:
     - skills_loaded
+    - references_loaded
     - mcp_used
     - tools_used
     - skill_instructions_followed
@@ -251,6 +322,7 @@ required_skills:
     path: /home/jadon/tool/ai-coding/skills/model-skill/coding-tdd/SKILL.md
     required: true
     reason: "The user requested test-first or red-green-refactor; the TDD loop must be protected."
+required_references: []
 required_mcp: []
 required_tools:
   - name: project test commands
@@ -271,6 +343,7 @@ expected_output:
     - final_entry_to_output_check
   must_report:
     - skills_loaded
+    - references_loaded
     - mcp_used
     - tools_used
     - skill_instructions_followed
@@ -294,6 +367,7 @@ stop_if:
 Before accepting specialist output, check:
 
 - `skills_loaded` includes every `required: true` skill from the task contract.
+- `references_loaded` includes every `required: true` reference from the task contract.
 - `mcp_used` and `tools_used` include every `required: true` capability from the task contract.
 - `skill_instructions_followed` is reported.
 - Any `deviations` are justified and do not break the task goal.

@@ -47,6 +47,10 @@ required_skills:
     path: ""
     required: true
     reason: ""
+required_references:
+  - path: ""
+    required: false
+    reason: ""
 required_mcp:
   - name: ""
     required: false
@@ -66,6 +70,7 @@ expected_output:
   required_fields: []
   must_report:
     - skills_loaded
+    - references_loaded
     - mcp_used
     - tools_used
     - skill_instructions_followed
@@ -74,7 +79,7 @@ validation: []
 stop_if: []
 ```
 
-完成标准：specialist 不需要猜测角色、阶段、范围、权限、required skills、required MCP/tools、预期输出、停止条件或验证。
+完成标准：specialist 不需要猜测角色、阶段、范围、权限、required skills、required references、required MCP/tools、预期输出、停止条件或验证。
 
 ## Skill 路由
 
@@ -90,6 +95,19 @@ stop_if: []
 - 要求 specialist 报告 `skills_loaded`、是否遵循了说明，以及任何偏离。
 
 完成标准：每个依赖专门流程的委派任务，都命名 skill、来源、为什么需要，以及编排者如何确认它被使用。
+
+## Reference 路由
+
+当 specialist 依赖控制面文件、设计指南、项目指南、ADR、schema 文档或其他非 skill reference 时，在 `required_references` 中声明。
+
+规则：
+
+- 对必须读取但不是独立 skill 的文件使用 `required_references`。
+- 当跳过该 reference 会实质改变结果时，标记 `required: true`。
+- 要求 specialist 报告 `references_loaded` 和偏离。
+- 如果 required reference 不可用，specialist 必须停止，而不是凭记忆重建。
+
+完成标准：每个依赖非 skill reference 材料的委派任务，都命名文件、为什么需要，以及编排者如何确认它被使用。
 
 ## MCP 和工具路由
 
@@ -132,6 +150,8 @@ tasks:
     state: running # running | completed | error | cancelled | timed_out
     required_skills: []
     skills_confirmed: []
+    required_references: []
+    references_confirmed: []
     required_mcp: []
     mcp_confirmed: []
     required_tools: []
@@ -165,12 +185,13 @@ specialist 输出是输入，不是最终真相。
 1. 对照原始用户目标比较结果。
 2. 检查与其他任务输出的冲突。
 3. 检查 required skills 是否已加载，以及偏离是否合理。
-4. 检查 required MCP/tools 是否已使用，以及偏离是否合理。
-5. 决定接受、修订、拒绝，或派发后续工作。
-6. 更新任务板。
-7. 在下一次 handoff 中保留有用决策。
+4. 检查 required references 是否已加载，以及偏离是否合理。
+5. 检查 required MCP/tools 是否已使用，以及偏离是否合理。
+6. 决定接受、修订、拒绝，或派发后续工作。
+7. 更新任务板。
+8. 在下一次 handoff 中保留有用决策。
 
-完成标准：最终工作不依赖未评审的 specialist 输出、未验证的 required-skill 使用，或未验证的 required-capability 使用。
+完成标准：最终工作不依赖未评审的 specialist 输出、未验证的 required-skill 使用、未验证的 required-reference 使用，或未验证的 required-capability 使用。
 
 ## 保守反思
 
@@ -191,7 +212,7 @@ specialist 输出是输入，不是最终真相。
 
 - 所有 required tasks 都已终止
 - 依赖工作已消费它等待的输出
-- required skills、MCP 和 tools 已确认，或偏离已被显式接受
+- required skills、references、MCP 和 tools 已确认，或偏离已被显式接受
 - 文件所有权冲突已解决
 - 相关检查已运行，或跳过的检查已解释
 - 残余风险已明确
