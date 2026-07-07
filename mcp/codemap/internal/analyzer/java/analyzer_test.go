@@ -103,6 +103,116 @@ public class PaymentReceipt {}
 	}
 }
 
+func TestAnalyzeJavaProjectDetectsEmbeddedPersistence(t *testing.T) {
+	root := t.TempDir()
+	writeJavaFile(t, root, "src/main/java/com/example/order/OrderService.java", `package com.example.order;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
+public class OrderService {
+    public void save(Connection connection, String id) throws SQLException {
+        PreparedStatement statement = connection.prepareStatement("insert into orders(id) values (?)");
+        statement.setString(1, id);
+        statement.executeUpdate();
+    }
+}
+`)
+
+	project, err := New().Analyze(context.Background(), root)
+	if err != nil {
+		t.Fatalf("Analyze: %v", err)
+	}
+
+	order := findModule(project.Modules, "com/example/order")
+	if order == nil {
+		t.Fatalf("missing order module: %#v", project.Modules)
+	}
+	if !contains(order.Dependencies, "storage/database") {
+		t.Fatalf("order deps = %v, want storage/database", order.Dependencies)
+	}
+
+	storage := findModule(project.Modules, "storage/database")
+	if storage == nil {
+		t.Fatalf("missing virtual storage module: %#v", project.Modules)
+	}
+	if storage.Name != "data" {
+		t.Fatalf("storage module name = %q, want data", storage.Name)
+	}
+}
+
+func TestAnalyzeSpringProjectWithMultilineAnnotations(t *testing.T) {
+	root := t.TempDir()
+	writeJavaFile(t, root, "src/main/java/com/example/order/OrderController.java", `package com.example.order;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping(
+    path = "/api/v1/orders"
+)
+public class OrderController {
+    @GetMapping(
+        path = "/{id}"
+    )
+    public OrderDto getOrder(String id) {
+        return new OrderDto();
+    }
+}
+`)
+	writeJavaFile(t, root, "src/main/java/com/example/order/OrderDto.java", `package com.example.order;
+
+public class OrderDto {}
+`)
+
+	project, err := New().Analyze(context.Background(), root)
+	if err != nil {
+		t.Fatalf("Analyze: %v", err)
+	}
+
+	if !hasRoute(project.Routes, "GET", "/api/v1/orders/{id}", "com/example/order") {
+		t.Fatalf("missing multiline annotation route; routes=%#v", project.Routes)
+	}
+}
+
+func TestAnalyzeSpringProjectWithMultipleAnnotationPaths(t *testing.T) {
+	root := t.TempDir()
+	writeJavaFile(t, root, "src/main/java/com/example/user/UserController.java", `package com.example.user;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/users")
+public class UserController {
+    @GetMapping(path = {"/active", "/enabled"})
+    public UserDto listActive() {
+        return new UserDto();
+    }
+}
+`)
+	writeJavaFile(t, root, "src/main/java/com/example/user/UserDto.java", `package com.example.user;
+
+public class UserDto {}
+`)
+
+	project, err := New().Analyze(context.Background(), root)
+	if err != nil {
+		t.Fatalf("Analyze: %v", err)
+	}
+
+	if !hasRoute(project.Routes, "GET", "/users/active", "com/example/user") {
+		t.Fatalf("missing /users/active route; routes=%#v", project.Routes)
+	}
+	if !hasRoute(project.Routes, "GET", "/users/enabled", "com/example/user") {
+		t.Fatalf("missing /users/enabled route; routes=%#v", project.Routes)
+	}
+}
+
 func writeJavaFile(t *testing.T, root, name, content string) {
 	t.Helper()
 	path := filepath.Join(root, name)

@@ -79,6 +79,7 @@ func (a *Analyzer) Analyze(ctx context.Context, root string) (*model.Project, er
 	moduleIndex := make(map[string]*model.Module)
 	packageToModule := make(map[string]string)
 	classToModule := make(map[string]string)
+	persistenceUsers := make(map[string]bool)
 
 	for _, srcRoot := range srcRoots {
 		err := filepath.Walk(srcRoot, func(path string, info os.FileInfo, err error) error {
@@ -117,6 +118,9 @@ func (a *Analyzer) Analyze(ctx context.Context, root string) (*model.Project, er
 			if jf.pkg != "" {
 				packageToModule[jf.pkg] = jf.modulePath
 			}
+			if hasPersistenceImport(jf.imports) {
+				persistenceUsers[jf.modulePath] = true
+			}
 			return nil
 		})
 		if err != nil {
@@ -145,6 +149,7 @@ func (a *Analyzer) Analyze(ctx context.Context, root string) (*model.Project, er
 	}
 
 	project.Flows = flowsFromEdges(project.CallEdges)
+	detectEmbeddedStorage(moduleIndex, persistenceUsers)
 	for _, module := range moduleIndex {
 		project.Modules = append(project.Modules, module)
 	}
@@ -153,6 +158,57 @@ func (a *Analyzer) Analyze(ctx context.Context, root string) (*model.Project, er
 	})
 
 	return project, nil
+}
+
+func hasPersistenceImport(imports []string) bool {
+	prefixes := []string{
+		"java.sql.",
+		"javax.sql.",
+		"javax.persistence.",
+		"jakarta.persistence.",
+		"org.springframework.jdbc.",
+		"org.springframework.data.jpa.",
+		"org.jooq.",
+		"io.r2dbc.",
+		"org.hibernate.Session",
+	}
+	for _, imp := range imports {
+		for _, prefix := range prefixes {
+			if strings.HasPrefix(imp, prefix) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func detectEmbeddedStorage(moduleIndex map[string]*model.Module, persistenceUsers map[string]bool) {
+	if len(persistenceUsers) == 0 || hasExplicitStorageModule(moduleIndex) {
+		return
+	}
+
+	const storagePath = "storage/database"
+	storage := ensureModule(moduleIndex, storagePath, "data")
+	storage.Name = "data"
+
+	for path := range persistenceUsers {
+		if mod := moduleIndex[path]; mod != nil && path != storagePath {
+			addDepIfNew(mod, storagePath)
+		}
+	}
+}
+
+func hasExplicitStorageModule(moduleIndex map[string]*model.Module) bool {
+	for _, mod := range moduleIndex {
+		path := strings.ToLower(mod.Path)
+		name := strings.ToLower(mod.Name)
+		for _, marker := range []string{"data", "dao", "repository", "repositories", "persistence", "storage"} {
+			if name == marker || strings.HasSuffix(path, "/"+marker) || path == marker {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func inferSourceRoots(root string) []string {
@@ -201,11 +257,22 @@ func parseJavaFile(filePath, srcRoot string) (*javaFile, error) {
 	var currentType string
 	var inMethod bool
 	var current javaMethod
+	var annotationLines []string
+	annotationDepth := 0
 	braceDepth := 0
 
 	for _, raw := range lines {
 		line := stripLineComment(strings.TrimSpace(raw))
 		if line == "" {
+			continue
+		}
+		if annotationDepth > 0 {
+			annotationLines = append(annotationLines, line)
+			annotationDepth += parenDelta(line)
+			if annotationDepth <= 0 {
+				pendingAnnotations = append(pendingAnnotations, strings.Join(annotationLines, " "))
+				annotationLines = nil
+			}
 			continue
 		}
 		if matches := packageRE.FindStringSubmatch(line); len(matches) == 2 {
@@ -217,10 +284,12 @@ func parseJavaFile(filePath, srcRoot string) (*javaFile, error) {
 			continue
 		}
 		if strings.HasPrefix(line, "@") {
-			pendingAnnotations = append(pendingAnnotations, line)
-			if !strings.Contains(line, ")") && !strings.Contains(line, "(") {
+			annotationDepth = parenDelta(line)
+			if annotationDepth > 0 {
+				annotationLines = []string{line}
 				continue
 			}
+			pendingAnnotations = append(pendingAnnotations, line)
 			continue
 		}
 		if inMethod {
@@ -413,6 +482,10 @@ func braceDelta(line string) int {
 	return strings.Count(line, "{") - strings.Count(line, "}")
 }
 
+func parenDelta(line string) int {
+	return strings.Count(line, "(") - strings.Count(line, ")")
+}
+
 func ensureModule(moduleIndex map[string]*model.Module, path, pkg string) *model.Module {
 	if path == "" {
 		path = "."
@@ -574,10 +647,7 @@ func annotationPaths(annotation string) []string {
 	args := annotation[start+1 : end]
 	var paths []string
 	for _, key := range []string{"value", "path"} {
-		re := regexp.MustCompile(key + `\s*=\s*(?:\{\s*)?"([^"]+)"`)
-		for _, match := range re.FindAllStringSubmatch(args, -1) {
-			paths = append(paths, match[1])
-		}
+		paths = append(paths, annotationAttributeStringValues(args, key)...)
 	}
 	if len(paths) == 0 {
 		re := regexp.MustCompile(`"([^"]+)"`)
@@ -588,6 +658,44 @@ func annotationPaths(annotation string) []string {
 		}
 	}
 	return uniqueStrings(paths)
+}
+
+func annotationAttributeStringValues(args, key string) []string {
+	re := regexp.MustCompile(`\b` + regexp.QuoteMeta(key) + `\s*=`)
+	loc := re.FindStringIndex(args)
+	if loc == nil {
+		return nil
+	}
+
+	value := strings.TrimSpace(args[loc[1]:])
+	if value == "" {
+		return nil
+	}
+	if strings.HasPrefix(value, "{") {
+		if end := strings.Index(value, "}"); end >= 0 {
+			return quotedStrings(value[1:end])
+		}
+		return quotedStrings(value)
+	}
+	if strings.HasPrefix(value, "\"") {
+		end := strings.Index(value[1:], "\"")
+		if end < 0 {
+			return nil
+		}
+		return quotedStrings(value[:end+2])
+	}
+	return nil
+}
+
+func quotedStrings(value string) []string {
+	re := regexp.MustCompile(`"([^"]+)"`)
+	var values []string
+	for _, match := range re.FindAllStringSubmatch(value, -1) {
+		if len(match) == 2 {
+			values = append(values, match[1])
+		}
+	}
+	return values
 }
 
 func requestMappingMethod(annotation string) string {
