@@ -103,6 +103,8 @@ stop_if: "范围扩大、出现风险、需求不清、所有权边界增多，�
 
 当下一步需要多个代理、并行通道、后台工作或阶段性实现时，读取 [`references/orchestration-state.md`](references/orchestration-state.md)。它是 scheduler-first 执行、任务契约、所有权边界、持久状态和保守反思的运行时层。
 
+当委派依赖专门 skill 时，读取 [`references/skill-orchestration.md`](references/skill-orchestration.md)，以选择 required skills 和任务契约形状。
+
 修改此 skill 时，在编辑 canonical 文件或 mirror 前读取 [`references/maintenance.md`](references/maintenance.md)。
 
 ## 操作步骤
