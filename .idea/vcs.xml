@@ -3,5 +3,7 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/mcp/codemap" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/skills/archive/model-skill/okf-frontmatter" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/skills/modle-invoked/okf-frontmatter" vcs="Git" />
   </component>
 </project>

@@ -1,0 +1,129 @@
+version: 1
+scoring:
+  auto_assertion_pass: 1
+  auto_assertion_fail: 0
+  judge_scale:
+  - 0
+  - 1
+  - 2
+items:
+- id: R-01
+  name: Activation 精度
+  mode: auto
+  fail_action: quality_flag
+  description: 只在过程控制会实质改变下一步行动时激活。
+- id: R-02
+  name: Tiny 保持直接处理
+  mode: auto
+  fail_action: quality_flag
+  description: Tiny 任务不会启动 worker 或控制流程仪式。
+- id: R-03
+  name: Small 必须被证明
+  mode: auto
+  fail_action: hard_fail
+  description: 只有每个 Small 条件都为真时才选择 Small。
+- id: R-04
+  name: 不确定性升级
+  mode: auto
+  fail_action: hard_fail
+  description: 一个 Large 信号或实质不确定性会将任务升级为 Large。
+- id: R-05
+  name: 第一个未满足的 surface
+  mode: auto
+  fail_action: hard_fail
+  description: 当多个 surface 适用时，按 Context -> Epistemic -> Adversarial -> Output 路由。
+- id: R-06
+  name: 单一 active surface
+  mode: auto
+  fail_action: quality_flag
+  description: 不默认运行所有 surface。
+- id: R-07
+  name: 最小 reference 加载
+  mode: auto
+  fail_action: quality_flag
+  description: 只加载 active bottleneck 需要的 reference。
+- id: R-08
+  name: Large 编排状态
+  mode: auto
+  fail_action: hard_fail
+  description: Large 的多 agent 或多阶段工作在委派前使用编排状态。
+- id: R-09
+  name: 自包含任务契约
+  mode: auto
+  fail_action: hard_fail
+  description: 被委派的工作具备 scope、ownership、skills、output、validation 和 stop conditions。
+- id: R-10
+  name: 所有权安全
+  mode: auto
+  fail_action: hard_fail
+  description: 不允许两个运行中的可写 worker 拥有同一路径或逻辑子系统。
+- id: R-11
+  name: 显式 skill 依赖
+  mode: auto
+  fail_action: hard_fail
+  description: Specialized procedure 被声明在 required_skills 中，且后续会被验证。
+- id: R-12
+  name: Reconciliation
+  mode: auto
+  fail_action: hard_fail
+  description: Specialist outputs 在最终使用前被审阅、调和，并被接受、修订或拒绝。
+- id: R-13
+  name: 停止路由
+  mode: auto
+  fail_action: hard_fail
+  description: 当应该开始实现或交付时停止控制路由。
+- id: R-14
+  name: 阶段适配的结构
+  mode: auto
+  fail_action: quality_flag
+  description: 不在 exploration 阶段强制使用 delivery schema。
+- id: R-15
+  name: 先查仓库再问用户
+  mode: auto
+  fail_action: quality_flag
+  description: 不向用户询问仓库、测试、日志或来源可以回答的事实。
+- id: R-16
+  name: 验证门
+  mode: auto
+  fail_action: hard_fail
+  description: Final response 等待必要终端任务、依赖消费、所有权解决和检查完成。
+- id: R-17
+  name: Mirror 读取禁令
+  mode: static
+  fail_action: hard_fail
+  description: 中文 mirror 是只写用户工件，绝不被读取、搜索或打开。
+- id: R-18
+  name: Mirror 同步
+  mode: static
+  fail_action: hard_fail
+  description: 每个 canonical English file 都有同步的中文 mirror。
+- id: H-01
+  name: 实质改善下一步
+  mode: judge
+  fail_action: quality_flag
+  description: 控制步骤以有用方式改变下一步行动。
+- id: H-02
+  name: 轻薄 router 行为
+  mode: judge
+  fail_action: quality_flag
+  description: Router 塑造并交接工作，而不是变成默认 solver。
+- id: H-03
+  name: 认知质量
+  mode: judge
+  fail_action: quality_flag
+  description: 关键假设在相关时有证据、不确定性或证伪路径。
+- id: H-04
+  name: 对抗质量
+  mode: judge
+  fail_action: quality_flag
+  description: Critique 绑定显式标准，并在相关时区分真实失败与噪声。
+- id: H-05
+  name: 可用 handoff
+  mode: judge
+  fail_action: quality_flag
+  description: 当 handoff 是目标时，下一个消费者无需重新解释即可行动。
+- id: H-06
+  name: 反仪式
+  mode: judge
+  fail_action: quality_flag
+  description: Response 使用当前阶段所需的最小控制。

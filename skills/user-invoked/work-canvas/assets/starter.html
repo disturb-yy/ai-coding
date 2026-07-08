@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<!-- work-canvas starter. Fill the body; keep the [[PASTE base.css]] / [[PASTE interactions.js]]
+     markers and any [[IMG path]]; then run:  python assets/assemble.py body.html out.html
+     (static page? delete the <script> block). Enforced: one self-contained offline file ·
+     provenance footer · "What needs your input" = only real decisions · legend for every
+     encoded color/symbol · non-destructive (paste-ready output, redact PII). -->
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TITLE — work-canvas</title>
+<!-- restore saved theme before first paint (avoids flash) -->
+<script>try{var t=localStorage.getItem("wc-theme");if(t)document.documentElement.setAttribute("data-theme",t);else if(matchMedia("(prefers-color-scheme: dark)").matches){/* keep light default; flip here if you prefer auto-dark */}}catch(e){}</script>
+<style>
+[[PASTE base.css]]
+</style>
+</head>
+<body>
+
+<!-- optional toolbar: theme toggle + print. Delete if the page is fully static. -->
+<div class="toolbar">
+  <button class="btn" data-theme-toggle title="Toggle theme">🌗</button>
+  <button class="btn" data-print title="Print / PDF">⎙</button>
+</div>
+
+<div class="container">
+
+  <!-- HEADER ------------------------------------------------------------- -->
+  <h1>📊 Report title</h1>
+  <p class="subtitle">One-line thesis: what this page is and what to conclude from it.</p>
+  <div class="meta-bar">
+    <span>Generated 2026-01-01</span><span>·</span>
+    <span>scope: N items</span><span>·</span>
+    <span>status: in progress</span>
+  </div>
+
+  <!-- WHAT NEEDS YOUR INPUT (keep near the top; only REAL decisions) ------ -->
+  <div class="needs-input">
+    <h2>⚡ What needs your input</h2>
+    <ol>
+      <li>Genuine open question 1 — with the concrete next action / command.</li>
+      <li>Genuine open question 2.</li>
+    </ol>
+  </div>
+
+  <!-- BODY SECTIONS — assemble from references/<type>.md ------------------- -->
+  <div class="section">
+    <div class="section-title"><span class="section-icon">📦</span> Section</div>
+    <!-- cards / tables / timeline / callouts / decisions / comparison ... -->
+  </div>
+
+  <!-- PROVENANCE FOOTER (mandatory) -------------------------------------- -->
+  <div class="footer">
+    <p>Built by &lt;agent / CLI&gt; → &lt;backbone model&gt; · 2026-01-01</p>
+  </div>
+
+</div>
+
+<script>
+[[PASTE interactions.js]]
+</script>
+</body>
+</html>

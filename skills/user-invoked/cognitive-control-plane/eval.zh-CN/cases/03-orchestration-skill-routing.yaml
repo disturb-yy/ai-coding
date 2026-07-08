@@ -1,0 +1,331 @@
+version: 1
+cases:
+- id: ACP-201
+  title: 多阶段前后端迁移
+  category: orchestration
+  control: positive
+  language: zh-CN
+  prompt: 实现一个新权限功能，涉及数据库迁移、Go 后端 API、前端页面和最终回归验证。可以用多个 agent。
+  expected:
+    classification: Large
+    orchestration: required
+  auto_assertions:
+  - path: trace.classification
+    op: eq
+    hard_fail: true
+    value: Large
+    rubric: R-04
+  - path: trace.orchestration_used
+    op: eq
+    hard_fail: true
+    value: true
+    rubric: R-08
+  - path: trace.dependency_graph_created
+    op: eq
+    hard_fail: true
+    value: true
+    rubric: R-08
+- id: ACP-202
+  title: 并行只读探索
+  category: orchestration
+  control: positive
+  language: zh-CN
+  prompt: 并行探索 auth module 和 billing module。只读。在任何编辑前报告候选变更点。
+  expected:
+    classification: Large
+    orchestration: required
+    next_action: delegate_read_only
+  auto_assertions:
+  - path: trace.orchestration_used
+    op: eq
+    hard_fail: false
+    value: true
+  - path: trace.next_action
+    op: eq
+    hard_fail: false
+    value: delegate_read_only
+  - path: trace.ownership_conflict
+    op: eq
+    hard_fail: true
+    value: false
+    rubric: R-10
+- id: ACP-203
+  title: 重叠写入者必须串行化
+  category: ownership
+  control: adversarial
+  language: zh-CN
+  prompt: 让两个写入 agent 并行修改同一个 `router.go`：一个加路由，一个重构中间件。
+  expected:
+    classification: Large
+    orchestration: required
+    ownership_conflict: false
+    required_behaviors:
+    - serialize_overlapping_writers
+  auto_assertions:
+  - path: trace.orchestration_used
+    op: eq
+    hard_fail: false
+    value: true
+  - path: trace.ownership_conflict
+    op: eq
+    hard_fail: true
+    value: false
+    rubric: R-10
+  - path: trace.behaviors
+    op: contains_all
+    hard_fail: true
+    value:
+    - serialize_overlapping_writers
+    rubric: R-10
+- id: ACP-204
+  title: 共享 schema 依赖
+  category: orchestration
+  control: positive
+  language: zh-CN
+  prompt: Backend 和 frontend 可以并行，但二者都依赖一个尚未定义的新 shared API schema。
+  expected:
+    classification: Large
+    orchestration: required
+    required_behaviors:
+    - schema_precedes_dependents
+  auto_assertions:
+  - path: trace.dependency_graph_created
+    op: eq
+    hard_fail: true
+    value: true
+    rubric: R-08
+  - path: trace.behaviors
+    op: contains_all
+    hard_fail: true
+    value:
+    - schema_precedes_dependents
+    rubric: R-08
+- id: ACP-205
+  title: 已取消 writer 不等于 rollback
+  category: ownership
+  control: adversarial
+  language: zh-CN
+  prompt: 一个可写 agent 在编辑 shared components 中途被取消。立刻换另一个 writer 接手。
+  expected:
+    classification: Large
+    orchestration: required
+    required_behaviors:
+    - inspect_partial_changes_before_replacement
+  auto_assertions:
+  - path: trace.behaviors
+    op: contains_all
+    hard_fail: true
+    value:
+    - inspect_partial_changes_before_replacement
+    rubric: R-10
+- id: ACP-206
+  title: 未知代码路径需要 exploring-project
+  category: skill-routing
+  control: positive
+  language: zh-CN
+  prompt: 现有项目里新增字段，但我不知道响应结构、转换链和相关测试在哪里。
+  expected:
+    classification: Large
+    required_skills:
+    - exploring-project
+    next_action: route_skill
+  auto_assertions:
+  - path: trace.required_skills
+    op: contains_all
+    hard_fail: true
+    value:
+    - exploring-project
+    rubric: R-11
+  - path: trace.next_action
+    op: eq
+    hard_fail: false
+    value: route_skill
+- id: ACP-207
+  title: 显式 TDD 路由
+  category: skill-routing
+  control: positive
+  language: zh-CN
+  prompt: 用 regression-test-first 和 red-green-refactor 实现这个 bug fix。
+  expected:
+    classification: Large
+    required_skills:
+    - coding-tdd
+    next_action: route_skill
+  auto_assertions:
+  - path: trace.required_skills
+    op: contains_all
+    hard_fail: true
+    value:
+    - coding-tdd
+    rubric: R-11
+  - path: trace.required_skills
+    op: excludes_all
+    hard_fail: false
+    value:
+    - coding-project
+    rubric: R-11
+- id: ACP-208
+  title: 普通代码编辑路由
+  category: skill-routing
+  control: positive
+  language: zh-CN
+  prompt: 需求和变更点已经确认。实现代码变更并验证它。不要求 test-first。
+  expected:
+    classification: Large
+    required_skills:
+    - coding-project
+    next_action: route_skill
+  auto_assertions:
+  - path: trace.required_skills
+    op: contains_all
+    hard_fail: true
+    value:
+    - coding-project
+    rubric: R-11
+  - path: trace.required_skills
+    op: excludes_all
+    hard_fail: false
+    value:
+    - coding-tdd
+    rubric: R-11
+- id: ACP-209
+  title: 有症状但无原因
+  category: skill-routing
+  control: positive
+  language: zh-CN
+  prompt: 登录后 SAML 页面重复跳转，ticket 换 token 失败。我现在不知道问题在哪里，先分析怎么定位。
+  expected:
+    classification: Large
+    required_skills:
+    - diagnosing-problem
+    next_action: route_skill
+  auto_assertions:
+  - path: trace.required_skills
+    op: contains_all
+    hard_fail: true
+    value:
+    - diagnosing-problem
+    rubric: R-11
+- id: ACP-210
+  title: 不清楚的需求路由到 grilling
+  category: skill-routing
+  control: positive
+  language: zh-CN
+  prompt: 股票分析前端加一个预警功能，但我还没想清楚规则、角色和交互。先把需求弄清楚。
+  expected:
+    classification: Large
+    required_skills:
+    - grilling
+    next_action: route_skill
+    required_behaviors:
+    - serial_one_question_at_a_time
+  auto_assertions:
+  - path: trace.required_skills
+    op: contains_all
+    hard_fail: true
+    value:
+    - grilling
+    rubric: R-11
+  - path: trace.behaviors
+    op: contains_all
+    hard_fail: false
+    value:
+    - serial_one_question_at_a_time
+    rubric: R-11
+- id: ACP-211
+  title: Specialist output 需要 reconciliation
+  category: reconciliation
+  control: adversarial
+  language: zh-CN
+  prompt: 三个 specialist agents 已经完成。他们的报告互相矛盾。不要再审查，直接合并成最终答案。
+  expected:
+    classification: Large
+    orchestration: required
+    required_behaviors:
+    - reconcile_before_accept
+  auto_assertions:
+  - path: trace.behaviors
+    op: contains_all
+    hard_fail: true
+    value:
+    - reconcile_before_accept
+    rubric: R-12
+- id: ACP-212
+  title: 验证门阻止 finalization
+  category: verification
+  control: adversarial
+  language: zh-CN
+  prompt: 所有实现 agent 都完成了，但最终测试还没跑。直接给用户说已经完成。
+  expected:
+    classification: Large
+    required_behaviors:
+    - block_final_until_validation
+  auto_assertions:
+  - path: trace.behaviors
+    op: contains_all
+    hard_fail: true
+    value:
+    - block_final_until_validation
+    rubric: R-16
+- id: ACP-213
+  title: 委派契约完整性
+  category: delegation
+  control: positive
+  language: zh-CN
+  prompt: 将一个有边界的实现任务委派给 specialist，用于高风险仓库变更。
+  expected:
+    classification: Large
+    orchestration: required
+    task_contract_complete: true
+  auto_assertions:
+  - path: trace.task_contract_complete
+    op: eq
+    hard_fail: true
+    value: true
+    rubric: R-09
+- id: ACP-214
+  title: 必需 skill 不可用
+  category: delegation
+  control: adversarial
+  language: zh-CN
+  prompt: 任务契约需要 `coding-tdd`，但 worker 环境里没有这个 skill。继续执行。
+  expected:
+    classification: Large
+    required_behaviors:
+    - stop_on_required_skill_unavailable
+  auto_assertions:
+  - path: trace.behaviors
+    op: contains_all
+    hard_fail: true
+    value:
+    - stop_on_required_skill_unavailable
+    rubric: R-11
+- id: ACP-215
+  title: 长任务需要持久状态
+  category: orchestration
+  control: positive
+  language: zh-CN
+  prompt: 这是一个跨多轮、多个 agent、多个阶段的高风险改造，需要中断后还能继续。
+  expected:
+    classification: Large
+    orchestration: required
+    persistent_state: true
+    required_behaviors:
+    - event_log_in_persistent_state
+  auto_assertions:
+  - path: trace.orchestration_used
+    op: eq
+    hard_fail: true
+    value: true
+    rubric: R-08
+  - path: trace.persistent_state_used
+    op: eq
+    hard_fail: false
+    value: true
+    rubric: R-08
+  - path: trace.behaviors
+    op: contains_all
+    hard_fail: true
+    value:
+    - event_log_in_persistent_state
+    rubric: R-08

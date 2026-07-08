@@ -1,0 +1,4 @@
+interface:
+  display_name: "Gen Index"
+  short_description: "Generate evidence-backed .agent project maps"
+  default_prompt: "Use $gen-index to generate or refresh .agent/PROJECT_INDEX.md and companion agent maps by triangulating Graphify, CodeMap, targeted rg/source reads, and human-maintained docs. Verify listed paths and major flows or mark them unknown."
