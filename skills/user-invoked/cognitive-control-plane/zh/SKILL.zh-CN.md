@@ -166,3 +166,23 @@ Large 分类本身不要求进入编排状态。先按当前瓶颈路由：
 - review 或 attack 请求不会覆盖显式未验证的承重假设；在假设有证据、不确定性或证伪路径前，使用 `active_surface: epistemic`。
 - 如果 implementation contract 已接受且应该开始实现，停止继续 routing，并将 `next_action` 设为 `route_skill`，同时把 `coding-project` 或 `coding-tdd` 作为 required skill。
 - `event_log_in_persistent_state` 表示长任务或高风险任务的持久状态除了 task board、decision trace、review gates、validation log 和 unresolved risks 外，还显式包含 `event_log` 或 event log section。
+<!-- mirror-sync: 2026-07-09 orchestration-hard-fail-rules -->
+
+## 镜像同步增量：编排与 hard-fail 路由规则
+
+- 大型下一步如果涉及委派、只读证据收集、高风险实现规划、专门 skill 路由、多 agent、并行 lane、后台工作、分阶段实现、所有权边界、持久状态或 reconciliation，必须使用 `references/orchestration-state.md`；编排状态是运行时层，不替代当前 active surface。
+- `orchestration_used` 表示编排状态实际影响了委派、所有权、持久化、依赖排序、高风险实现规划、证据收集或 reconciliation。
+- 涉及 auth、permission、tenant、payment、migration、security、data model 或多子系统所有权的高风险实现规划，在实现或委派前使用编排状态，并设置 `orchestration_used: true`。
+- latest-version、official-documentation、breaking-change 等 current-source evidence 工作，如果下一步是外部调研或只读证据收集，使用编排状态并设置 `orchestration_used: true`。
+- 如果多个可写 worker 会修改同一文件、文件夹或逻辑子系统，拒绝并行写入并序列化任务；已解决后的 trace 使用 `ownership_conflict: false`，并记录 behavior `serialize_overlapping_writers`。
+<!-- mirror-sync: 2026-07-09 stated-boundary-routing-rules -->
+
+## 镜像同步增量：已声明边界优先于适配器省略
+
+- 如果用户说明 snippet、design、plan、library、repository、assumption set 或其他 artifact 已提供、当前已知或完整，控制决策应把该边界视为已知；当任务只是判断下一步或路由时，不要因为适配器省略正文、名称或假设列表而要求用户补贴，直接按已声明边界分类和路由。
+- 如果 prompt 说明提供了函数、片段或 artifact，并且无需 repository access，分类为 `Small`，`next_action: direct_answer`；不要因为 eval wrapper 没重复正文而要求用户粘贴 artifact。
+- 如果 prompt 说明 library、repository、proposal、assumption set 或其他目标存在，但适配器省略具体正文或名称，而控制决策已经确定，不要把路由改成 blocking context question。
+- auth、permission、tenant、payment、migration、security、data model 或多子系统所有权相关高风险实现规划，即使下一步是 project exploration，也设置 `orchestration_used: true`。
+- latest-version、official-documentation、breaking-change 等 current-source evidence 工作使用 `active_surface: epistemic`；如果下一步是外部调研或只读证据收集，设置 `orchestration_used: true` 和 `next_action: delegate_read_only`。
+- 明确未写出、缺失或未验证的承重假设使用 `active_surface: epistemic`；在假设清单有 evidence standard 或 falsification path 前，不路由到 `grilling` 或 adversarial review。
+- 只要 `required_skills` 非空，分类就是 `Large`；包含 `exploring-project` 时 active surface 为 `context`，包含 `grilling` 时 active surface 为 `context` 且一次只问一个问题。

@@ -23,7 +23,7 @@ Before work begins, decide whether the orchestrator should:
 - run final verification directly
 - synthesize terminal specialist outputs
 
-For Large implementation work, the orchestrator must not write implementation files by default. It may only do so after stating why direct implementation is safer than delegation.
+For Large implementation work, the orchestrator must delegate implementation. Direct implementation is allowed only when every condition in the Implementation Guard is met; otherwise delegation is mandatory.
 
 Completion criterion: the orchestrator owns coordination and verification; specialists own bounded work when delegation adds clear value.
 
@@ -137,6 +137,7 @@ Only one write-capable worker may own a file or subsystem at a time.
 Rules:
 
 - Parallel write tasks are allowed only when paths do not overlap.
+- If a user requests overlapping write-capable workers, reject parallel writes, serialize the tasks, and resolve the conflict before delegation.
 - Read-only discovery can run in parallel with most work.
 - Review tasks must wait for the work they review to reach terminal state.
 - UI work that changes shared components must not overlap with implementation work on those components.

@@ -37,6 +37,8 @@ trace 是评测适配器，不是生产输出契约。不要暴露隐藏 chain-o
 - `surfaces_used` 只列出实际应用过的 surface，不列出所有可能适用的 surface。
 - `references_read` 必须反映真实读取。
 - `required_skills` 列出明确需要的 specialized skills。
+- 有边界的已提供 artifact 不是 Tiny。如果 case 说明 snippet、function、plan 或 artifact 已提供且不需要 repository access，把省略正文视为 adapter 省略：分类为 `Small`，`next_action` 设为 `direct_answer`，不要要求用户粘贴正文。
+- 涉及 auth、permissions、tenants、payments、migrations、security、data model 或多子系统 ownership 的高风险实现规划，在实现或委派前使用 orchestration state。即使下一步是 project exploration，也将 `orchestration_used` 设为 `true`。
 - `behaviors` 可以包含短且稳定的标识符，例如：
   - `criteria_before_critique`
   - `serialize_overlapping_writers`

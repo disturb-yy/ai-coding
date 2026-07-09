@@ -59,7 +59,7 @@ Use Tiny only for:
 
 Do not use Tiny for reading a provided code snippet, explaining behavior in a bounded artifact, editing a known file, producing a handoff, clarifying requirements, routing to a specialized skill, or deciding whether evidence is sufficient; those are at least Small.
 
-If the user says the snippet, design, plan, or other artifact is provided or complete, treat that artifact boundary as known for the control decision. When only the next action or routing decision is being made, do not ask the user to paste the artifact; classify and route from the stated boundary.
+If the user says the snippet, design, plan, library, repository, assumption set, or other artifact is provided, current, already known, or complete, treat that boundary as known for the control decision. When only the next action or routing decision is being made, do not ask the user to paste the omitted body, name, or assumption list; classify and route from the stated boundary.
 
 Completion criterion: there is no artifact to inspect, no edit to make, no skill route to choose, and no worker would add value.
 
@@ -123,14 +123,21 @@ Completion criterion: the active bottleneck, required skills, orchestration need
 
 For Large implementation work, the control-plane agent must not silently become the implementation worker.
 
-Before editing source files, generated artifacts, schemas, migrations, tests, or implementation-facing docs, do one of these:
+Before editing source files, generated artifacts, schemas, migrations, tests, or implementation-facing docs, delegate with a task contract that names the phase, required skills, required MCP/tools, ownership boundaries, validation, and stop conditions.
 
-1. Delegate with a task contract that names the phase, required skills, required MCP/tools, ownership boundaries, validation, and stop conditions.
-2. State why direct implementation is safer than delegation, then switch explicitly from routing to implementation.
+Direct implementation is allowed only when **all** of these conditions are true:
+
+- The change touches a single file.
+- No schema, migration, API surface, or generated-artifact change.
+- No cross-package or cross-module dependency.
+- The implementation pattern exactly mirrors an existing, working example in the same codebase.
+- You can state, in one sentence, what would go wrong if delegated instead of done directly.
+
+If **any** condition fails, delegation is mandatory. Do not invent additional exceptions. When implementing directly under this exception, state which conditions are met and switch explicitly from routing to implementation before the first edit.
 
 This guard does not block minimal routing reads, final verification commands, or tiny local edits that only update the control artifact itself.
 
-Completion criterion: every Large implementation edit is preceded by a visible delegation contract or an explicit direct-implementation exception.
+Completion criterion: every Large implementation edit is preceded by a visible delegation contract; if the direct-implementation exception was used, every condition is met and the justification is explicit before the first edit.
 
 ## Route
 
@@ -144,11 +151,11 @@ Pick the first unsatisfied surface that would materially change the next action.
 Surface order examples:
 
 - "Still exploring", "requirements unclear", "help determine next step", "organize current state", "find where this lives", "make the requirement clear", "先把需求弄清楚", or "repository can answer" -> Context before anything else.
-- "Current official docs", "latest major version", "breaking changes", "we assume", "unverified assumption", "must be based on evidence", or "root cause is..." -> Epistemic unless context is still missing.
+- "Current official docs", "latest major version", "breaking changes", "we assume", "unverified assumption", "assumptions are not written down", "must be based on evidence", or "root cause is..." -> Epistemic unless repository context is the only way to identify the claim.
 - "Review this concrete plan", "complete Skill design", "完整的 Skill 设计方案", "red-team", "pre-mortem", "worth doing?", "duplicate?", or "too complex?" -> Adversarial only after context is clear and load-bearing assumptions are explicit or verified.
 - "Discovery and design are complete", "generate implementation contract", "machine-readable", "accepted contract", or "final handoff" -> Output or route to implementation.
 
-Use [`references/orchestration-state.md`](references/orchestration-state.md) when a Large next action involves delegation, read-only evidence gathering, specialized skill routing, multiple agents, parallel lanes, background work, staged implementation, ownership boundaries, persistent state, or reconciliation. Orchestration state is the runtime layer; it does not replace the active surface.
+Use [`references/orchestration-state.md`](references/orchestration-state.md) when a Large next action involves delegation, read-only evidence gathering, high-risk implementation planning, specialized skill routing, multiple agents, parallel lanes, background work, staged implementation, ownership boundaries, persistent state, or reconciliation. Orchestration state is the runtime layer; it does not replace the active surface.
 
 Use [`references/skill-orchestration.md`](references/skill-orchestration.md) whenever the next action depends on a specialized skill. Required skill names must be explicit, even if the next visible act is asking the first question or starting implementation. Unclear requirements that need interview discipline require `grilling` and one question at a time; unknown repository paths require `exploring-project`; accepted implementation contracts require `coding-project` or `coding-tdd`.
 
@@ -161,7 +168,7 @@ When modifying this skill, read [`references/maintenance.md`](references/mainten
 2. For Large work, choose the first unsatisfied surface and read only that reference.
    Completion criterion: exactly one active surface is named unless the next action is already implementation with no remaining control surface.
 3. Decide whether orchestration state is required.
-   Completion criterion: orchestration is used for Large delegation, read-only evidence gathering, specialized skill routing, staged or parallel work, ownership boundaries, persistent state, or reconciliation; it is not used for Small work just because the user asked for agents.
+   Completion criterion: orchestration is used for Large delegation, read-only evidence gathering, high-risk implementation planning, specialized skill routing, staged or parallel work, ownership boundaries, persistent state, or reconciliation; it is not used for Small work just because the user asked for agents.
 4. If specialized procedure is needed, read skill orchestration and name `required_skills`.
    Completion criterion: `grilling`, `diagnosing-problem`, `exploring-project`, `coding-project`, or `coding-tdd` is explicit whenever skipping it would change the result.
 5. Apply the selected surface or orchestration state until its completion criterion is met.
@@ -174,13 +181,18 @@ When modifying this skill, read [`references/maintenance.md`](references/mainten
 When a wrapper, task contract, or summary asks for a routing trace, use these meanings:
 
 - `active_surface` is the first unsatisfied surface, not every relevant concern.
-- `orchestration_used` means orchestration state materially shaped delegation, ownership, persistence, dependency ordering, or reconciliation.
+- `orchestration_used` means orchestration state materially shaped delegation, ownership, persistence, dependency ordering, high-risk implementation planning, evidence gathering, or reconciliation.
 - `classification: Tiny` is only for no-artifact interaction. Bounded snippet analysis is `Small`; repository discovery, current-source evidence gathering, and any required downstream skill route are `Large`.
 - If the prompt states a snippet, function, or artifact is provided and says no repository access is needed, classify from that stated boundary as `Small` and use `next_action: direct_answer`; do not ask for the artifact merely because an eval wrapper omitted its body.
+- If the prompt states that a library, repository, proposal, assumption set, or other target exists but the adapter omits its concrete body or name, do not convert the route into a blocking context question when the control decision is already determined.
 - `active_surface: none` is incompatible with required repository discovery, current-source evidence gathering, or adversarial review of a stated complete plan.
 - Requests to find an existing code location, route, call chain, tests, or change points require `exploring-project`; classification is `Large`, active surface is `context`, and `next_action` is `route_skill`.
 - `ownership_conflict` means an unresolved conflict remains in the planned execution. If overlapping writers are rejected or serialized, the safe routed state has `ownership_conflict: false` and behavior `serialize_overlapping_writers`.
-- `required_skills` records specialized procedure that the next action depends on, even when the response also asks the first user question or starts implementation. If it contains `exploring-project`, classification is `Large` and active surface is `context`. If it contains `grilling`, classification is `Large`, active surface is `context`, and the route asks one question at a time.
+- High-risk implementation planning involving auth, permissions, tenants, payments, migrations, security, data model, or multi-subsystem ownership uses orchestration state before implementation or delegation; set `orchestration_used: true` even when the immediate route is project exploration.
+- Current-source evidence work, including latest-version, official-documentation, or breaking-change checks, uses `active_surface: epistemic`; when the immediate next step is external research or read-only evidence gathering, set `orchestration_used: true` and `next_action: delegate_read_only`.
+- When parallel write-capable workers target the same file, folder, or logical subsystem, reject parallel writes and serialize the tasks; the resolved trace has `ownership_conflict: false` and behavior `serialize_overlapping_writers`.
+- Explicitly unstated, missing, or unverified load-bearing assumptions use `active_surface: epistemic`; do not route to `grilling` or adversarial review until the assumption inventory has an evidence standard or falsification path.
+- `required_skills` records specialized procedure that the next action depends on, even when the response also asks the first user question or starts implementation. If any required skill is present, classification is `Large`. If it contains `exploring-project`, active surface is `context`. If it contains `grilling`, active surface is `context` and the route asks one question at a time.
 - Current official documentation, latest-version, or breaking-change decisions use `active_surface: epistemic`; if the immediate next step is read-only evidence gathering or external research, orchestration state is used.
 - A review or attack request does not override an explicit unverified load-bearing assumption; use `active_surface: epistemic` until the assumption has evidence, uncertainty, or a falsification path.
 - A stated complete plan, design, Skill design, diff, PR, or implementation approach requested for review uses `active_surface: adversarial` and behavior `criteria_before_critique`; do not downgrade to context merely because the artifact body is not repeated in the current adapter prompt.
