@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cognitive Control Plane 验证状态 - work-canvas</title>
+<script>try{var t=localStorage.getItem("wc-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<style>
+:root {
+--bg: #faf7f2;
+--bg-accent: #f3ece1;
+--card: #ffffff;
+--card-border: #ece4d8;
+--text: #2b2722;
+--text-muted: #8a8073;
+--accent: #d97757;
+--accent-dark: #bd5a39;
+--green: #2f8f5b;
+--red: #d2553f;
+--yellow: #c08a2e;
+--purple: #7c5cd0;
+--blue: #2b8fb0;
+--shadow-sm: 0 1px 2px rgba(43,39,34,.05), 0 4px 14px rgba(43,39,34,.03);
+--shadow-lg: 0 10px 28px rgba(189,90,57,.14);
+--radius: 12px;
+--mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", Menlo, monospace;
+--sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+[data-theme="dark"] {
+--bg: #0f172a;
+--bg-accent: #1a2336;
+--card: #1e293b;
+--card-border: #334155;
+--text: #e2e8f0;
+--text-muted: #94a3b8;
+--accent: #f0a384;
+--accent-dark: #d97757;
+--green: #4ade80;
+--red: #f87171;
+--yellow: #fbbf24;
+--purple: #a78bfa;
+--blue: #38bdf8;
+--shadow-sm: 0 1px 2px rgba(0,0,0,.25);
+--shadow-lg: 0 10px 28px rgba(0,0,0,.35);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+font-family: var(--sans);
+background: var(--bg);
+color: var(--text);
+line-height: 1.6;
+padding: 2rem;
+-webkit-font-smoothing: antialiased;
+border-top: 4px solid var(--accent);
+}
+.container { max-width: 1200px; margin: 0 auto; }
+.container--reading { max-width: 860px; }
+a { color: var(--accent-dark); }
+h1 {
+font-size: 2rem; font-weight: 700; margin-bottom: .4rem;
+background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+-webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.subtitle { color: var(--text-muted); margin-bottom: 1.5rem; font-size: .95rem; }
+.meta-bar {
+display: flex; flex-wrap: wrap; gap: .35rem 1rem; align-items: center;
+font-size: .8rem; color: var(--text-muted); font-family: var(--mono);
+margin-bottom: 1.75rem;
+}
+.footer {
+text-align: center; color: var(--text-muted); font-size: .8rem;
+margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--card-border);
+}
+.section { margin-bottom: 2.5rem; }
+.section-title {
+font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem;
+display: flex; align-items: center; gap: .5rem; scroll-margin-top: 5rem;
+}
+.section-icon { font-size: 1.35rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
+.card {
+background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius);
+padding: 1.5rem; box-shadow: var(--shadow-sm); transition: transform .2s, box-shadow .2s;
+}
+.card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.card-title { font-size: .8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .5rem; }
+.card-value { font-size: 2rem; font-weight: 700; }
+.card-detail { font-size: .85rem; color: var(--text-muted); margin-top: .25rem; }
+.badge { display: inline-flex; align-items: center; gap: .4rem; padding: .22rem .7rem; border-radius: 9999px; font-size: .78rem; font-weight: 600; }
+.badge.done, .badge.pass, .badge.ok, .badge.new   { background: color-mix(in srgb, var(--green) 16%, transparent); color: var(--green); }
+.badge.running, .badge.info                        { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent-dark); }
+.badge.blocked, .badge.fail, .badge.bad            { background: color-mix(in srgb, var(--red) 16%, transparent); color: var(--red); }
+.badge.waiting, .badge.pend, .badge.warn           { background: color-mix(in srgb, var(--yellow) 18%, transparent); color: var(--yellow); }
+.badge.exists, .badge.muted                        { background: color-mix(in srgb, var(--text-muted) 18%, transparent); color: var(--text-muted); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.dot.live { animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+.tag { display: inline-block; padding: .12rem .5rem; border-radius: 5px; font-size: .75rem; font-weight: 600; margin-right: .25rem; background: var(--bg-accent); color: var(--text-muted); }
+.tag.green { background: color-mix(in srgb, var(--green) 14%, transparent); color: var(--green); }
+.tag.red   { background: color-mix(in srgb, var(--red) 14%, transparent); color: var(--red); }
+.tag.amber { background: color-mix(in srgb, var(--yellow) 16%, transparent); color: var(--yellow); }
+.tag.coral { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent-dark); }
+.tag.purple{ background: color-mix(in srgb, var(--purple) 15%, transparent); color: var(--purple); }
+.progress-bar { width: 100%; height: 8px; background: color-mix(in srgb, var(--text) 9%, transparent); border-radius: 4px; overflow: hidden; margin-top: .5rem; }
+.progress-fill { height: 100%; border-radius: 4px; transition: width .5s ease; background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, white)); }
+.progress-fill.green { background: linear-gradient(90deg, var(--green), color-mix(in srgb, var(--green) 55%, white)); }
+.progress-fill.amber { background: linear-gradient(90deg, var(--yellow), color-mix(in srgb, var(--yellow) 55%, white)); }
+.progress-fill.red   { background: linear-gradient(90deg, var(--red), color-mix(in srgb, var(--red) 55%, white)); }
+.bar-track { display: flex; align-items: center; gap: .5rem; margin: .35rem 0; }
+.bar-track .bar-label { flex: 0 0 130px; font-size: .85rem; color: var(--text-muted); }
+.bar-track .bar { height: 18px; border-radius: 4px; background: var(--accent); }
+.table-wrap { overflow-x: auto; border: 1px solid var(--card-border); border-radius: var(--radius); }
+table { width: 100%; border-collapse: collapse; background: var(--card); }
+th {
+background: var(--bg-accent); text-align: left; padding: .7rem 1rem; font-size: .78rem;
+text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted);
+border-bottom: 1px solid var(--card-border); position: sticky; top: 0;
+}
+th[data-sort] { cursor: pointer; user-select: none; }
+th[data-sort]::after { content: " \2195"; opacity: .35; }
+th[data-sort].asc::after { content: " \2191"; opacity: 1; }
+th[data-sort].desc::after { content: " \2193"; opacity: 1; }
+td { padding: .7rem 1rem; border-bottom: 1px solid color-mix(in srgb, var(--text) 8%, transparent); font-size: .9rem; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--bg-accent) 45%, transparent); }
+tbody tr:hover td { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--mono); }
+td.best { font-weight: 700; color: var(--green); }
+.filter-bar { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .75rem; }
+.chip { padding: .25rem .7rem; border-radius: 9999px; border: 1px solid var(--card-border); background: var(--card); color: var(--text-muted); font-size: .8rem; cursor: pointer; }
+.chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.callout { border-left: 4px solid var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--card)); border-radius: 0 var(--radius) var(--radius) 0; padding: 1rem 1.25rem; margin: 1rem 0; }
+.callout.good { border-color: var(--green); background: color-mix(in srgb, var(--green) 8%, var(--card)); }
+.callout.warn { border-color: var(--yellow); background: color-mix(in srgb, var(--yellow) 9%, var(--card)); }
+.callout.bad  { border-color: var(--red); background: color-mix(in srgb, var(--red) 8%, var(--card)); }
+.callout-title { font-weight: 700; margin-bottom: .35rem; }
+.needs-input { border: 1px dashed var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--card)); border-radius: var(--radius); padding: 1.25rem 1.5rem; margin: 1.5rem 0; }
+.needs-input h2 { font-size: 1.1rem; margin-bottom: .5rem; color: var(--accent-dark); }
+.needs-input ol { padding-left: 1.25rem; }
+.needs-input li { margin: .4rem 0; }
+.verdict { border: 1px solid var(--card-border); border-radius: var(--radius); padding: 1.25rem 1.5rem; margin: 1.25rem 0; box-shadow: var(--shadow-sm); }
+.verdict.pursue { background: linear-gradient(135deg, color-mix(in srgb, var(--yellow) 14%, var(--card)), var(--card)); }
+.verdict.go     { background: linear-gradient(135deg, color-mix(in srgb, var(--green) 14%, var(--card)), var(--card)); }
+.verdict.stop   { background: linear-gradient(135deg, color-mix(in srgb, var(--red) 14%, var(--card)), var(--card)); }
+.verdict-badge { display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: .15rem .55rem; border-radius: 5px; background: var(--accent); color: #fff; margin-bottom: .5rem; }
+.decision { counter-reset: none; }
+.decision-item { border: 1px solid var(--card-border); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: .9rem; background: var(--card); }
+.decision-q { font-weight: 600; margin-bottom: .5rem; }
+.commentbox { border: 1px dashed var(--text-muted); border-radius: 8px; padding: .6rem .8rem; min-height: 2.4rem; font-family: var(--mono); font-size: .85rem; color: var(--text); background: color-mix(in srgb, var(--bg-accent) 50%, transparent); }
+.commentbox:empty::before { content: "Comment\2026"; color: var(--text-muted); }
+.commentbox:focus { outline: 2px solid var(--accent); }
+.timeline { position: relative; padding-left: 2rem; }
+.timeline::before { content: ""; position: absolute; left: 7px; top: 0; bottom: 0; width: 2px; background: var(--card-border); }
+.timeline-item { position: relative; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid color-mix(in srgb, var(--text) 7%, transparent); }
+.timeline-item:last-child { border-bottom: none; margin-bottom: 0; }
+.timeline-dot { position: absolute; left: -2rem; top: .35rem; width: 14px; height: 14px; border-radius: 50%; border: 3px solid var(--bg); background: var(--accent); }
+.timeline-date { font-size: .8rem; color: var(--text-muted); }
+.timeline-title { font-weight: 600; margin: .15rem 0; }
+.timeline-desc { font-size: .85rem; color: var(--text-muted); }
+.legend { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; align-items: center; padding: .75rem 1rem; background: var(--bg-accent); border-radius: var(--radius); font-size: .82rem; margin-bottom: 1.25rem; }
+.legend-item { display: inline-flex; align-items: center; gap: .4rem; }
+.legend-swatch { width: 12px; height: 12px; border-radius: 3px; }
+.compare-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+.compare-col { border: 1px solid var(--card-border); border-radius: var(--radius); overflow: hidden; background: var(--card); }
+.compare-col .col-head { padding: .6rem 1rem; font-weight: 600; border-bottom: 1px solid var(--card-border); }
+.compare-col.winner { outline: 2px solid var(--green); }
+.img-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.img-grid img, .filmstrip img { width: 100%; border-radius: 8px; cursor: zoom-in; }
+.filmstrip { display: flex; gap: .75rem; overflow-x: auto; padding-bottom: .5rem; }
+.filmstrip > * { flex: 0 0 220px; }
+code { font-family: var(--mono); font-size: .85em; background: color-mix(in srgb, var(--accent) 8%, transparent); padding: .12rem .4rem; border-radius: 5px; color: var(--accent-dark); word-break: break-word; }
+pre { background: var(--bg-accent); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 1rem; overflow-x: auto; font-family: var(--mono); font-size: .85rem; }
+pre code { background: none; padding: 0; color: var(--text); }
+.toolbar { position: fixed; top: .75rem; right: .75rem; display: flex; gap: .4rem; z-index: 50; }
+.btn { padding: .35rem .7rem; border-radius: 8px; border: 1px solid var(--card-border); background: var(--card); color: var(--text); font-size: .8rem; cursor: pointer; box-shadow: var(--shadow-sm); }
+.btn:hover { border-color: var(--accent); }
+.copy-btn { padding: .15rem .5rem; font-size: .72rem; border-radius: 5px; border: 1px solid var(--card-border); background: var(--card); color: var(--text-muted); cursor: pointer; }
+.copy-btn.copied { color: var(--green); border-color: var(--green); }
+.tab-bar { display: flex; gap: .25rem; overflow-x: auto; border-bottom: 1px solid var(--card-border); margin-bottom: 1.5rem; }
+.tab-btn { padding: .6rem 1rem; border: none; background: none; color: var(--text-muted); font-size: .9rem; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+.tab-btn.active { color: var(--accent-dark); border-bottom-color: var(--accent); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+.layout { display: grid; grid-template-columns: 240px 1fr; gap: 2rem; align-items: start; }
+.sidebar { position: sticky; top: 1.5rem; align-self: start; font-size: .9rem; }
+.sidebar a { display: block; padding: .25rem .5rem; color: var(--text-muted); text-decoration: none; border-radius: 6px; }
+.sidebar a.active { color: var(--accent-dark); background: var(--bg-accent); }
+.back-to-top { position: fixed; bottom: 1.25rem; right: 1.25rem; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.back-to-top.visible { opacity: 1; pointer-events: auto; }
+dialog.lightbox { border: none; background: transparent; max-width: 95vw; max-height: 95vh; padding: 0; }
+dialog.lightbox::backdrop { background: rgba(0,0,0,.8); }
+dialog.lightbox img { max-width: 95vw; max-height: 90vh; border-radius: 8px; }
+dialog.lightbox .cap { color: #eee; text-align: center; font-size: .85rem; margin-top: .5rem; }
+@media (max-width: 800px) {
+body { padding: 1rem; }
+.layout { grid-template-columns: 1fr; }
+.sidebar { position: static; }
+.img-grid { grid-template-columns: 1fr; }
+}
+@media print { .toolbar, .back-to-top { display: none; } body { padding: 0; } }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button class="btn" data-theme-toggle title="切换主题">主题</button>
+  <button class="btn" data-print title="打印 / 导出 PDF">打印</button>
+</div>
+
+<div class="container">
+  <h1>Cognitive Control Plane 验证状态</h1>
+  <p class="subtitle">已修复的 hard-fail 聚类保持干净；全量评测仍暴露 6 个更广的路由失败，需要下一轮补丁。</p>
+  <div class="meta-bar">
+    <span>生成日期 2026-07-09</span><span>·</span>
+    <span>范围：cognitive-control-plane eval 与 GitHub 发布状态</span><span>·</span>
+    <span>状态：需要后续处理</span>
+  </div>
+
+  <div class="needs-input">
+    <h2>需要你决定的事</h2>
+    <ol>
+      <li>是否现在继续修全量评测剩余的 6 个 hard fail。下一步命令：查看 <code>eval/results/full-rerun-2026-07-09/report.md</code> 并更新路由规则。</li>
+      <li>是否手动创建 GitHub PR，或先恢复本机 <code>gh</code> 登录。下一步命令：<code>gh auth refresh -h github.com</code>，然后从 <code>codex/codemap-workspace-mcp</code> 向 <code>master</code> 创建 draft PR。</li>
+    </ol>
+  </div>
+
+  <div class="section">
+    <div class="section-title"><span class="section-icon">状态</span>当前快照</div>
+    <div class="grid">
+      <div class="card">
+        <div class="card-title">已修复 targeted 聚类</div>
+        <div class="card-value" style="color:var(--green)">27/27</div>
+        <div class="card-detail">hard fails: 0</div>
+        <div class="progress-bar"><div class="progress-fill green" style="width:100%"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">全量 eval</div>
+        <div class="card-value" style="color:var(--amber)">89/102</div>
+        <div class="card-detail">87.3%；hard fails: 6</div>
+        <div class="progress-bar"><div class="progress-fill amber" style="width:87.3%"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">静态检查</div>
+        <div class="card-value" style="color:var(--green)">通过</div>
+        <div class="card-detail">static checks 与 mirror check 均通过</div>
+        <div class="progress-bar"><div class="progress-fill green" style="width:100%"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">GitHub 发布</div>
+        <div class="card-value" style="color:var(--green)">已推送</div>
+        <div class="card-detail"><code>83f3f96</code> 位于 <code>codex/codemap-workspace-mcp</code></div>
+        <div class="progress-bar"><div class="progress-fill green" style="width:80%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title"><span class="section-icon">诊断</span>为什么是 87.3%，不是 100%？</div>
+    <div class="callout warn">
+      <div class="callout-title">全量 eval 发现的是修复聚类之外的更广路由回归。</div>
+      <ul>
+        <li><b>Skill 名称规范化：</b>两个 case 输出了 <code>explore-project</code>，但 eval 期望 canonical 名称 <code>exploring-project</code>。</li>
+        <li><b>Surface precedence 漂移：</b>三个 case 中，vague critique 或 context/epistemic 混合提示选择了错误的第一个 active surface。</li>
+        <li><b>实现启动 handoff：</b>一个 case 已经进入实现启动阶段，但 <code>required_skills</code> 没有包含 <code>coding-project</code>。</li>
+        <li><b>非 hard 的 reference path 失败：</b>4 个 R-07 失败主要是路径形状不一致；期望的相对路径包含在实际绝对路径里，所以这是噪声，不是 hard fail。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title"><span class="section-icon">图例</span>结果图例</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>标记</th><th>含义</th><th>动作</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge done">通过</span></td><td>验证已通过，或该项变更已完成。</td><td>无需处理。</td></tr>
+          <tr><td><span class="badge waiting">待处理</span></td><td>问题已定位且范围清楚，但仍需要补丁。</td><td>如果希望 PR 前 full eval 更干净，应优先处理。</td></tr>
+          <tr><td><span class="badge blocked">受阻</span></td><td>外部工具或认证阻止完成。</td><td>需要人工输入或刷新认证。</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title"><span class="section-icon">失败项</span>全量 Eval Hard Fails</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Case</th><th>期望</th><th>实际</th><th>可能修法</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>ACP-103</code></td><td><code>required_skills</code> 包含 <code>exploring-project</code></td><td><code>explore-project</code></td><td>在 trace 语义或 eval adapter 中把别名归一到 canonical skill 名。</td></tr>
+          <tr><td><code>ACP-107</code></td><td><code>active_surface: context</code></td><td><code>none</code></td><td>明确 vague idea 请求 critique 时尚未进入 adversarial review，先路由到 context。</td></tr>
+          <tr><td><code>ACP-110</code></td><td><code>active_surface: context</code></td><td><code>epistemic</code></td><td>加强 precedence：缺少 operating context 时优先于 epistemic/adversarial 信号。</td></tr>
+          <tr><td><code>ACP-113</code></td><td><code>active_surface: adversarial</code></td><td><code>context</code></td><td>完整 artifact 加 critique 请求应保持 adversarial，并使用 criteria-before-critique。</td></tr>
+          <tr><td><code>ACP-206</code></td><td><code>required_skills</code> 包含 <code>exploring-project</code></td><td><code>explore-project</code></td><td>同 ACP-103：canonical skill-name normalization。</td></tr>
+          <tr><td><code>ACP-304</code></td><td><code>required_skills</code> 包含 <code>coding-project</code></td><td>空列表</td><td>implementation contract 已接受时必须显式 route 到 <code>coding-project</code>。</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title"><span class="section-icon">运行</span>验证运行记录</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Run</th><th>范围</th><th>结果</th><th>报告</th></tr></thead>
+        <tbody>
+          <tr><td><code>hard-fail-targeted-rerun-r2-2026-07-09</code></td><td>10 个已修复/失败重点 case</td><td><span class="badge done">27/27，hard fails 0</span></td><td><code>eval/results/hard-fail-targeted-rerun-r2-2026-07-09/report.md</code></td></tr>
+          <tr><td><code>full-rerun-2026-07-09</code></td><td>45 个全量 eval case</td><td><span class="badge waiting">89/102，hard fails 6</span></td><td><code>eval/results/full-rerun-2026-07-09/report.md</code></td></tr>
+          <tr><td><code>static_checks.py</code></td><td>本地静态验证</td><td><span class="badge done">通过</span></td><td><code>python3 eval/scripts/static_checks.py --skill-dir .</code></td></tr>
+          <tr><td><code>check-mirrors.js</code></td><td>镜像新鲜度</td><td><span class="badge done">通过</span></td><td><code>CCP_SKILL_DIR=$PWD node scripts/check-mirrors.js</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title"><span class="section-icon">时间线</span>调试过程</div>
+    <div class="timeline">
+      <div class="timeline-item"><div class="timeline-dot" style="background:var(--red)"></div><div class="timeline-date">起点</div><div class="timeline-title">旧 full eval 有 10 个 hard fail</div><div class="timeline-desc">失败集中在 event log、bounded artifact vs repository discovery、route precedence、unclear requirements、overlapping writers 和 implementation handoff。</div></div>
+      <div class="timeline-item"><div class="timeline-dot" style="background:var(--green)"></div><div class="timeline-date">修复</div><div class="timeline-title">Targeted hard-fail 聚类修复完成</div><div class="timeline-desc">补了 event log 语义、路由 invariants、ownership serialization 和 eval adapter 规则。Targeted rerun 达到 27/27。</div></div>
+      <div class="timeline-item"><div class="timeline-dot" style="background:var(--green)"></div><div class="timeline-date">发布</div><div class="timeline-title">Commit 已推送</div><div class="timeline-desc">Commit <code>83f3f96 fix cognitive control plane eval routing</code> 已推送到 <code>origin/codex/codemap-workspace-mcp</code>。</div></div>
+      <div class="timeline-item"><div class="timeline-dot" style="background:var(--amber)"></div><div class="timeline-date">全量验证</div><div class="timeline-title">仍有更广的路由回归</div><div class="timeline-desc">Full eval 完成：89/102 assertions，6 个 hard fail。已修复 targeted 聚类没有回归。</div></div>
+      <div class="timeline-item"><div class="timeline-dot" style="background:var(--red)"></div><div class="timeline-date">PR</div><div class="timeline-title">PR 创建被认证/工具阻塞</div><div class="timeline-desc"><code>git push</code> 已成功；本机 <code>gh</code> token 失效，GitHub connector 在 MCP 启动阶段失败。</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title"><span class="section-icon">下一步</span>行动项</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>优先级</th><th>动作</th><th>具体下一步</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>修复 full eval 剩余 6 个 hard fail。</td><td>为 skill-name aliases、context precedence、完整 critique artifact、implementation-start handoff 补 canonical routing 语义。</td></tr>
+          <tr><td>2</td><td>重跑这 6 个失败 case 的 focused eval。</td><td><code>python3 eval/scripts/run_codex_baseline.py --skill-dir . --eval-dir eval --run-id full-failures-rerun-2026-07-09 --sandbox workspace-write --timeout 180 --use-user-config --case ACP-103 --case ACP-107 --case ACP-110 --case ACP-113 --case ACP-206 --case ACP-304</code></td></tr>
+          <tr><td>3</td><td>如果要从本机开 PR，刷新 GitHub CLI auth。</td><td><code>gh auth refresh -h github.com</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title"><span class="section-icon">命令</span>快速参考</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>用途</th><th>命令</th></tr></thead>
+        <tbody>
+          <tr><td>静态检查</td><td><code>python3 eval/scripts/static_checks.py --skill-dir .</code></td></tr>
+          <tr><td>镜像检查</td><td><code>CCP_SKILL_DIR=$PWD node scripts/check-mirrors.js</code></td></tr>
+          <tr><td>查看 full eval 报告</td><td><code>sed -n '1,220p' eval/results/full-rerun-2026-07-09/report.md</code></td></tr>
+          <tr><td>查看 targeted clean 报告</td><td><code>sed -n '1,120p' eval/results/hard-fail-targeted-rerun-r2-2026-07-09/report.md</code></td></tr>
+          <tr><td>认证恢复后创建 draft PR</td><td><code>gh pr create --draft --base master --head codex/codemap-workspace-mcp --title "fix cognitive control plane eval routing"</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>由 Codex CLI / GPT-5 构建 · 2026-07-09 · 数据来源：<code>cognitive-control-plane</code> 本地 eval reports 与 git 状态。</p>
+  </div>
+</div>
+
+<script>
+function initTheme() {
+const KEY = "wc-theme";
+const root = document.documentElement;
+const btn = document.querySelector("[data-theme-toggle]");
+if (btn) btn.addEventListener("click", () => {
+const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+root.setAttribute("data-theme", next);
+try { localStorage.setItem(KEY, next); } catch (e) {}
+});
+const p = document.querySelector("[data-print]");
+if (p) p.addEventListener("click", () => window.print());
+}
+function initTabs() {
+const btns = [...document.querySelectorAll(".tab-btn[data-tab]")];
+if (!btns.length) return;
+const panels = [...document.querySelectorAll(".tab-panel")];
+function activate(id, push) {
+const btn = btns.find(b => b.dataset.tab === id) || btns[0];
+id = btn.dataset.tab;
+btns.forEach(b => b.classList.toggle("active", b === btn));
+panels.forEach(p => p.classList.toggle("active", p.id === id));
+const panel = document.getElementById(id);
+if (panel && panel.dataset.accent) document.documentElement.style.setProperty("--accent", panel.dataset.accent);
+btn.scrollIntoView({ inline: "center", block: "nearest" });
+if (push) history.replaceState(null, "", "#" + id);
+}
+btns.forEach(b => b.addEventListener("click", () => activate(b.dataset.tab, true)));
+document.addEventListener("click", e => {
+const a = e.target.closest('a[href^="#"]');
+if (!a) return;
+const el = document.getElementById(a.getAttribute("href").slice(1));
+const panel = el && el.closest(".tab-panel");
+if (panel && !panel.classList.contains("active")) {
+e.preventDefault();
+activate(panel.id, true);
+setTimeout(() => el.scrollIntoView({ behavior: "smooth" }), 80);
+}
+});
+window.addEventListener("hashchange", () => activate(location.hash.slice(1), false));
+activate(location.hash.slice(1), false);
+}
+function initTables() {
+document.querySelectorAll("table").forEach(table => {
+table.querySelectorAll("th[data-sort]").forEach((th, col) => {
+th.addEventListener("click", () => {
+const tb = table.tBodies[0];
+const rows = [...tb.rows];
+const numeric = th.dataset.sort === "num";
+const asc = !th.classList.contains("asc");
+table.querySelectorAll("th").forEach(h => h.classList.remove("asc", "desc"));
+th.classList.add(asc ? "asc" : "desc");
+rows.sort((a, b) => {
+let x = a.cells[col]?.innerText.trim() ?? "", y = b.cells[col]?.innerText.trim() ?? "";
+if (numeric) { x = parseFloat(x.replace(/[^0-9.\-]/g, "")); y = parseFloat(y.replace(/[^0-9.\-]/g, "")); x = isNaN(x) ? -Infinity : x; y = isNaN(y) ? -Infinity : y; return asc ? x - y : y - x; }
+return asc ? x.localeCompare(y) : y.localeCompare(x);
+});
+rows.forEach(r => tb.appendChild(r));
+});
+});
+});
+document.querySelectorAll(".filter-bar[data-filter-for]").forEach(bar => {
+const table = document.getElementById(bar.dataset.filterFor);
+if (!table) return;
+bar.addEventListener("click", e => {
+const chip = e.target.closest(".chip"); if (!chip) return;
+bar.querySelectorAll(".chip").forEach(c => c.classList.toggle("active", c === chip));
+const f = chip.dataset.filter;
+[...table.tBodies[0].rows].forEach(r => { r.style.display = (f === "all" || r.dataset.type === f) ? "" : "none"; });
+});
+});
+}
+function initLightbox() {
+const imgs = document.querySelectorAll(".img-grid img, .filmstrip img, [data-zoom]");
+if (!imgs.length) return;
+let dlg = document.querySelector("dialog.lightbox");
+if (!dlg) {
+dlg = document.createElement("dialog");
+dlg.className = "lightbox";
+dlg.innerHTML = '<img alt=""><div class="cap"></div>';
+document.body.appendChild(dlg);
+dlg.addEventListener("click", () => dlg.close());
+}
+const big = dlg.querySelector("img"), cap = dlg.querySelector(".cap");
+imgs.forEach(im => im.addEventListener("click", () => {
+big.src = im.currentSrc || im.src;
+cap.textContent = im.dataset.caption || im.alt || "";
+dlg.showModal();
+}));
+}
+function initCopy() {
+document.querySelectorAll(".copy-btn[data-copy]").forEach(btn => {
+btn.addEventListener("click", async () => {
+const v = btn.dataset.copy;
+const src = v.startsWith("#") ? document.querySelector(v) : null;
+const text = src ? src.innerText : v;
+try { await navigator.clipboard.writeText(text); } catch (e) {}
+const old = btn.textContent; btn.textContent = "Copied ✓"; btn.classList.add("copied");
+setTimeout(() => { btn.textContent = old; btn.classList.remove("copied"); }, 1400);
+});
+});
+}
+function initScrollspy() {
+const links = [...document.querySelectorAll(".sidebar a[href^='#']")];
+if (links.length) {
+const ids = links.map(a => a.getAttribute("href").slice(1));
+const onScroll = () => {
+let cur = ids[0];
+for (const id of ids) { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top <= 120) cur = id; }
+links.forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + cur));
+};
+window.addEventListener("scroll", onScroll, { passive: true }); onScroll();
+}
+const top = document.querySelector("[data-top]");
+if (top) {
+top.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+window.addEventListener("scroll", () => top.classList.toggle("visible", window.scrollY > 400), { passive: true });
+}
+}
+function initPersist() {
+const els = document.querySelectorAll("[data-persist]");
+els.forEach(el => {
+const key = "wc-" + (el.id || el.dataset.persist);
+try {
+const saved = localStorage.getItem(key);
+if (saved !== null) { if (el.type === "checkbox") el.checked = saved === "1"; else el.textContent = saved; }
+} catch (e) {}
+const save = () => { try { localStorage.setItem(key, el.type === "checkbox" ? (el.checked ? "1" : "0") : el.textContent); } catch (e) {} };
+el.addEventListener(el.type === "checkbox" ? "change" : "input", save);
+});
+}
+document.addEventListener("DOMContentLoaded", () => {
+initTheme(); initTabs(); initTables(); initLightbox(); initCopy(); initScrollspy(); initPersist();
+});
+</script>
+</body>
+</html>

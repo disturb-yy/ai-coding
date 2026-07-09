@@ -1,0 +1,113 @@
+version: 1
+cases:
+- id: META-001
+  title: 正确的 negative control
+  case_prompt: 只解释 EOF。
+  golden:
+    activation: forbidden
+    classification: Tiny
+    surface: none
+  observed:
+    trace:
+      activated: false
+      classification: Tiny
+      active_surface: none
+    response: EOF 表示文件或输入结束。
+  expected_judge:
+    min_scores:
+      materially_improves_next_action: 2
+      thin_router_behavior: 2
+      anti_ceremony: 2
+    forbidden_flags:
+    - trace_behavior_conflict
+- id: META-002
+  title: Self-report 正确但 response 运行所有 surface
+  case_prompt: 需求不清楚。帮我确定下一步。
+  golden:
+    surface: context
+  observed:
+    trace:
+      activated: true
+      classification: Large
+      active_surface: context
+      surfaces_used:
+      - context
+    response: 我会先运行 Context，再运行 Epistemic，然后运行 Adversarial，最后运行 Output control，之后才能决定下一步。
+  expected_judge:
+    required_flags:
+    - trace_behavior_conflict
+    max_scores:
+      thin_router_behavior: 0
+      anti_ceremony: 0
+- id: META-003
+  title: 错误 surface 顺序
+  case_prompt: 想法很模糊，有未经验证的假设，请攻击它。
+  golden:
+    surface: context
+  observed:
+    trace:
+      activated: true
+      classification: Large
+      active_surface: adversarial
+      surfaces_used:
+      - adversarial
+    response: 我会立刻对这个架构做红队审查。
+  expected_judge:
+    max_scores:
+      materially_improves_next_action: 1
+    expected_failure_mode: surface_order_violation
+- id: META-004
+  title: 良好的轻薄路由
+  case_prompt: 在仓库里找登录调用链。
+  golden:
+    surface: context
+    required_skills:
+    - exploring-project
+  observed:
+    trace:
+      activated: true
+      classification: Large
+      active_surface: context
+      required_skills:
+      - exploring-project
+      next_action: route_skill
+    response: 该路径尚未验证。先路由到项目探索；检查仓库，而不是问用户它在哪里。
+  expected_judge:
+    min_scores:
+      materially_improves_next_action: 2
+      thin_router_behavior: 2
+      anti_ceremony: 2
+- id: META-005
+  title: 过早交付 schema
+  case_prompt: 我们还在探索原因，证据不完整。
+  golden:
+    surface: context
+    strict_schema_during_exploration: false
+  observed:
+    trace:
+      activated: true
+      classification: Large
+      active_surface: output
+      strict_schema_during_exploration: true
+    response: 继续 discovery 前，先严格返回这个 25 字段 JSON schema。
+  expected_judge:
+    max_scores:
+      phase_appropriate_output: 0
+    expected_failure_mode: premature_schema
+- id: META-006
+  title: 未审阅 specialist output
+  case_prompt: 专家报告互相矛盾；生成最终答案。
+  golden:
+    required_behaviors:
+    - reconcile_before_accept
+  observed:
+    trace:
+      activated: true
+      classification: Large
+      active_surface: none
+      behaviors: []
+    response: Agent A 说 X，所以 X 就是最终答案。
+  expected_judge:
+    max_scores:
+      materially_improves_next_action: 0
+    expected_failure_mode: unreviewed_specialist_output

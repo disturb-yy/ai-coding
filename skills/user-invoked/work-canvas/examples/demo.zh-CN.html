@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>work-canvas 示例 — Atlas 项目</title>
+<script>try{var t=localStorage.getItem("wc-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<style>
+/* ============================================================================
+   work-canvas base design system  —  inline this whole block into a <style> tag.
+   Light "Anthropic" theme is the default. Dark theme activates via
+   <html data-theme="dark">. The theme toggle in interactions.js flips it.
+   All colors are CSS variables so a project design system can override :root.
+   ========================================================================== */
+
+:root {
+  /* light "Anthropic" (default) */
+  --bg: #faf7f2;
+  --bg-accent: #f3ece1;
+  --card: #ffffff;
+  --card-border: #ece4d8;
+  --text: #2b2722;
+  --text-muted: #8a8073;
+  --accent: #d97757;          /* Claude coral */
+  --accent-dark: #bd5a39;
+  --green: #2f8f5b;
+  --red: #d2553f;
+  --yellow: #c08a2e;
+  --purple: #7c5cd0;
+  --blue: #2b8fb0;
+  --shadow-sm: 0 1px 2px rgba(43,39,34,.05), 0 4px 14px rgba(43,39,34,.03);
+  --shadow-lg: 0 10px 28px rgba(189,90,57,.14);
+  --radius: 12px;
+  --mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", Menlo, monospace;
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+[data-theme="dark"] {
+  --bg: #0f172a;
+  --bg-accent: #1a2336;
+  --card: #1e293b;
+  --card-border: #334155;
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --accent: #f0a384;
+  --accent-dark: #d97757;
+  --green: #4ade80;
+  --red: #f87171;
+  --yellow: #fbbf24;
+  --purple: #a78bfa;
+  --blue: #38bdf8;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.25);
+  --shadow-lg: 0 10px 28px rgba(0,0,0,.35);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  padding: 2rem;
+  -webkit-font-smoothing: antialiased;
+  border-top: 4px solid var(--accent);
+}
+.container { max-width: 1200px; margin: 0 auto; }
+.container--reading { max-width: 860px; }   /* for long-form review documents */
+a { color: var(--accent-dark); }
+
+/* ---- header + provenance ------------------------------------------------- */
+h1 {
+  font-size: 2rem; font-weight: 700; margin-bottom: .4rem;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.subtitle { color: var(--text-muted); margin-bottom: 1.5rem; font-size: .95rem; }
+.meta-bar {     /* one-line stat/meta band under the title */
+  display: flex; flex-wrap: wrap; gap: .35rem 1rem; align-items: center;
+  font-size: .8rem; color: var(--text-muted); font-family: var(--mono);
+  margin-bottom: 1.75rem;
+}
+.footer {       /* MANDATORY provenance footer */
+  text-align: center; color: var(--text-muted); font-size: .8rem;
+  margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--card-border);
+}
+
+/* ---- sections ------------------------------------------------------------ */
+.section { margin-bottom: 2.5rem; }
+.section-title {
+  font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem;
+  display: flex; align-items: center; gap: .5rem; scroll-margin-top: 5rem;
+}
+.section-icon { font-size: 1.35rem; }
+
+/* ---- cards / stat grid --------------------------------------------------- */
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
+.card {
+  background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius);
+  padding: 1.5rem; box-shadow: var(--shadow-sm); transition: transform .2s, box-shadow .2s;
+}
+.card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.card-title { font-size: .8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .5rem; }
+.card-value { font-size: 2rem; font-weight: 700; }
+.card-detail { font-size: .85rem; color: var(--text-muted); margin-top: .25rem; }
+
+/* ---- badges, dots, tags -------------------------------------------------- */
+.badge { display: inline-flex; align-items: center; gap: .4rem; padding: .22rem .7rem; border-radius: 9999px; font-size: .78rem; font-weight: 600; }
+.badge.done, .badge.pass, .badge.ok, .badge.new   { background: color-mix(in srgb, var(--green) 16%, transparent); color: var(--green); }
+.badge.running, .badge.info                        { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent-dark); }
+.badge.blocked, .badge.fail, .badge.bad            { background: color-mix(in srgb, var(--red) 16%, transparent); color: var(--red); }
+.badge.waiting, .badge.pend, .badge.warn           { background: color-mix(in srgb, var(--yellow) 18%, transparent); color: var(--yellow); }
+.badge.exists, .badge.muted                        { background: color-mix(in srgb, var(--text-muted) 18%, transparent); color: var(--text-muted); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.dot.live { animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+.tag { display: inline-block; padding: .12rem .5rem; border-radius: 5px; font-size: .75rem; font-weight: 600; margin-right: .25rem; background: var(--bg-accent); color: var(--text-muted); }
+.tag.green { background: color-mix(in srgb, var(--green) 14%, transparent); color: var(--green); }
+.tag.red   { background: color-mix(in srgb, var(--red) 14%, transparent); color: var(--red); }
+.tag.amber { background: color-mix(in srgb, var(--yellow) 16%, transparent); color: var(--yellow); }
+.tag.coral { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent-dark); }
+.tag.purple{ background: color-mix(in srgb, var(--purple) 15%, transparent); color: var(--purple); }
+
+/* ---- progress bars / css bar charts ------------------------------------- */
+.progress-bar { width: 100%; height: 8px; background: color-mix(in srgb, var(--text) 9%, transparent); border-radius: 4px; overflow: hidden; margin-top: .5rem; }
+.progress-fill { height: 100%; border-radius: 4px; transition: width .5s ease; background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, white)); }
+.progress-fill.green { background: linear-gradient(90deg, var(--green), color-mix(in srgb, var(--green) 55%, white)); }
+.progress-fill.amber { background: linear-gradient(90deg, var(--yellow), color-mix(in srgb, var(--yellow) 55%, white)); }
+.progress-fill.red   { background: linear-gradient(90deg, var(--red), color-mix(in srgb, var(--red) 55%, white)); }
+.bar-track { display: flex; align-items: center; gap: .5rem; margin: .35rem 0; }
+.bar-track .bar-label { flex: 0 0 130px; font-size: .85rem; color: var(--text-muted); }
+.bar-track .bar { height: 18px; border-radius: 4px; background: var(--accent); }
+
+/* ---- tables -------------------------------------------------------------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--card-border); border-radius: var(--radius); }
+table { width: 100%; border-collapse: collapse; background: var(--card); }
+th {
+  background: var(--bg-accent); text-align: left; padding: .7rem 1rem; font-size: .78rem;
+  text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted);
+  border-bottom: 1px solid var(--card-border); position: sticky; top: 0;
+}
+th[data-sort] { cursor: pointer; user-select: none; }
+th[data-sort]::after { content: " \2195"; opacity: .35; }
+th[data-sort].asc::after { content: " \2191"; opacity: 1; }
+th[data-sort].desc::after { content: " \2193"; opacity: 1; }
+td { padding: .7rem 1rem; border-bottom: 1px solid color-mix(in srgb, var(--text) 8%, transparent); font-size: .9rem; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--bg-accent) 45%, transparent); }
+tbody tr:hover td { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--mono); }
+td.best { font-weight: 700; color: var(--green); }
+.filter-bar { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .75rem; }
+.chip { padding: .25rem .7rem; border-radius: 9999px; border: 1px solid var(--card-border); background: var(--card); color: var(--text-muted); font-size: .8rem; cursor: pointer; }
+.chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ---- callouts / highlight boxes ----------------------------------------- */
+.callout { border-left: 4px solid var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--card)); border-radius: 0 var(--radius) var(--radius) 0; padding: 1rem 1.25rem; margin: 1rem 0; }
+.callout.good { border-color: var(--green); background: color-mix(in srgb, var(--green) 8%, var(--card)); }
+.callout.warn { border-color: var(--yellow); background: color-mix(in srgb, var(--yellow) 9%, var(--card)); }
+.callout.bad  { border-color: var(--red); background: color-mix(in srgb, var(--red) 8%, var(--card)); }
+.callout-title { font-weight: 700; margin-bottom: .35rem; }
+
+/* "needs your input" box — surface ONLY real human-in-the-loop decisions */
+.needs-input { border: 1px dashed var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--card)); border-radius: var(--radius); padding: 1.25rem 1.5rem; margin: 1.5rem 0; }
+.needs-input h2 { font-size: 1.1rem; margin-bottom: .5rem; color: var(--accent-dark); }
+.needs-input ol { padding-left: 1.25rem; }
+.needs-input li { margin: .4rem 0; }
+
+/* ---- verdict / decision / comment (review type) -------------------------- */
+.verdict { border: 1px solid var(--card-border); border-radius: var(--radius); padding: 1.25rem 1.5rem; margin: 1.25rem 0; box-shadow: var(--shadow-sm); }
+.verdict.pursue { background: linear-gradient(135deg, color-mix(in srgb, var(--yellow) 14%, var(--card)), var(--card)); }
+.verdict.go     { background: linear-gradient(135deg, color-mix(in srgb, var(--green) 14%, var(--card)), var(--card)); }
+.verdict.stop   { background: linear-gradient(135deg, color-mix(in srgb, var(--red) 14%, var(--card)), var(--card)); }
+.verdict-badge { display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: .15rem .55rem; border-radius: 5px; background: var(--accent); color: #fff; margin-bottom: .5rem; }
+.decision { counter-reset: none; }
+.decision-item { border: 1px solid var(--card-border); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: .9rem; background: var(--card); }
+.decision-q { font-weight: 600; margin-bottom: .5rem; }
+.commentbox { border: 1px dashed var(--text-muted); border-radius: 8px; padding: .6rem .8rem; min-height: 2.4rem; font-family: var(--mono); font-size: .85rem; color: var(--text); background: color-mix(in srgb, var(--bg-accent) 50%, transparent); }
+.commentbox:empty::before { content: "Comment\2026"; color: var(--text-muted); }
+.commentbox:focus { outline: 2px solid var(--accent); }
+
+/* ---- timeline ------------------------------------------------------------ */
+.timeline { position: relative; padding-left: 2rem; }
+.timeline::before { content: ""; position: absolute; left: 7px; top: 0; bottom: 0; width: 2px; background: var(--card-border); }
+.timeline-item { position: relative; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid color-mix(in srgb, var(--text) 7%, transparent); }
+.timeline-item:last-child { border-bottom: none; margin-bottom: 0; }
+.timeline-dot { position: absolute; left: -2rem; top: .35rem; width: 14px; height: 14px; border-radius: 50%; border: 3px solid var(--bg); background: var(--accent); }
+.timeline-date { font-size: .8rem; color: var(--text-muted); }
+.timeline-title { font-weight: 600; margin: .15rem 0; }
+.timeline-desc { font-size: .85rem; color: var(--text-muted); }
+
+/* ---- legend (mandatory whenever color/letters encode meaning) ------------ */
+.legend { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; align-items: center; padding: .75rem 1rem; background: var(--bg-accent); border-radius: var(--radius); font-size: .82rem; margin-bottom: 1.25rem; }
+.legend-item { display: inline-flex; align-items: center; gap: .4rem; }
+.legend-swatch { width: 12px; height: 12px; border-radius: 3px; }
+
+/* ---- comparison columns / image grids ----------------------------------- */
+.compare-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+.compare-col { border: 1px solid var(--card-border); border-radius: var(--radius); overflow: hidden; background: var(--card); }
+.compare-col .col-head { padding: .6rem 1rem; font-weight: 600; border-bottom: 1px solid var(--card-border); }
+.compare-col.winner { outline: 2px solid var(--green); }
+.img-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.img-grid img, .filmstrip img { width: 100%; border-radius: 8px; cursor: zoom-in; }
+.filmstrip { display: flex; gap: .75rem; overflow-x: auto; padding-bottom: .5rem; }
+.filmstrip > * { flex: 0 0 220px; }
+
+/* ---- code chips ---------------------------------------------------------- */
+code { font-family: var(--mono); font-size: .85em; background: color-mix(in srgb, var(--accent) 8%, transparent); padding: .12rem .4rem; border-radius: 5px; color: var(--accent-dark); word-break: break-word; }
+pre { background: var(--bg-accent); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 1rem; overflow-x: auto; font-family: var(--mono); font-size: .85rem; }
+pre code { background: none; padding: 0; color: var(--text); }
+
+/* ---- toolbar (theme toggle / print) + copy buttons ---------------------- */
+.toolbar { position: fixed; top: .75rem; right: .75rem; display: flex; gap: .4rem; z-index: 50; }
+.btn { padding: .35rem .7rem; border-radius: 8px; border: 1px solid var(--card-border); background: var(--card); color: var(--text); font-size: .8rem; cursor: pointer; box-shadow: var(--shadow-sm); }
+.btn:hover { border-color: var(--accent); }
+.copy-btn { padding: .15rem .5rem; font-size: .72rem; border-radius: 5px; border: 1px solid var(--card-border); background: var(--card); color: var(--text-muted); cursor: pointer; }
+.copy-btn.copied { color: var(--green); border-color: var(--green); }
+
+/* ---- tabs (review type, opt-in) ----------------------------------------- */
+.tab-bar { display: flex; gap: .25rem; overflow-x: auto; border-bottom: 1px solid var(--card-border); margin-bottom: 1.5rem; }
+.tab-btn { padding: .6rem 1rem; border: none; background: none; color: var(--text-muted); font-size: .9rem; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+.tab-btn.active { color: var(--accent-dark); border-bottom-color: var(--accent); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ---- sidebar layout (long-form review, opt-in) -------------------------- */
+.layout { display: grid; grid-template-columns: 240px 1fr; gap: 2rem; align-items: start; }
+.sidebar { position: sticky; top: 1.5rem; align-self: start; font-size: .9rem; }
+.sidebar a { display: block; padding: .25rem .5rem; color: var(--text-muted); text-decoration: none; border-radius: 6px; }
+.sidebar a.active { color: var(--accent-dark); background: var(--bg-accent); }
+.back-to-top { position: fixed; bottom: 1.25rem; right: 1.25rem; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.back-to-top.visible { opacity: 1; pointer-events: auto; }
+
+/* ---- lightbox (native <dialog>, opt-in) --------------------------------- */
+dialog.lightbox { border: none; background: transparent; max-width: 95vw; max-height: 95vh; padding: 0; }
+dialog.lightbox::backdrop { background: rgba(0,0,0,.8); }
+dialog.lightbox img { max-width: 95vw; max-height: 90vh; border-radius: 8px; }
+dialog.lightbox .cap { color: #eee; text-align: center; font-size: .85rem; margin-top: .5rem; }
+
+@media (max-width: 800px) {
+  body { padding: 1rem; }
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { position: static; }
+  .img-grid { grid-template-columns: 1fr; }
+}
+@media print { .toolbar, .back-to-top { display: none; } body { padding: 0; } }
+
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <button class="btn" data-theme-toggle title="切换浅色 / 深色">🌗</button>
+  <button class="btn" data-print title="打印 / PDF">⎙</button>
+</div>
+<div class="container">
+
+  <h1>🛰️ Atlas 项目 — 迁移对齐</h1>
+  <p class="subtitle">work-canvas 页面的合成示例：进度 + 对比 + 决策，集于一个自包含文件。</p>
+  <div class="meta-bar"><span>2026-01-15</span><span>·</span><span>范围：24 个服务</span><span>·</span><span>状态：进行中</span></div>
+
+  <div class="needs-input"><h2>⚡ 需要你拍板</h2>
+    <ol>
+      <li>选择缓存厂商——见下方对比（倾向：厂商 B）。</li>
+      <li>批准只读副本切换窗口（D2）。</li>
+    </ol>
+    <p style="margin-top:.5rem;font-size:.85rem;color:var(--text-muted)">批注框会保存在你的浏览器本地。</p>
+  </div>
+
+  <div class="section"><div class="section-title"><span class="section-icon">📊</span> 进度</div>
+    <div class="grid">
+      <div class="card"><div class="card-title">已迁移服务</div><div class="card-value" style="color:var(--green)">18/24</div>
+        <div class="card-detail">75%</div><div class="progress-bar"><div class="progress-fill green" style="width:75%"></div></div></div>
+      <div class="card"><div class="card-title">测试通过</div><div class="card-value" style="color:var(--accent)">412</div>
+        <div class="card-detail">3 个不稳定，已隔离</div></div>
+      <div class="card"><div class="card-title">状态</div>
+        <div style="display:flex;flex-direction:column;gap:.4rem;margin-top:.4rem">
+          <span class="badge done"><span class="dot"></span> 已完成</span>
+          <span class="badge running"><span class="dot live"></span> 进行中</span>
+          <span class="badge waiting"><span class="dot"></span> 计划中</span></div></div>
+    </div>
+    <div class="callout warn"><div class="callout-title">为什么吞吐量低于目标（8k vs 12k rps）？</div>
+      <ul><li><b>连接池过小（主因）：</b>新网关 32 → 需 128。</li>
+          <li><b>N+1 查询：</b>目录服务热路径存在。</li></ul></div>
+    <div class="timeline">
+      <div class="timeline-item"><div class="timeline-dot" style="background:var(--green)"></div>
+        <div class="timeline-date">01-04</div><div class="timeline-title">Schema 迁移完成</div><div class="timeline-desc">全部 24 个服务切到新 schema。</div></div>
+      <div class="timeline-item"><div class="timeline-dot" style="background:var(--red)"></div>
+        <div class="timeline-date">01-09</div><div class="timeline-title">8k rps 压测失败</div><div class="timeline-desc">连接池耗尽 + 发现 N+1。</div></div>
+      <div class="timeline-item"><div class="timeline-dot" style="background:var(--blue)"></div>
+        <div class="timeline-date">01-14</div><div class="timeline-title">连接池 + 查询修复合入</div><div class="timeline-desc">已排期重测。</div></div>
+    </div>
+  </div>
+
+  <div class="section"><div class="section-title"><span class="section-icon">⚖️</span> 缓存厂商对比</div>
+    <div class="legend"><span class="legend-item"><span class="legend-swatch" style="background:var(--green)"></span>厂商 B（倾向）</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--accent)"></span>厂商 A</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--text-muted)"></span>基线</span></div>
+    <div class="verdict go"><span class="verdict-badge">倾向厂商 B</span><p>p99 更优、月成本更低；厂商 A 仅在冷启动占优。提交前请确认。</p></div>
+    <div class="filter-bar" data-filter-for="lb">
+      <button class="chip active" data-filter="all">全部</button>
+      <button class="chip" data-filter="managed">托管</button>
+      <button class="chip" data-filter="self">自建</button></div>
+    <div class="table-wrap"><table id="lb"><thead><tr>
+      <th data-sort>选项</th><th data-sort="num" class="num">p99 ms</th><th data-sort="num" class="num">月费 $</th><th data-sort="num" class="num">运维成本</th></tr></thead>
+      <tbody>
+      <tr data-type="managed"><td>厂商 B</td><td class="num best">11</td><td class="num best">420</td><td class="num">低</td></tr>
+      <tr data-type="managed"><td>厂商 A</td><td class="num">14</td><td class="num">610</td><td class="num">低</td></tr>
+      <tr data-type="self"><td>基线（Redis OSS）</td><td class="num">19</td><td class="num">180</td><td class="num">高</td></tr></tbody></table></div>
+  </div>
+
+  <div class="section"><div class="section-title"><span class="section-icon">🗳️</span> 需要你拍板的决策</div>
+    <div class="decision-item"><div class="decision-q">D1 · 缓存厂商</div>
+      <p>建议：厂商 B（p99 11ms，$420/月）。代价：冷启动比 A 慢。</p>
+      <div class="commentbox" contenteditable data-persist id="d1"></div></div>
+    <div class="decision-item"><div class="decision-q">D2 · 只读副本切换窗口</div>
+      <p>建议：周六 02:00–03:00 UTC（流量最低）。需要你签字确认。</p>
+      <div class="commentbox" contenteditable data-persist id="d2"></div></div>
+    <pre id="snip1"><code>make migrate SERVICE=catalog WINDOW=sat-0200</code></pre>
+    <button class="copy-btn" data-copy="#snip1">复制命令</button>
+  </div>
+
+  <div class="footer">
+    <p>由 &lt;你的 Agent&gt; · <b>work-canvas</b> 技能 → &lt;后端模型&gt; 生成 · 2026-01-15</p>
+    <p>合成示例——数据均为虚构。</p>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   work-canvas interaction modules — STATIC-FIRST: include only the modules the
+   page actually needs (inline into a <script> tag). Every module is a no-op when
+   its markup is absent, so pasting the whole file is harmless. No dependencies,
+   no network. Each module is keyed to the HTML hooks documented in the references.
+   ========================================================================== */
+
+/* THEME TOGGLE + PRINT ------------------------------------------------------
+   Needs: <button class="btn" data-theme-toggle>🌗</button>
+          <button class="btn" data-print>⎙</button>  (optional)
+   Restores saved theme before paint via the inline IIFE in starter.html. */
+function initTheme() {
+  const KEY = "wc-theme";
+  const root = document.documentElement;
+  const btn = document.querySelector("[data-theme-toggle]");
+  if (btn) btn.addEventListener("click", () => {
+    const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem(KEY, next); } catch (e) {}
+  });
+  const p = document.querySelector("[data-print]");
+  if (p) p.addEventListener("click", () => window.print());
+}
+
+/* TABS (hash-routed, deep-linkable, per-tab accent) -------------------------
+   Needs: .tab-bar > .tab-btn[data-tab="x"]  and  .tab-panel#x[data-accent="#hex"] */
+function initTabs() {
+  const btns = [...document.querySelectorAll(".tab-btn[data-tab]")];
+  if (!btns.length) return;
+  const panels = [...document.querySelectorAll(".tab-panel")];
+  function activate(id, push) {
+    const btn = btns.find(b => b.dataset.tab === id) || btns[0];
+    id = btn.dataset.tab;
+    btns.forEach(b => b.classList.toggle("active", b === btn));
+    panels.forEach(p => p.classList.toggle("active", p.id === id));
+    const panel = document.getElementById(id);
+    if (panel && panel.dataset.accent) document.documentElement.style.setProperty("--accent", panel.dataset.accent);
+    btn.scrollIntoView({ inline: "center", block: "nearest" });
+    if (push) history.replaceState(null, "", "#" + id);
+  }
+  btns.forEach(b => b.addEventListener("click", () => activate(b.dataset.tab, true)));
+  // cross-tab anchor interception: links to an element inside another tab switch first
+  document.addEventListener("click", e => {
+    const a = e.target.closest('a[href^="#"]');
+    if (!a) return;
+    const el = document.getElementById(a.getAttribute("href").slice(1));
+    const panel = el && el.closest(".tab-panel");
+    if (panel && !panel.classList.contains("active")) {
+      e.preventDefault();
+      activate(panel.id, true);
+      setTimeout(() => el.scrollIntoView({ behavior: "smooth" }), 80);
+    }
+  });
+  window.addEventListener("hashchange", () => activate(location.hash.slice(1), false));
+  activate(location.hash.slice(1), false);
+}
+
+/* SORTABLE + FILTERABLE TABLES ---------------------------------------------
+   Sort: <th data-sort> (add data-sort="num" for numeric, data-goal="min|max").
+   Filter: <div class="filter-bar" data-filter-for="tableId">
+             <button class="chip active" data-filter="all">All</button>
+             <button class="chip" data-filter="agent">Agent</button> ...
+           rows tagged <tr data-type="agent">. */
+function initTables() {
+  document.querySelectorAll("table").forEach(table => {
+    table.querySelectorAll("th[data-sort]").forEach((th, col) => {
+      th.addEventListener("click", () => {
+        const tb = table.tBodies[0];
+        const rows = [...tb.rows];
+        const numeric = th.dataset.sort === "num";
+        const asc = !th.classList.contains("asc");
+        table.querySelectorAll("th").forEach(h => h.classList.remove("asc", "desc"));
+        th.classList.add(asc ? "asc" : "desc");
+        rows.sort((a, b) => {
+          let x = a.cells[col]?.innerText.trim() ?? "", y = b.cells[col]?.innerText.trim() ?? "";
+          if (numeric) { x = parseFloat(x.replace(/[^0-9.\-]/g, "")); y = parseFloat(y.replace(/[^0-9.\-]/g, "")); x = isNaN(x) ? -Infinity : x; y = isNaN(y) ? -Infinity : y; return asc ? x - y : y - x; }
+          return asc ? x.localeCompare(y) : y.localeCompare(x);
+        });
+        rows.forEach(r => tb.appendChild(r));
+      });
+    });
+  });
+  document.querySelectorAll(".filter-bar[data-filter-for]").forEach(bar => {
+    const table = document.getElementById(bar.dataset.filterFor);
+    if (!table) return;
+    bar.addEventListener("click", e => {
+      const chip = e.target.closest(".chip"); if (!chip) return;
+      bar.querySelectorAll(".chip").forEach(c => c.classList.toggle("active", c === chip));
+      const f = chip.dataset.filter;
+      [...table.tBodies[0].rows].forEach(r => { r.style.display = (f === "all" || r.dataset.type === f) ? "" : "none"; });
+    });
+  });
+}
+
+/* LIGHTBOX (click any .img-grid/.filmstrip img, or [data-zoom]) -------------- */
+function initLightbox() {
+  const imgs = document.querySelectorAll(".img-grid img, .filmstrip img, [data-zoom]");
+  if (!imgs.length) return;
+  let dlg = document.querySelector("dialog.lightbox");
+  if (!dlg) {
+    dlg = document.createElement("dialog");
+    dlg.className = "lightbox";
+    dlg.innerHTML = '<img alt=""><div class="cap"></div>';
+    document.body.appendChild(dlg);
+    dlg.addEventListener("click", () => dlg.close());
+  }
+  const big = dlg.querySelector("img"), cap = dlg.querySelector(".cap");
+  imgs.forEach(im => im.addEventListener("click", () => {
+    big.src = im.currentSrc || im.src;
+    cap.textContent = im.dataset.caption || im.alt || "";
+    dlg.showModal();
+  }));
+}
+
+/* COPY-TO-CLIPBOARD ---------------------------------------------------------
+   Needs: <button class="copy-btn" data-copy="#sourceId or literal text">Copy</button> */
+function initCopy() {
+  document.querySelectorAll(".copy-btn[data-copy]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const v = btn.dataset.copy;
+      const src = v.startsWith("#") ? document.querySelector(v) : null;
+      const text = src ? src.innerText : v;
+      try { await navigator.clipboard.writeText(text); } catch (e) {}
+      const old = btn.textContent; btn.textContent = "Copied ✓"; btn.classList.add("copied");
+      setTimeout(() => { btn.textContent = old; btn.classList.remove("copied"); }, 1400);
+    });
+  });
+}
+
+/* SIDEBAR SCROLLSPY + BACK-TO-TOP (long-form review) ------------------------
+   Needs: .sidebar a[href="#sectionId"], sections with matching id, and
+          <button class="btn back-to-top" data-top>↑</button> (optional). */
+function initScrollspy() {
+  const links = [...document.querySelectorAll(".sidebar a[href^='#']")];
+  if (links.length) {
+    const ids = links.map(a => a.getAttribute("href").slice(1));
+    const onScroll = () => {
+      let cur = ids[0];
+      for (const id of ids) { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top <= 120) cur = id; }
+      links.forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + cur));
+    };
+    window.addEventListener("scroll", onScroll, { passive: true }); onScroll();
+  }
+  const top = document.querySelector("[data-top]");
+  if (top) {
+    top.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+    window.addEventListener("scroll", () => top.classList.toggle("visible", window.scrollY > 400), { passive: true });
+  }
+}
+
+/* PERSIST MARKUP (review type) ---------------------------------------------
+   Saves the text of every [contenteditable][data-persist], and the state of
+   <input data-persist>, to localStorage keyed by id, so the reviewer's comments
+   and checkboxes survive a reload. */
+function initPersist() {
+  const els = document.querySelectorAll("[data-persist]");
+  els.forEach(el => {
+    const key = "wc-" + (el.id || el.dataset.persist);
+    try {
+      const saved = localStorage.getItem(key);
+      if (saved !== null) { if (el.type === "checkbox") el.checked = saved === "1"; else el.textContent = saved; }
+    } catch (e) {}
+    const save = () => { try { localStorage.setItem(key, el.type === "checkbox" ? (el.checked ? "1" : "0") : el.textContent); } catch (e) {} };
+    el.addEventListener(el.type === "checkbox" ? "change" : "input", save);
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  initTheme(); initTabs(); initTables(); initLightbox(); initCopy(); initScrollspy(); initPersist();
+});
+
+</script>
+</body>
+</html>

@@ -1,0 +1,236 @@
+# config/skill-orchestration-map.yaml 的示例配置。
+# 本文件展示每个支持字段的写法和含义；实际运行使用
+# config/skill-orchestration-map.yaml。
+
+# access：供 guard/check 工具读取的文件访问元数据。
+access:
+  # audience：文件面向谁。模型可读配置使用 "model"。
+  audience: model
+  # model_read：agent 是否可以把这个配置作为运行上下文读取。
+  model_read: true
+  # model_write：任务需要时，agent 是否可以更新这个配置。
+  model_write: true
+  # purpose：这个文件存在的机器可读用途说明。
+  purpose: orchestration_map
+
+# version：配置 schema/内容版本。字段含义变化时递增。
+version: 2
+
+# updated：最近一次语义更新日期，格式为 YYYY-MM-DD。
+updated: "2026-07-09"
+
+# description：一句话说明这个 map 控制什么。
+description: "Default routing map for assigning skills, references, MCP, and tools."
+
+# skill_registry：路由器可选择的 skill/reference 注册表。
+# 顶层 key 是稳定 route id。对已安装 skill，key 应与 required_skills
+# 中使用的 skill 名称一致。不要为 skill 添加硬编码 path 字段。
+skill_registry:
+  # diagnosing-problem：routing_order 和 contract 中使用的 route id。
+  diagnosing-problem:
+    # role：该 skill 在编排契约里扮演的功能角色。
+    role: problem_framer
+    # source：能力来源。
+    # available_skill = 运行时按 skill 名称发现/加载。
+    # file_reference = 本地参考文件，不是独立 skill。
+    # none = 没有 skill/reference 依赖。
+    source: available_skill
+    # required_when：使该 route 变得相关的符号化条件。
+    required_when:
+      - user_asks_problem_analysis
+      - symptom_without_known_cause
+      - need_hypothesis_tree_before_project_exploration
+    # exit_when：该 route 完成时应满足的符号化条件。
+    exit_when:
+      - symptom_hypotheses_evidence_and_investigation_order_are_clear
+    # not_for：出现这些条件时应路由到别处。
+    not_for:
+      - feature_requirements_clarification
+      - roles_rules_or_interactions_unclear
+
+  # adversarial-control：file_reference 条目的示例。
+  adversarial-control:
+    role: adversarial_reviewer
+    source: file_reference
+    # reference：本仓库内参考文件的相对定位符。
+    # 只给 file_reference 条目使用。
+    reference: references/adversarial-control.md
+    required_when:
+      - concrete_plan_needs_attack
+    exit_when:
+      - criteria_failures_mitigations_and_residual_risk_are_clear
+
+# routing_order：按顺序匹配的路由表，采用 first match。
+routing_order:
+  # condition：从任务状态识别出的符号化条件。
+  - condition: problem_or_question_needs_diagnosis
+    # skill：命中该条件时使用的 skill_registry key。
+    skill: diagnosing-problem
+    # delegate：是否以及如何委派该工作。
+    # 常见值：false、optional_read_only、optional_bounded_write。
+    delegate: optional_read_only
+
+# contract_schema：生成任务契约时必须满足的结构。
+contract_schema:
+  # required_fields：完整任务契约必须携带的字段。
+  required_fields:
+    - role
+    - phase
+    - objective
+    - required_skills
+    - required_references
+    - required_mcp
+    - required_tools
+    - edits_allowed
+    - ownership
+    - expected_output
+    - validation
+    - stop_if
+  # must_report：worker 回传时必须报告的证据字段，用于 reconciliation。
+  must_report:
+    - skills_loaded
+    - references_loaded
+    - mcp_used
+    - tools_used
+    - skill_instructions_followed
+    - deviations
+
+# contract_patterns：常见 worker 角色的可复用契约模板。
+contract_patterns:
+  # problem_framer：在执行前框定模糊问题的模板。
+  problem_framer:
+    # role：稳定 worker id；用于任务契约和下游报告，不写成长句。
+    role: problem_framer
+    # role_prompt：给模型的 1-2 句角色定义，说明它的身份、上下文和工作。
+    role_prompt: "You frame ambiguous problems before execution. Your job is to select the most useful interpretation, expose assumptions, define evidence standards, and hand off the next investigation or action."
+    # personality：协作风格、语气和判断姿态。
+    personality: "Diagnostic, skeptical, and evidence-oriented. Separate what is known, assumed, rejected, and still uncertain without overcomplicating the frame."
+    # goal：用户可见的最终结果。
+    goal: "Turn an unclear symptom, question, or cause-analysis request into a framed problem, assumptions, evidence standard, and concrete handoff."
+    # success_criteria：最终回答前必须为真的条件。
+    success_criteria:
+      - framed_problem_is_specific
+      - selected_interpretation_is_explicit
+      - rejected_interpretations_are_named
+      - assumptions_are_load_bearing
+      - evidence_standard_is_actionable
+      - handoff_names_next_route
+    # constraints：策略、安全、业务、证据和副作用限制。
+    constraints:
+      - do_not_start_implementation
+      - do_not_guess_missing_evidence
+      - do_not_treat_feature_requirements_as_problem_diagnosis
+      - route_code_navigation_to_codebase_explorer
+    # output：输出章节、长度和语气要求。
+    output:
+      sections:
+        - framed_problem
+        - selected_interpretation
+        - rejected_interpretations
+        - assumptions
+        - evidence_standard
+        - handoff
+      length: concise
+      tone: diagnostic
+    # stop_rules：什么时候重试、降级、停止、询问或放弃。
+    stop_rules:
+      - concrete_implementation_starts_before_problem_frame_is_accepted
+      - evidence_needed_for_framing_is_unavailable
+      - problem_resolves_into_requirements_clarification
+    # phase：这个契约所属的控制阶段。
+    phase: context
+    # required_skills：worker 必须加载/遵循的 skill 依赖。
+    required_skills:
+      # name：运行时 skill 名称，由 skill registry 解析。
+      - name: diagnosing-problem
+        # source：依赖来源；available_skill 按名称解析。
+        source: available_skill
+        # required：true 表示该 skill 不可用时，输出不能被接受。
+        required: true
+    # required_references：必须读取的本地参考文件。
+    required_references: []
+    # required_mcp：必须可用或必须尝试使用的 MCP server/tool。
+    required_mcp: []
+    # required_tools：必须使用或报告的 shell/CLI/项目工具。
+    required_tools: []
+    # edits_allowed：该 worker 是否允许写文件。
+    edits_allowed: false
+    # expected_output_fields：该 worker 必须产出的字段。
+    expected_output_fields:
+      # framed_problem：被选定且精确的问题陈述。
+      - framed_problem
+      # selected_interpretation：从多个可能理解中选定的解释。
+      - selected_interpretation
+      # rejected_interpretations：明确排除的其他合理解释。
+      - rejected_interpretations
+      # assumptions：支撑当前问题框定的承重假设。
+      - assumptions
+      # evidence_standard：接受/拒绝这些假设所需的证据标准。
+      - evidence_standard
+      # handoff：具体下一步行动或下游路由。
+      - handoff
+    # stop_if：命中时应停止该 worker，而不是继续推进。
+    stop_if:
+      - concrete_implementation_starts_before_problem_frame_is_accepted
+
+# subagent_contract_defaults：合并进委派任务契约的默认值。
+subagent_contract_defaults:
+  # must_report：每个被委派 worker 都必须回报的字段。
+  must_report:
+    - skills_loaded
+    - references_loaded
+    - mcp_used
+    - tools_used
+    - skill_instructions_followed
+    - deviations
+  # stop_if：委派工作的全局停止条件。
+  stop_if:
+    - required_skill_unavailable
+    - required_reference_unavailable
+    - required_mcp_or_tool_unavailable
+    - scope_unclear
+    - ownership_conflict
+    - validation_blocked
+  # memory_policy：编排状态的持久化策略。
+  memory_policy:
+    # persist_event：是否应把事件记录到 persistent state。
+    persist_event: true
+    # candidate_short_term：该事件是否适合作为当前会话记忆。
+    candidate_short_term: true
+    # candidate_long_term：该事件是否应被考虑沉淀为长期知识。
+    candidate_long_term: false
+    # event_log_fields：每条 event log 包含的字段。
+    event_log_fields:
+      - timestamp
+      - actor
+      - task_id
+      - event_type
+      - summary
+      - evidence_refs
+      - artifact_refs
+      - next_action
+    # event_types：允许的事件类型。
+    event_types:
+      - started
+      - blocked
+      - completed
+      - decision
+      - validation
+      - handoff
+
+# parallelization：每个 skill 的并发策略。
+parallelization:
+  # key 是 skill 名称；value 是符号化并发策略。
+  diagnosing-problem: read_only_parallel_allowed
+  coding-project: write_parallel_only_with_non_overlapping_ownership
+
+# reconciliation_checks：接受委派输出前必须检查的项目。
+reconciliation_checks:
+  - required_skills_loaded
+  - required_references_loaded
+  - required_mcp_and_tools_used
+  - skill_instructions_followed_reported
+  - deviations_justified
+  - expected_fields_present
+  - ownership_respected
+  - validation_evidence_present

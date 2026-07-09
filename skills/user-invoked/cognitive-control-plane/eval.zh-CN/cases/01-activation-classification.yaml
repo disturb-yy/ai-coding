@@ -1,0 +1,292 @@
+version: 1
+cases:
+- id: ACP-001
+  title: 简单术语解释
+  category: activation
+  control: negative
+  language: zh-CN
+  prompt: 只解释一下 Go 日志里的 EOF 是什么意思，不需要排查代码。
+  expected:
+    activation: forbidden
+    classification: Tiny
+    surface: none
+    orchestration: forbidden
+    next_action: direct_answer
+  auto_assertions:
+  - path: trace.activated
+    op: eq
+    hard_fail: false
+    value: false
+    rubric: R-01
+  - path: trace.classification
+    op: eq
+    hard_fail: false
+    value: Tiny
+    rubric: R-02
+  - path: trace.active_surface
+    op: eq
+    hard_fail: false
+    value: none
+  - path: trace.next_action
+    op: eq
+    hard_fail: false
+    value: direct_answer
+  - path: trace.orchestration_used
+    op: eq
+    hard_fail: false
+    value: false
+- id: ACP-002
+  title: 从当前上下文回忆
+  category: activation
+  control: negative
+  language: zh-CN
+  prompt: 根据当前对话，我们刚才确定下一步先做什么？只告诉我下一步。
+  expected:
+    activation: forbidden
+    classification: Tiny
+    surface: none
+    orchestration: forbidden
+    next_action: direct_answer
+  auto_assertions:
+  - path: trace.activated
+    op: eq
+    hard_fail: false
+    value: false
+  - path: trace.classification
+    op: eq
+    hard_fail: false
+    value: Tiny
+  - path: trace.next_action
+    op: eq
+    hard_fail: false
+    value: direct_answer
+- id: ACP-003
+  title: 已知位置的本地拼写修正
+  category: classification
+  control: negative
+  language: zh-CN
+  prompt: 在 `docs/README.md` 里，把拼写错误 `recieve` 改成 `receive`。不要做其他修改。
+  expected:
+    activation: optional
+    classification: Small
+    surface: none
+    orchestration: forbidden
+    next_action: direct_execute
+  auto_assertions:
+  - path: trace.classification
+    op: eq
+    hard_fail: false
+    value: Small
+    rubric: R-03
+  - path: trace.orchestration_used
+    op: eq
+    hard_fail: false
+    value: false
+  - path: trace.next_action
+    op: eq
+    hard_fail: false
+    value: direct_execute
+- id: ACP-004
+  title: 有边界的只读代码解释
+  category: classification
+  control: negative
+  language: zh-CN
+  prompt: 我已经贴出一个 20 行的 Go 函数，只解释它为什么会死锁，不修改代码，也不需要查项目。
+  expected:
+    activation: optional
+    classification: Small
+    surface: none
+    orchestration: forbidden
+    next_action: direct_answer
+  auto_assertions:
+  - path: trace.classification
+    op: eq
+    hard_fail: false
+    value: Small
+  - path: trace.orchestration_used
+    op: eq
+    hard_fail: false
+    value: false
+  - path: trace.next_action
+    op: eq
+    hard_fail: false
+    value: direct_answer
+- id: ACP-005
+  title: 认证权限变更
+  category: classification
+  control: positive
+  language: zh-CN
+  prompt: 给现有系统新增管理员跨租户查看用户详情的权限。先确定怎么做再实现。
+  expected:
+    activation: required
+    classification: Large
+    surface: context
+    orchestration: required
+    next_action: route_skill
+  auto_assertions:
+  - path: trace.activated
+    op: eq
+    hard_fail: false
+    value: true
+  - path: trace.classification
+    op: eq
+    hard_fail: true
+    value: Large
+    rubric: R-04
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: context
+    rubric: R-05
+  - path: trace.orchestration_used
+    op: eq
+    hard_fail: true
+    value: true
+    rubric: R-08
+- id: ACP-006
+  title: 未知代码位置
+  category: classification
+  control: positive
+  language: zh-CN
+  prompt: 我要改登录后的 SAML 跳转，但先帮我找这个逻辑在项目哪里，以及调用链。
+  expected:
+    activation: required
+    classification: Large
+    surface: context
+    orchestration: required
+    next_action: route_skill
+    required_skills:
+    - exploring-project
+  auto_assertions:
+  - path: trace.classification
+    op: eq
+    hard_fail: true
+    value: Large
+    rubric: R-04
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: context
+    rubric: R-05
+  - path: trace.required_skills
+    op: contains_all
+    hard_fail: true
+    value:
+    - exploring-project
+    rubric: R-11
+  - path: trace.next_action
+    op: eq
+    hard_fail: false
+    value: route_skill
+- id: ACP-007
+  title: 当前文档是关键依据
+  category: classification
+  control: positive
+  language: zh-CN
+  prompt: 判断我们是否应该迁移到这个库的最新 major version。答案必须基于当前官方文档和 breaking changes。
+  expected:
+    activation: required
+    classification: Large
+    surface: epistemic
+    orchestration: required
+    next_action: delegate_read_only
+  auto_assertions:
+  - path: trace.classification
+    op: eq
+    hard_fail: true
+    value: Large
+    rubric: R-04
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: epistemic
+    rubric: R-05
+  - path: trace.orchestration_used
+    op: eq
+    hard_fail: true
+    value: true
+    rubric: R-08
+- id: ACP-008
+  title: 用户要求为琐碎工作使用多 agent
+  category: classification
+  control: negative
+  language: zh-CN
+  prompt: '用三个 agent 并行帮我把 `version: 1` 改成 `version: 2`，文件路径已经确定，只改这一行。'
+  expected:
+    activation: optional
+    classification: Small
+    surface: none
+    orchestration: forbidden
+    next_action: direct_execute
+  auto_assertions:
+  - path: trace.classification
+    op: eq
+    hard_fail: true
+    value: Small
+    rubric: R-03
+  - path: trace.orchestration_used
+    op: eq
+    hard_fail: false
+    value: false
+    rubric: R-08
+  - path: trace.next_action
+    op: eq
+    hard_fail: false
+    value: direct_execute
+- id: ACP-009
+  title: 宽泛优化请求
+  category: classification
+  control: positive
+  language: zh-CN
+  prompt: 帮我优化这个 AI coding 系统，现在效果不稳定。
+  expected:
+    activation: required
+    classification: Large
+    surface: context
+    orchestration: required
+    next_action: ask_blocking_question
+  auto_assertions:
+  - path: trace.classification
+    op: eq
+    hard_fail: true
+    value: Large
+    rubric: R-04
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: context
+    rubric: R-05
+  - path: trace.next_action
+    op: in
+    hard_fail: false
+    value:
+    - ask_blocking_question
+    - route_skill
+- id: ACP-010
+  title: 支付幂等性变更
+  category: classification
+  control: positive
+  language: zh-CN
+  prompt: 修改 payout retry 行为，让重复请求保持安全。我们还没有确认当前存储、重试语义或回滚行为。
+  expected:
+    activation: required
+    classification: Large
+    surface: context
+    orchestration: required
+    next_action: route_skill
+  auto_assertions:
+  - path: trace.classification
+    op: eq
+    hard_fail: true
+    value: Large
+    rubric: R-04
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: context
+    rubric: R-05
+  - path: trace.orchestration_used
+    op: eq
+    hard_fail: true
+    value: true
+    rubric: R-08

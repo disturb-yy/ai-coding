@@ -1,0 +1,197 @@
+version: 1
+system: cognitive-control-plane
+note_zh: 机器枚举值保持英文，以便与原评分脚本、trace 和报告兼容。
+axes:
+  activation:
+  - required
+  - forbidden
+  - optional
+  classification:
+  - Tiny
+  - Small
+  - Large
+  surface:
+  - none
+  - context
+  - epistemic
+  - adversarial
+  - output
+  orchestration:
+  - required
+  - forbidden
+  - optional
+  next_action:
+  - direct_answer
+  - direct_execute
+  - ask_blocking_question
+  - route_skill
+  - delegate_read_only
+  - delegate_write
+  - verify
+  - deliver
+  evidence_source:
+  - runtime_trace
+  - executor_trace
+  - self_report
+  - human
+failure_stage:
+- activation
+- classification
+- surface_routing
+- reference_loading
+- orchestration
+- delegation
+- ownership
+- reconciliation
+- verification
+- handoff
+- maintenance
+- evaluator
+failure_modes:
+  activation:
+  - over_activation
+  - under_activation
+  classification:
+  - tiny_escalated
+  - small_underclassified
+  - large_missed
+  - small_not_proven
+  surface_routing:
+  - wrong_surface
+  - surface_order_violation
+  - all_surfaces_ceremony
+  - routing_loop
+  reference_loading:
+  - unnecessary_reference_load
+  - required_reference_missing
+  orchestration:
+  - missing_orchestration_state
+  - unnecessary_orchestration
+  - dependency_graph_missing
+  - persistent_state_missing
+  delegation:
+  - incomplete_task_contract
+  - implicit_skill_dependency
+  - wrong_skill_route
+  - skill_usage_unverified
+  ownership:
+  - ownership_overlap
+  - cancelled_writer_treated_as_rollback
+  reconciliation:
+  - unreviewed_specialist_output
+  - conflict_not_reconciled
+  verification:
+  - verification_gate_skipped
+  - skipped_check_unexplained
+  handoff:
+  - premature_schema
+  - unusable_handoff
+  - router_solved_task
+  - user_asked_for_repo_answerable_fact
+  maintenance:
+  - mirror_read
+  - mirror_missing
+  - mirror_stale
+  - guard_regression
+  evaluator:
+  - false_positive
+  - false_negative
+  - trace_behavior_conflict
+root_cause_types:
+- skill_rule
+- case_ambiguity
+- missing_context
+- runtime_instrumentation
+- evaluator_bug
+- architecture_ceiling
+labels_zh:
+  activation:
+    required: 必须激活
+    forbidden: 禁止激活
+    optional: 可选激活
+  classification:
+    Tiny: 极小任务
+    Small: 小任务
+    Large: 大任务
+  surface:
+    none: 无控制面
+    context: 上下文控制
+    epistemic: 认知控制
+    adversarial: 对抗审查
+    output: 输出控制
+  orchestration:
+    required: 需要编排
+    forbidden: 禁止编排
+    optional: 可选编排
+  next_action:
+    direct_answer: 直接回答
+    direct_execute: 直接执行
+    ask_blocking_question: 询问阻塞问题
+    route_skill: 路由到 skill
+    delegate_read_only: 委派只读任务
+    delegate_write: 委派写入任务
+    verify: 验证
+    deliver: 交付
+  evidence_source:
+    runtime_trace: 运行时 trace
+    executor_trace: 执行器 trace
+    self_report: 模型自报
+    human: 人工复原
+  failure_stage:
+    activation: 激活
+    classification: 分类
+    surface_routing: 控制面路由
+    reference_loading: reference 加载
+    orchestration: 编排
+    delegation: 委派
+    ownership: 所有权
+    reconciliation: 汇总校验
+    verification: 验证
+    handoff: 交接
+    maintenance: 维护
+    evaluator: 评测器
+  failure_modes:
+    over_activation: 过度激活
+    under_activation: 激活不足
+    tiny_escalated: Tiny 被升级
+    small_underclassified: Small 分类过低
+    large_missed: 漏掉 Large
+    small_not_proven: Small 未被证明
+    wrong_surface: 错误控制面
+    surface_order_violation: 控制面顺序违规
+    all_surfaces_ceremony: 全控制面仪式
+    routing_loop: 路由循环
+    unnecessary_reference_load: 不必要 reference 读取
+    required_reference_missing: 缺少必要 reference
+    missing_orchestration_state: 缺少编排状态
+    unnecessary_orchestration: 不必要编排
+    dependency_graph_missing: 缺少依赖图
+    persistent_state_missing: 缺少持久状态
+    incomplete_task_contract: 任务契约不完整
+    implicit_skill_dependency: 隐式 skill 依赖
+    wrong_skill_route: skill 路由错误
+    skill_usage_unverified: skill 使用未验证
+    ownership_overlap: 所有权重叠
+    cancelled_writer_treated_as_rollback: 将取消的写入者当作已回滚
+    unreviewed_specialist_output: specialist 输出未审阅
+    conflict_not_reconciled: 冲突未调和
+    verification_gate_skipped: 跳过验证门
+    skipped_check_unexplained: 跳过检查但未解释
+    premature_schema: 过早使用 schema
+    unusable_handoff: handoff 不可用
+    router_solved_task: router 直接解决任务
+    user_asked_for_repo_answerable_fact: 向用户询问仓库可回答事实
+    mirror_read: 读取 mirror
+    mirror_missing: mirror 缺失
+    mirror_stale: mirror 过期
+    guard_regression: guard 回归
+    false_positive: 假阳性
+    false_negative: 假阴性
+    trace_behavior_conflict: trace 与行为冲突
+  root_cause_types:
+    skill_rule: skill 规则
+    case_ambiguity: case 歧义
+    missing_context: 缺失上下文
+    runtime_instrumentation: 运行时 instrumentation
+    evaluator_bug: evaluator 缺陷
+    architecture_ceiling: 架构上限
