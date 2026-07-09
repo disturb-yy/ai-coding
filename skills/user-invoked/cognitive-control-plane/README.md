@@ -32,7 +32,8 @@ Models should use these files only:
 - `references/output-control.md`: handoff and final output shaping
 - `references/orchestration-state.md`: multi-agent, staged, persistent, or delegated work
 - `references/skill-orchestration.md`: skill routing and task-contract patterns
-- `references/skill-orchestration-map.yaml`: machine-readable routing map
+- `config/skill-orchestration-map.yaml`: machine-readable routing map
+- `config/skill-orchestration-map.example.yaml`: Chinese-commented example documenting every config field
 - `references/maintenance.md`: required before changing canonical files or guards
 
 Human-only files:
@@ -89,7 +90,7 @@ validation: []
 stop_if: []
 ```
 
-Useful contract patterns are in `references/skill-orchestration.md`. The YAML equivalent is in `references/skill-orchestration-map.yaml`.
+Useful contract patterns are in `references/skill-orchestration.md`. The YAML equivalent is in `config/skill-orchestration-map.yaml`; see `config/skill-orchestration-map.example.yaml` for Chinese-commented field-by-field examples.
 
 ## Hook Behavior
 
@@ -110,7 +111,7 @@ Mirrors:
 - `zh/SKILL.zh-CN.md`
 - `zh/references/*.zh-CN.md`
 
-`README.md`, scripts, and YAML files are not canonical Markdown mirror sources, except the existing `skill-orchestration-map.zh-CN.yaml` mirror is maintained manually for user visibility.
+`README.md`, scripts, and YAML files are not canonical Markdown mirror sources.
 
 ## Install Or Refresh Hooks
 
@@ -191,7 +192,7 @@ python3 /home/jadon/tool/ai-coding/skills/.system/skill-creator/scripts/quick_va
 For YAML routing map syntax:
 
 ```bash
-python3 -c 'import yaml; yaml.safe_load(open("references/skill-orchestration-map.yaml")); yaml.safe_load(open("zh/references/skill-orchestration-map.zh-CN.yaml")); print("YAML ok")'
+python3 -c 'import yaml; yaml.safe_load(open("config/skill-orchestration-map.yaml")); yaml.safe_load(open("config/skill-orchestration-map.example.yaml")); print("YAML ok")'
 ```
 
 ## Updating The Skill

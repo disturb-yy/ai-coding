@@ -9,7 +9,7 @@ access:
 
 Use this reference when delegating work that depends on specialized skills. It defines the default route from task state to required skill and the task-contract shape specialists must receive.
 
-Machine-readable map: [`skill-orchestration-map.yaml`](skill-orchestration-map.yaml)
+Machine-readable map: [`../config/skill-orchestration-map.yaml`](../config/skill-orchestration-map.yaml)
 
 ## Skill Registry
 
@@ -18,6 +18,7 @@ Machine-readable map: [`skill-orchestration-map.yaml`](skill-orchestration-map.y
 | `grilling` | requirements_interviewer | `available_skill` | `/home/jadon/tool/ai-coding/skills/model-skill/grilling/SKILL.md` | Clarify requirements, plans, designs, or problem statements one question at a time until executable. |
 | `diagnosing-problem` | problem_framer | `available_skill` | `/home/jadon/tool/ai-coding/skills/model-skill/diagnosing-problem/SKILL.md` | Frame ambiguous problems into answerable statements, assumptions, evidence standards, and handoffs. |
 | `exploring-project` | codebase_explorer | `available_skill` | `/home/jadon/tool/ai-coding/skills/model-skill/exploring-project/SKILL.md` | Explore project structure, behavior paths, modules, routes, functions, tests, and change points. |
+| `reviewing-code` | code_reviewer | `available_skill` | `/home/jadon/projects/ai-coding/skills/user-invoked/reviewing-code/SKILL.md` | Review code changes, PRs, branches, diffs, and security-sensitive implementation artifacts for syntax, functionality, standards, and security issues. |
 | `coding-project` | implementation_worker | `available_skill` | `/home/jadon/tool/ai-coding/skills/model-skill/coding-project/SKILL.md` | Implement ordinary code changes, test changes, validation, generated artifacts, and language-aware project work. |
 | `coding-tdd` | tdd_worker | `available_skill` | `/home/jadon/tool/ai-coding/skills/model-skill/coding-tdd/SKILL.md` | Execute test-first, red-green-refactor, regression-test-first, and behavior-sliced implementation. |
 | `adversarial-control` | adversarial_reviewer | `file_reference` | `/home/jadon/tool/ai-coding/skills/user-skill/cognitive-control-plane/references/adversarial-control.md` | Attack concrete plans, designs, architecture, prompts, skills, implementation approaches, or agent traces before acceptance. |
@@ -33,6 +34,7 @@ Pick the first matching route:
 | User goal, acceptance criteria, constraints, business rules, roles, or interactions are unclear, or the user asks to make requirements clear. | `grilling` | usually no | Ask one question at a time; if the repository can answer, explore instead of asking. |
 | User asks why, what is wrong, how to locate a problem, or how to analyze a phenomenon, and the problem is not framed yet. | `diagnosing-problem` | optional read-only | Produce framed problem, assumptions, evidence standard, and handoff; do not use for feature requirements clarification. |
 | Existing project structure, entry point, call chain, route, module, function, tests, or change points are unclear. | `exploring-project` | optional read-only | Produce verified flow, candidate files, risks, and nearby tests. |
+| Code changes, a PR, branch, diff, commit range, or security-sensitive implementation artifact needs code or security review. | `reviewing-code` | optional read-only | Produce severity-ranked code/security findings with evidence, recommendations, skipped checks, and residual risk. |
 | A concrete plan, design, architecture, prompt, skill, implementation approach, diff, PR, or agent run needs critique. | `adversarial-control` | optional read-only | Produce criterion-based critique, valid failures, mitigations, and residual risks. |
 | Requirements are clear and existing code or tests need ordinary edits. | `coding-project` | optional bounded write | Implement narrowly and validate. |
 | User asks for TDD, test-first, red-green-refactor, or regression test first. | `coding-tdd` | optional bounded write | Run red -> green -> refactor for each behavior slice. |
@@ -44,6 +46,7 @@ intake
   -> grilling                   # requirements unclear
   -> diagnosing-problem          # problem or phenomenon not framed
   -> exploring-project           # project path or change points unclear
+  -> reviewing-code              # code, PR, diff, branch, or security review
   -> adversarial-control          # concrete plan or agent output needs attack
   -> coding-tdd | coding-project # choose by test-first requirement
   -> verification
@@ -84,6 +87,18 @@ Enter when:
 
 Exit when candidate files, functions, routes, tests, risks, and key evidence are verified by source, tests, Graphify, CodeMap, or targeted search.
 
+### Code Review
+
+Enter when:
+
+- Code changes, a PR, branch, diff, commit range, or implementation artifact needs review before acceptance.
+- The user asks for code review, security review, PR review, diff review, branch review, or review since a ref.
+- Syntax, functional correctness, repository standards, or security findings matter more than implementation.
+
+If the review target or diff base is unclear, use context control or `exploring-project` first. If the artifact is not code or the user wants a plan/design/prompt/agent trace attacked, route to `adversarial-control`.
+
+Exit when code/security findings are evidence-backed, severity-ranked, deduplicated, and include skipped checks and residual risk.
+
 ### Coding Project
 
 Enter when:
@@ -98,11 +113,12 @@ Exit when narrow changes are complete and relevant validation passed, failed for
 
 Enter when:
 
-- A concrete plan, design, architecture, prompt, skill, implementation approach, diff, PR, or agent run needs critique.
+- A concrete plan, design, architecture, prompt, skill, implementation approach, or agent run needs critique.
 - The user asks for review, risk analysis, pre-mortem, red-team, or asks whether an agent violated process.
 - Failure modes matter more than producing new implementation.
 
 Do not enter while the requested critique rests on an explicit unverified load-bearing assumption; route to epistemic control first.
+Do not use adversarial review for ordinary code, PR, branch, diff, commit-range, or security review; route those to `reviewing-code`.
 
 Exit when the critique names its criteria, separates valid failures from weak attacks, gives mitigations, and leaves explicit residual risk.
 
@@ -227,6 +243,59 @@ expected_output:
     - deviations
 stop_if:
   - "Implementation is requested before candidate files, flows, risks, and tests are verified."
+```
+
+### Code Review
+
+```yaml
+role: code_reviewer
+phase: review
+objective: "Review code changes, PRs, branches, diffs, commit ranges, or security-sensitive implementation artifacts before acceptance."
+required_skills:
+  - name: reviewing-code
+    source: available_skill
+    path: /home/jadon/projects/ai-coding/skills/user-invoked/reviewing-code/SKILL.md
+    required: true
+    reason: "Code and security review require syntax, functionality, standards, and security lanes with evidence-backed aggregation."
+required_references: []
+required_mcp:
+  - name: GitHub
+    required: false
+    reason: "Use when the review target is a PR, review thread, check run, linked issue, or remote diff."
+  - name: CodeMap or Graphify
+    required: false
+    reason: "Use when call chains, route impact, related tests, or cross-area risk need navigation."
+required_tools:
+  - name: git diff or PR file list
+    required: true
+    reason: "The review target must be pinned before findings can be accepted."
+  - name: rg
+    required: false
+    reason: "Use for targeted source, standard, test, and config evidence checks."
+edits_allowed: false
+ownership:
+  writable_paths: []
+  read_only_paths: []
+  forbidden_paths: []
+expected_output:
+  format: code_review_report
+  required_fields:
+    - findings
+    - no_findings
+    - skipped_or_blocked
+    - residual_risk
+    - review_summary
+  must_report:
+    - skills_loaded
+    - references_loaded
+    - mcp_used
+    - tools_used
+    - skill_instructions_followed
+    - deviations
+stop_if:
+  - "The review target, diff base, PR, branch, commit range, or file list is unavailable."
+  - "Required review evidence is inaccessible."
+  - "The task becomes implementation instead of review."
 ```
 
 ### Adversarial Review
@@ -371,6 +440,7 @@ stop_if:
 - `grilling` is serial only. It asks one question at a time.
 - `diagnosing-problem` may run beside read-only evidence collection, but the main agent must merge the final problem frame and handoff.
 - `exploring-project` may parallelize read-only exploration across different modules; it must not write files.
+- `reviewing-code` may parallelize read-only review lanes across code and security packs; it must not write files.
 - `coding-project` may write in parallel only when ownership paths and logical subsystems do not overlap.
 - `coding-tdd` may parallelize only independent functions or modules; shared APIs, schemas, generated artifacts, migrations, and final integration stay serial.
 

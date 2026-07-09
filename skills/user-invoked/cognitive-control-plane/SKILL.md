@@ -61,6 +61,8 @@ Do not use Tiny for reading a provided code snippet, explaining behavior in a bo
 
 If the user says the snippet, design, plan, library, repository, assumption set, or other artifact is provided, current, already known, or complete, treat that boundary as known for the control decision. When only the next action or routing decision is being made, do not ask the user to paste the omitted body, name, or assumption list; classify and route from the stated boundary.
 
+Do not use Tiny for critique, stress-test, red-team, implementation-start, or accepted-contract prompts. Those prompts create a control decision even when the current adapter prompt is short.
+
 Completion criterion: there is no artifact to inspect, no edit to make, no skill route to choose, and no worker would add value.
 
 ### Small
@@ -80,7 +82,11 @@ Use Small when every condition is true:
 
 If the user asks for multiple agents on a known one-line or single-artifact change, treat that as Small and decline the unnecessary parallelism. Do not upgrade solely because the user requested ceremony.
 
-Do not use Small when the next action depends on `grilling`, `diagnosing-problem`, `exploring-project`, `coding-project`, or `coding-tdd`; specialized skill routing is Large control-plane work even when the downstream task may be bounded.
+Do not use Small when the next action depends on `grilling`, `diagnosing-problem`, `exploring-project`, `reviewing-code`, `coding-project`, or `coding-tdd`; specialized skill routing is Large control-plane work even when the downstream task may be bounded.
+
+Do not use Small for a stated complete plan, design, Skill design, implementation approach, diff, PR, or agent run requested for critique or review. A concrete code, security, or adversarial review is Large control-plane work, even when the artifact body is omitted by an eval adapter.
+
+Do not use Small when an implementation contract has been accepted and the user asks to start implementation. That is Large specialized routing to `coding-project` or `coding-tdd`, not `direct_execute`.
 
 Use this compact task contract only when delegating:
 
@@ -110,7 +116,7 @@ Treat the task as Large when any signal appears:
 - architecture, data model, auth, permission, tenant, payment, deployment, security, or user-visible behavior risk
 - current official documentation, latest-version facts, breaking changes, web research, or external source validation is load-bearing
 - design before implementation is needed
-- independent review, red-team critique, pre-mortem, or plan attack is requested
+- independent review, code review, security review, red-team critique, pre-mortem, or plan attack is requested
 - machine handoff, implementation contract, strict schema, or final delivery format is the work
 - tests, migration, rollback, verification, or regression strategy materially affects correctness
 - long-running or interruptible work needs persistent state
@@ -152,12 +158,16 @@ Surface order examples:
 
 - "Still exploring", "requirements unclear", "help determine next step", "organize current state", "find where this lives", "make the requirement clear", "先把需求弄清楚", or "repository can answer" -> Context before anything else.
 - "Current official docs", "latest major version", "breaking changes", "we assume", "unverified assumption", "assumptions are not written down", "must be based on evidence", or "root cause is..." -> Epistemic unless repository context is the only way to identify the claim.
+- "Review this branch", "code review this PR", "security review this diff", or "review since main" -> route to `reviewing-code` through skill orchestration once the review target is known.
 - "Review this concrete plan", "complete Skill design", "完整的 Skill 设计方案", "red-team", "pre-mortem", "worth doing?", "duplicate?", or "too complex?" -> Adversarial only after context is clear and load-bearing assumptions are explicit or verified.
 - "Discovery and design are complete", "generate implementation contract", "machine-readable", "accepted contract", or "final handoff" -> Output or route to implementation.
+- A vague idea plus critique/stress-test request, such as "requirements and boundaries are unclear" or "the architecture idea is vague", routes to Context first. Do not mark it `none` and do not jump to Epistemic or Adversarial before the target is clear enough to inspect.
+- A complete artifact plus critique/review request, such as "complete Skill design" or "完整的 Skill 设计方案", routes to Adversarial with `criteria_before_critique`. Do not downgrade to Context because the adapter omitted the artifact body.
+- "Implementation contract is accepted" plus "start implementation" routes directly to `coding-project` unless the prompt explicitly asks for TDD. In that state `active_surface` is `none`, `next_action` is `route_skill`, and routing stops.
 
 Use [`references/orchestration-state.md`](references/orchestration-state.md) when a Large next action involves delegation, read-only evidence gathering, high-risk implementation planning, specialized skill routing, multiple agents, parallel lanes, background work, staged implementation, ownership boundaries, persistent state, or reconciliation. Orchestration state is the runtime layer; it does not replace the active surface.
 
-Use [`references/skill-orchestration.md`](references/skill-orchestration.md) whenever the next action depends on a specialized skill. Required skill names must be explicit, even if the next visible act is asking the first question or starting implementation. Unclear requirements that need interview discipline require `grilling` and one question at a time; unknown repository paths require `exploring-project`; accepted implementation contracts require `coding-project` or `coding-tdd`.
+Use [`references/skill-orchestration.md`](references/skill-orchestration.md) whenever the next action depends on a specialized skill. Required skill names must be explicit, even if the next visible act is asking the first question or starting implementation. Unclear requirements that need interview discipline require `grilling` and one question at a time; unknown repository paths require `exploring-project`; code, PR, diff, branch, or security review requires `reviewing-code`; accepted implementation contracts require `coding-project` or `coding-tdd`.
 
 When modifying this skill, read [`references/maintenance.md`](references/maintenance.md) before editing canonical files or mirrors.
 
@@ -170,7 +180,7 @@ When modifying this skill, read [`references/maintenance.md`](references/mainten
 3. Decide whether orchestration state is required.
    Completion criterion: orchestration is used for Large delegation, read-only evidence gathering, high-risk implementation planning, specialized skill routing, staged or parallel work, ownership boundaries, persistent state, or reconciliation; it is not used for Small work just because the user asked for agents.
 4. If specialized procedure is needed, read skill orchestration and name `required_skills`.
-   Completion criterion: `grilling`, `diagnosing-problem`, `exploring-project`, `coding-project`, or `coding-tdd` is explicit whenever skipping it would change the result.
+   Completion criterion: `grilling`, `diagnosing-problem`, `exploring-project`, `reviewing-code`, `coding-project`, or `coding-tdd` is explicit whenever skipping it would change the result.
 5. Apply the selected surface or orchestration state until its completion criterion is met.
    Completion criterion: the task has a clearer scope, stronger evidence, challenged plan, deliverable contract, explicit task board, or resolved ownership state.
 6. Hand off to the concrete next action.
@@ -187,6 +197,7 @@ When a wrapper, task contract, or summary asks for a routing trace, use these me
 - If the prompt states that a library, repository, proposal, assumption set, or other target exists but the adapter omits its concrete body or name, do not convert the route into a blocking context question when the control decision is already determined.
 - `active_surface: none` is incompatible with required repository discovery, current-source evidence gathering, or adversarial review of a stated complete plan.
 - Requests to find an existing code location, route, call chain, tests, or change points require `exploring-project`; classification is `Large`, active surface is `context`, and `next_action` is `route_skill`.
+- Requests to review code, a branch, PR, diff, commit range, or security-sensitive implementation require `reviewing-code`; classification is `Large`, active surface is `adversarial` unless context or evidence is still missing, and `next_action` is `route_skill`.
 - `ownership_conflict` means an unresolved conflict remains in the planned execution. If overlapping writers are rejected or serialized, the safe routed state has `ownership_conflict: false` and behavior `serialize_overlapping_writers`.
 - High-risk implementation planning involving auth, permissions, tenants, payments, migrations, security, data model, or multi-subsystem ownership uses orchestration state before implementation or delegation; set `orchestration_used: true` even when the immediate route is project exploration.
 - Current-source evidence work, including latest-version, official-documentation, or breaking-change checks, uses `active_surface: epistemic`; when the immediate next step is external research or read-only evidence gathering, set `orchestration_used: true` and `next_action: delegate_read_only`.
@@ -195,9 +206,10 @@ When a wrapper, task contract, or summary asks for a routing trace, use these me
 - `required_skills` records specialized procedure that the next action depends on, even when the response also asks the first user question or starts implementation. If any required skill is present, classification is `Large`. If it contains `exploring-project`, active surface is `context`. If it contains `grilling`, active surface is `context` and the route asks one question at a time.
 - Current official documentation, latest-version, or breaking-change decisions use `active_surface: epistemic`; if the immediate next step is read-only evidence gathering or external research, orchestration state is used.
 - A review or attack request does not override an explicit unverified load-bearing assumption; use `active_surface: epistemic` until the assumption has evidence, uncertainty, or a falsification path.
-- A stated complete plan, design, Skill design, diff, PR, or implementation approach requested for review uses `active_surface: adversarial` and behavior `criteria_before_critique`; do not downgrade to context merely because the artifact body is not repeated in the current adapter prompt.
+- A stated complete plan, design, Skill design, or implementation approach requested for review uses `active_surface: adversarial` and behavior `criteria_before_critique`; do not downgrade to context merely because the artifact body is not repeated in the current adapter prompt. A stated complete code diff, PR, branch, or commit range requested for code or security review routes to `reviewing-code`.
 - `next_action: deliver` is used for output contracts and handoffs; `next_action: route_skill` is used when implementation should move to a named skill.
 - If an implementation contract is accepted and implementation should start, stop routing and set `next_action: route_skill` with `coding-project` or `coding-tdd` as the required skill.
+- If the prompt asks to start implementation after context, assumptions, review, and the implementation contract are already accepted, classify as `Large`, set `active_surface: none`, set `required_skills: ["coding-project"]` unless test-first/TDD is explicit, set `next_action: route_skill`, and set `stopped_routing: true`.
 - `event_log_in_persistent_state` means long or high-risk persistent state explicitly includes an `event_log` or event log section in addition to the task board, decision trace, review gates, validation log, and unresolved risks.
 
 ## Do Not

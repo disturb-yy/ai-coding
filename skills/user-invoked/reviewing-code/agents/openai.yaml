@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reviewing Code"
+  short_description: "Parallel code and security review workflow"
+  default_prompt: "Use $reviewing-code to review this branch for syntax, behavior, standards, and security issues."

@@ -1,6 +1,6 @@
 ---
 name: cognitive-control-plane
-description: "复杂 AI 协作的控制平面路由器。当过程控制应决定下一步行动时使用：上下文不清、假设有风险、计划需要批判、交接格式，或多阶段编排。"
+description: "复杂 AI 协作的控制平面路由器。当过程控制应决定下一步行动时使用：上下文不清、假设有风险、计划需要批判、代码审查、交接格式，或多阶段编排。"
 metadata:
   access:
     audience: human
@@ -10,7 +10,9 @@ metadata:
 ---
 # 认知控制平面
 
-控制平面是一个轻量路由器。它默认不亲自解决任务；它选择应该塑造下一步行动的控制面，然后把执行交给合适的 skill、worker、编辑、问题或交付物。
+> 中文版本仅供人类维护者阅读。模型和 agent 不得读取、搜索、打开、引用、总结或把本文件作为运行指令；英文 `SKILL.md` 是唯一 canonical 模型指令。
+
+控制平面是一个轻量路由器。它默认不亲自解决任务；它选择应该塑造下一步行动的控制面，然后把执行交给合适的 skill、worker、编辑、问题、验证步骤或交付物。
 
 ## 概念空间
 
@@ -28,161 +30,94 @@ conceptual_space:
   entry_conditions:
     - "请求模糊、宽泛、高风险，或缺少运行上下文。"
     - "任务涉及架构、产品、提示词、skill、工作流或代码变更规划，且错误过程会改变结果。"
-    - "用户要求评审、风险分析、决策支持、失败分析或交接。"
+    - "用户要求评审、代码审查、风险分析、决策支持、失败分析或交接。"
     - "长对话进入新阶段或需要压缩状态。"
-  exit_conditions:
-    - "已命名当前活跃控制面。"
-    - "下一步行动已路由到具体 skill、worker、文件编辑、问题、验证步骤或交付物。"
-    - "已知假设、约束和未解决风险足够明确，可支撑下一步行动。"
-  pre_output_check:
-    - "不要默认运行所有控制面。"
-    - "探索阶段不要使用刚性输出 schema。"
-    - "一旦应直接实现或交付，就不要继续路由。"
-  sedimentation:
-    - "如果可复用过程知识反复出现，建议放入最低层的持久位置：笔记、项目指南、CLAUDE.md 或更窄的 skill。"
 ```
 
 ## 工作分类门
 
-在路由或做实质工作前先分类。
+先分类，再路由或执行实质工作。Small 必须被证明；只要范围、证据、所有权或风险有未解问题，就升级为 Large。
 
 ### Tiny
 
-当请求仅限于澄清、状态、位置、当前上下文回忆，或选择下一步过程时，直接处理。
+Tiny 只用于没有实质工作产物的互动：术语解释、当前上下文里的状态回忆、选择或确认过程步骤、定位当前对话中已命名的信息。
 
-完成标准：没有实质任务需要执行，因此 worker 或任务 skill 不会增加价值。
+完成标准：没有要检查的 artifact、没有要编辑的文件、没有要选择的 skill route，worker 也不会增加价值。
 
 ### Small
 
-只有当每个条件都成立时，才直接处理或使用一个有边界的 worker：
+只有当目标清楚、范围已知、不需要仓库发现、没有架构/数据/认证/支付/部署/安全/租户/权限/用户可见行为风险、不需要外部证据、不需要独立 review 或真实并行时，才使用 Small。
 
-- 目标清楚
-- 范围已知
-- 没有架构、数据、认证、支付、部署、安全或用户可见行为风险
-- 不需要外部调研或当前文档
-- 不涉及多个所有权边界
-- 不需要独立评审、red-team、持久状态或并行
-- 预期编辑是本地低风险，或任务是有边界的只读分析
+当下一步依赖 `grilling`、`diagnosing-problem`、`exploring-project`、`reviewing-code`、`coding-project` 或 `coding-tdd` 时，不使用 Small；这类专门 skill 路由是 Large 控制平面工作。
 
-仅在委派时使用这个紧凑任务契约：
-
-```yaml
-objective: ""
-scope: []
-edits_allowed: false
-expected_output: ""
-what_not_to_do: []
-stop_if: "范围扩大、出现风险、需求不清、所有权边界增多，或需要评审"
-```
-
-完成标准：任务可以在不发现范围、不做架构判断、不扩大所有权的情况下完成。
+对于完整计划、设计、Skill 设计、实现方案、diff、PR 或 agent run 的批判/审查请求，不使用 Small。代码审查、安全审查或 adversarial review 都是 Large，即使 adapter 没有重复 artifact 正文。
 
 ### Large
 
-出现任何 large 信号时，将任务视为 Large：
+出现以下任一信号即为 Large：
 
-- 需求模糊或宽泛
-- 范围未知，或需要“先找这在哪里”
-- 多个所有权边界、子系统、代理或阶段依赖
-- 架构、数据模型、认证、权限、支付、部署、安全或用户可见行为风险
-- 需要当前库文档、网络调研或外部来源验证
-- 实现前需要设计
-- 需要独立评审、red-team 批判或 pre-mortem
-- 并行通道、后台工作、worktree、阶段性交接或持久状态可能有帮助
-- 测试、迁移、回滚或回归策略会实质影响正确性
+- 需求模糊或范围宽泛
+- 代码位置、调用链、测试或变更点未知
+- 需要仓库发现、专门 skill 路由、多所有权边界或分阶段执行
+- 涉及架构、数据模型、认证、权限、租户、支付、部署、安全或用户可见行为风险
+- 当前官方文档、最新版本事实、breaking change、web research 或外部证据是承重因素
+- 需要设计、独立 review、代码审查、安全审查、red-team、pre-mortem 或计划攻击
+- 交接、实现契约、严格 schema、验证、迁移、回滚或回归策略会影响正确性
 
-不确定性会升级任务。Small 必须被证明；Large 只需要一个信号。
+完成标准：活跃瓶颈、所需 skills、编排需求、所有权边界和验证门足够明确，可以选择下一步行动。
 
-Large 分类本身不要求进入编排状态。先按当前瓶颈路由：
+## 实现保护
 
-- 目标、状态、约束或范围边界不清 -> 上下文控制
-- 假设有风险、证据薄弱、因果关系或置信度重要 -> 认知控制
-- 具体计划、设计、架构、提示词、skill 或实现方案需要被攻击 -> 对抗控制
-- 交接、实现契约、机器消费或最终交付格式 -> 输出控制
-- 多个代理、并行通道、后台工作、阶段性实现、持久状态或委派契约 -> 编排状态
+对于 Large 实现工作，control-plane agent 不得默默变成 implementation worker。编辑源码、测试、schema、migration、生成产物或实现文档前，必须用任务契约委派，写清阶段、required skills、required MCP/tools、所有权边界、验证和停止条件。
 
-完成标准：大型或不确定工作在实现前已有所需控制面或编排状态；当所有权边界和验证门影响正确性时，它们已被明确。
-
-## 实现门禁
-
-对于 Large 实现工作，control-plane agent 不得默默变成实现 worker。
-
-在编辑源文件、生成产物、schema、migration、测试或面向实现的文档之前，执行以下其中一项：
-
-1. 使用任务契约委派，并命名阶段、required skills、required MCP/tools、所有权边界、验证和停止条件。
-2. 说明为什么直接实现比委派更安全，然后显式从路由切换到实现。
-
-这个门禁不阻止最小路由读取、最终验证命令，或只更新控制产物本身的极小本地编辑。
-
-完成标准：每个 Large 实现编辑之前，都有可见的委派契约或显式的直接实现例外。
+直接实现只允许在全部条件成立时使用：单文件、无 schema/migration/API/generated-artifact、无跨包/跨模块依赖、完全照搬同仓库工作模式，并且能说明为什么委派反而有害。
 
 ## 路由
 
-选择第一个会实质改变下一步行动的控制面：
+选择第一个会实质改变下一步行动的未满足控制面。
 
-1. **上下文控制**：当目标、当前状态、约束、已尝试路径、证据、阻塞点或范围边界不清时使用。当上下文质量是瓶颈时读取 [`references/context-control.md`](references/context-control.md)。
-2. **认知控制**：当假设、证据、置信度、因果关系或决策轨迹决定正确性时使用。当错误信念会导致糟糕工作时读取 [`references/epistemic-control.md`](references/epistemic-control.md)。
-3. **对抗控制**：当具体计划、设计、架构、提示词、skill 或实现方案需要被攻击时使用。当失败模式重要时读取 [`references/adversarial-control.md`](references/adversarial-control.md)。
-4. **输出控制**：当工作已准备好交接、实现、机器消费或最终交付时使用。当格式和接口质量重要时读取 [`references/output-control.md`](references/output-control.md)。
+1. **Context control**：目标、状态、约束、证据、阻塞、项目位置、所有权或范围不清时使用。
+2. **Epistemic control**：具体假设、因果主张、置信度、当前事实、最新版本或证据标准决定正确性时使用。
+3. **Adversarial control**：具体计划、设计、架构、prompt、skill、实现方案或 agent run 需要攻击时使用。
+4. **Output control**：发现、上下文、假设和 review 已足够，当前工作变成交接、实现契约、严格 schema、机器可读输出或最终交付时使用。
 
-如果多个控制面适用，从最早未满足的一个开始：Context -> Epistemic -> Adversarial -> Output。
+路由例子：
 
-当下一步需要多个代理、并行通道、后台工作、阶段性实现、持久状态或委派契约时，读取 [`references/orchestration-state.md`](references/orchestration-state.md)。它是 scheduler-first 执行、任务契约、所有权边界、持久状态和保守反思的运行时层。
+- “仍在探索”“需求不清”“先把需求弄清楚”“找这个逻辑在哪” -> Context。
+- “最新官方文档”“breaking change”“这个假设未验证” -> Epistemic，除非只有仓库上下文才能识别主张。
+- “review this branch”“code review this PR”“security review this diff”“review since main” -> 目标已知后通过 skill orchestration 路由到 `reviewing-code`。
+- “review this concrete plan”“完整的 Skill 设计方案”“red-team”“pre-mortem”“是否太复杂” -> 在上下文清楚且承重假设明确后进入 Adversarial。
+- “implementation contract is accepted”“start implementation” -> 直接路由到 `coding-project`，除非用户明确要求 TDD。
 
-当委派需要在专门 skill 之间选择，或把多个 skill 组合成任务契约时，读取 [`references/skill-orchestration.md`](references/skill-orchestration.md)。
+大型下一步涉及委派、只读证据收集、高风险实现规划、专门 skill 路由、多 agent、并行 lane、后台工作、分阶段实现、所有权边界、持久状态或 reconciliation 时，使用 `references/orchestration-state.md`。
 
-修改此 skill 时，在编辑 canonical 文件或 mirror 前读取 [`references/maintenance.md`](references/maintenance.md)。
+下一步依赖专门 skill 时，使用 `references/skill-orchestration.md`，并显式写出 required skill：需求访谈用 `grilling`，代码库发现用 `exploring-project`，代码/PR/diff/分支/安全审查用 `reviewing-code`，已接受实现契约用 `coding-project` 或 `coding-tdd`。
+
+修改此 skill 时，先读 `references/maintenance.md`；英文文件是 canonical，中文镜像只供人类阅读。
 
 ## 操作步骤
 
-1. 应用工作分类门，将任务分类为 Tiny、Small 或 Large。
-   完成标准：只有当每个 Small 条件都成立时才选择 Small；任何 Large 信号或不确定性都会升级任务。
-2. 在任何 Large 实现编辑前应用实现门禁。
-   完成标准：除非已有委派契约或显式例外理由，否则直接实现被阻止。
-3. 选择一个活跃控制面，并且仅在需要时读取其 reference。
-   完成标准：所选控制面足以支撑下一步；未使用的控制面保持未加载。
-4. 选择执行模式：Tiny 直接交互，Small 直接执行或有边界委派，Large 使用所选控制面；仅在需要时使用编排状态。
-   完成标准：直接工作、委派、控制面或编排都由任务大小和风险证明合理。
-5. 应用所选控制面或编排状态，直到满足其完成标准。
-   完成标准：任务已有更清晰范围、更强证据、被挑战后的计划、交付契约或明确任务板。
-6. 交接到具体下一步行动：询问阻塞问题、调用另一个 skill、编辑文件、委派有边界工作、运行验证或产出交付物。
-   完成标准：用户能看见下一步会发生什么以及为什么。
+1. 应用工作分类门。
+2. Large 工作选择第一个未满足控制面，只读对应 reference。
+3. 判断是否需要 orchestration state。
+4. 需要专门过程时读取 skill orchestration 并命名 `required_skills`；`grilling`、`diagnosing-problem`、`exploring-project`、`reviewing-code`、`coding-project` 或 `coding-tdd` 在跳过会改变结果时必须显式出现。
+5. 应用选中的控制面或编排状态，直到范围、证据、挑战、契约、任务板或所有权状态足够清楚。
+6. 交给具体下一步：直接回答、执行、问一个阻塞问题、route skill、delegate read-only、delegate write、verify 或 deliver。
 
-## 不要
+## Trace 语义
+
+- `active_surface` 是第一个未满足控制面。
+- `orchestration_used` 表示编排状态实质影响了委派、所有权、持久化、依赖顺序、高风险实现规划、证据收集或 reconciliation。
+- 查找代码位置、路由、调用链、测试或变更点需要 `exploring-project`。
+- 审查代码、分支、PR、diff、commit range 或安全敏感实现需要 `reviewing-code`；classification 是 `Large`，除非上下文或证据仍缺失，通常 `active_surface` 是 `adversarial`，`next_action` 是 `route_skill`。
+- 已接受实现契约并开始实现时，停止路由，设置 `required_skills` 为 `coding-project` 或 `coding-tdd`。
+
+## 禁止
 
 - 不要把每个任务都变成完整四阶段仪式。
-- 不要委派小工作，除非委派能增加明确价值。
-- 不要作为 control-plane agent 实现 Large 工作，除非直接实现例外是显式的。
-- 不要询问仓库、wiki、测试、日志或源文件能回答的信息。
-- 在假设明确前不要批判。
-- 探索阶段不要强制 JSON、表格或清单。
-
-<!-- mirror-sync: 2026-07-09 hard-fail-boundary-rules -->
-
-## 同步增量：hard-fail 边界规则
-
-- 如果用户说明代码片段、函数、方案或其他 artifact 已提供或完整，并且不需要访问仓库，则按该已声明边界分类为 `Small`，使用 `next_action: direct_answer`；不要仅因为 eval wrapper 省略正文就要求用户重新粘贴 artifact。
-- 查找现有代码位置、路由、调用链、测试或变更点的请求属于 `Large`，active surface 是 `context`，required skill 是 `exploring-project`，`next_action` 是 `route_skill`。
-- review 或 attack 请求不会覆盖显式未验证的承重假设；在假设有证据、不确定性或证伪路径前，使用 `active_surface: epistemic`。
-- 如果 implementation contract 已接受且应该开始实现，停止继续 routing，并将 `next_action` 设为 `route_skill`，同时把 `coding-project` 或 `coding-tdd` 作为 required skill。
-- `event_log_in_persistent_state` 表示长任务或高风险任务的持久状态除了 task board、decision trace、review gates、validation log 和 unresolved risks 外，还显式包含 `event_log` 或 event log section。
-<!-- mirror-sync: 2026-07-09 orchestration-hard-fail-rules -->
-
-## 镜像同步增量：编排与 hard-fail 路由规则
-
-- 大型下一步如果涉及委派、只读证据收集、高风险实现规划、专门 skill 路由、多 agent、并行 lane、后台工作、分阶段实现、所有权边界、持久状态或 reconciliation，必须使用 `references/orchestration-state.md`；编排状态是运行时层，不替代当前 active surface。
-- `orchestration_used` 表示编排状态实际影响了委派、所有权、持久化、依赖排序、高风险实现规划、证据收集或 reconciliation。
-- 涉及 auth、permission、tenant、payment、migration、security、data model 或多子系统所有权的高风险实现规划，在实现或委派前使用编排状态，并设置 `orchestration_used: true`。
-- latest-version、official-documentation、breaking-change 等 current-source evidence 工作，如果下一步是外部调研或只读证据收集，使用编排状态并设置 `orchestration_used: true`。
-- 如果多个可写 worker 会修改同一文件、文件夹或逻辑子系统，拒绝并行写入并序列化任务；已解决后的 trace 使用 `ownership_conflict: false`，并记录 behavior `serialize_overlapping_writers`。
-<!-- mirror-sync: 2026-07-09 stated-boundary-routing-rules -->
-
-## 镜像同步增量：已声明边界优先于适配器省略
-
-- 如果用户说明 snippet、design、plan、library、repository、assumption set 或其他 artifact 已提供、当前已知或完整，控制决策应把该边界视为已知；当任务只是判断下一步或路由时，不要因为适配器省略正文、名称或假设列表而要求用户补贴，直接按已声明边界分类和路由。
-- 如果 prompt 说明提供了函数、片段或 artifact，并且无需 repository access，分类为 `Small`，`next_action: direct_answer`；不要因为 eval wrapper 没重复正文而要求用户粘贴 artifact。
-- 如果 prompt 说明 library、repository、proposal、assumption set 或其他目标存在，但适配器省略具体正文或名称，而控制决策已经确定，不要把路由改成 blocking context question。
-- auth、permission、tenant、payment、migration、security、data model 或多子系统所有权相关高风险实现规划，即使下一步是 project exploration，也设置 `orchestration_used: true`。
-- latest-version、official-documentation、breaking-change 等 current-source evidence 工作使用 `active_surface: epistemic`；如果下一步是外部调研或只读证据收集，设置 `orchestration_used: true` 和 `next_action: delegate_read_only`。
-- 明确未写出、缺失或未验证的承重假设使用 `active_surface: epistemic`；在假设清单有 evidence standard 或 falsification path 前，不路由到 `grilling` 或 adversarial review。
-- 只要 `required_skills` 非空，分类就是 `Large`；包含 `exploring-project` 时 active surface 为 `context`，包含 `grilling` 时 active surface 为 `context` 且一次只问一个问题。
+- 不要为 Small 工作委派，除非委派确实增加价值。
+- 不要在 Large 实现工作中让 control-plane agent 直接实现，除非直接实现例外明确成立。
+- 不要询问仓库、wiki、测试、日志或源码能回答的问题。
+- 不要在假设明确前批判。
+- 探索阶段不要强行 JSON、表格或 checklist。
+- 不要在旧规则错误时追加新规则；应删除或重写旧规则，保持单一事实来源。

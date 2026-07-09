@@ -8,7 +8,7 @@ const DEFAULT_SKILL_DIR = path.resolve(__dirname, "..");
 const SKILL_DIR = path.resolve(process.env.CCP_SKILL_DIR || DEFAULT_SKILL_DIR);
 const MIRROR_ROOT = path.join(SKILL_DIR, "zh");
 const STALE_MS = Number(process.env.CCP_MIRROR_STALE_MS || "2000");
-const ACCESS_SCAN_DIRS = ["README.md", "SKILL.md", "references", "zh"];
+const ACCESS_SCAN_DIRS = ["README.md", "SKILL.md", "references", "config", "zh"];
 
 function mirrorForCanonical(canonicalPath) {
   const relative = path.relative(SKILL_DIR, canonicalPath);
