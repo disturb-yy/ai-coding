@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cognitive-control-plane.local/adapters/contract.schema.json",
+  "title": "Cognitive Control Plane Adapter Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "ccp_version",
+    "next_action",
+    "task"
+  ],
+  "properties": {
+    "ccp_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "next_action": {
+      "type": "string",
+      "enum": [
+        "delegate_read_only",
+        "delegate_write",
+        "route_skill",
+        "verify",
+        "deliver"
+      ]
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "phase",
+        "objective",
+        "constraints",
+        "required_skills",
+        "required_references",
+        "required_mcp",
+        "required_tools",
+        "ownership",
+        "edits_allowed",
+        "expected_output",
+        "validation",
+        "stop_if"
+      ],
+      "properties": {
+        "role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "phase": {
+          "type": "string",
+          "enum": [
+            "context",
+            "design",
+            "implementation",
+            "review",
+            "verification"
+          ]
+        },
+        "objective": {
+          "type": "string",
+          "minLength": 1
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "required_skills": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/requirement"
+          }
+        },
+        "required_references": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/requirement"
+          }
+        },
+        "required_mcp": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/requirement"
+          }
+        },
+        "required_tools": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/requirement"
+          }
+        },
+        "ownership": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "writable_paths",
+            "read_only_paths",
+            "forbidden_paths"
+          ],
+          "properties": {
+            "writable_paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "read_only_paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "forbidden_paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "edits_allowed": {
+          "type": "boolean"
+        },
+        "expected_output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "format",
+            "required_fields",
+            "must_report"
+          ],
+          "properties": {
+            "format": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required_fields": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "must_report": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "validation": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "stop_if": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "source",
+        "required",
+        "reason"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "available_skill",
+            "file_reference",
+            "repo_skill",
+            "mcp",
+            "tool",
+            "none"
+          ]
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
