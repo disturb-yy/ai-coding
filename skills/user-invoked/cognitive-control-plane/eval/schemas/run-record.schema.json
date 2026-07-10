@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Cognitive Control Plane Eval Run Record",
+  "type": "object",
+  "required": [
+    "run_id",
+    "skill_version",
+    "executor",
+    "case_count",
+    "started_at",
+    "finished_at",
+    "artifacts"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string"
+    },
+    "skill_version": {
+      "type": "string"
+    },
+    "executor": {
+      "type": "object"
+    },
+    "case_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "started_at": {
+      "type": "string"
+    },
+    "finished_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "selected_case_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "workspace": {
+      "type": "string"
+    },
+    "skill_dir": {
+      "type": "string"
+    },
+    "artifacts": {
+      "type": "object",
+      "required": [
+        "raw_events_dir",
+        "final_results_dir",
+        "model_conversations_dir",
+        "results_jsonl",
+        "report_json",
+        "report_md",
+        "static_checks_json"
+      ],
+      "properties": {
+        "raw_events_dir": {
+          "type": "string"
+        },
+        "final_results_dir": {
+          "type": "string"
+        },
+        "model_conversations_dir": {
+          "type": "string"
+        },
+        "results_jsonl": {
+          "type": "string"
+        },
+        "report_json": {
+          "type": "string"
+        },
+        "report_md": {
+          "type": "string"
+        },
+        "static_checks_json": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "runtime_error_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "result_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "conversation_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "metrics": {
+      "type": "object"
+    },
+    "failures": {
+      "type": "array"
+    },
+    "changes_under_test": {
+      "type": "array"
+    }
+  },
+  "additionalProperties": false
+}

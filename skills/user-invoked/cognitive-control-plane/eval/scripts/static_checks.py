@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import re
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 
 try:
@@ -48,6 +50,80 @@ def strict_schema_problems(node: object, path: str = "$") -> list[str]:
         for index, value in enumerate(node):
             problems.extend(strict_schema_problems(value, f"{path}[{index}]"))
     return problems
+
+
+def import_python_module(path: Path, module_name: str):
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot import module from {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def check_conversation_recorder(runner_path: Path) -> tuple[bool, str]:
+    module = import_python_module(runner_path, "ccp_eval_runner_static_check")
+    if not hasattr(module, "record_model_conversation"):
+        return False, "record_model_conversation helper is missing"
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        raw_path = root / "ACP-TEST.jsonl"
+        final_path = root / "ACP-TEST.json"
+        conversation_path = root / "ACP-TEST-conversation.json"
+        raw_path.write_text(
+            "\n".join(
+                [
+                    json.dumps({"type": "thread.started", "thread_id": "t1"}),
+                    json.dumps({
+                        "type": "item.completed",
+                        "item": {
+                            "id": "m1",
+                            "type": "agent_message",
+                            "text": "assistant reply",
+                        },
+                    }),
+                    json.dumps({
+                        "type": "item.completed",
+                        "item": {
+                            "id": "c1",
+                            "type": "command_execution",
+                            "command": "echo ok",
+                            "aggregated_output": "ok\n",
+                            "exit_code": 0,
+                            "status": "completed",
+                        },
+                    }),
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        final_path.write_text('{"case_id":"ACP-TEST"}\n', encoding="utf-8")
+
+        payload = module.record_model_conversation(
+            case_id="ACP-TEST",
+            prompt="user prompt",
+            raw_path=raw_path,
+            final_path=final_path,
+            conversation_path=conversation_path,
+            status="completed",
+            runner_error=None,
+        )
+        stored = json.loads(conversation_path.read_text(encoding="utf-8"))
+        roles = [message.get("role") for message in stored.get("messages", [])]
+        kinds = [message.get("kind") for message in stored.get("messages", [])]
+        if payload.get("raw_event_count") != 3 or stored.get("raw_event_count") != 3:
+            return False, "conversation raw_event_count did not match raw JSONL events"
+        if roles[:1] != ["user"] or "assistant" not in roles or "tool" not in roles:
+            return False, f"conversation roles are incomplete: {roles}"
+        if "eval_prompt" not in kinds or "message" not in kinds or "command_execution" not in kinds:
+            return False, f"conversation kinds are incomplete: {kinds}"
+        artifacts = stored.get("artifacts") or {}
+        if not artifacts.get("raw_events") or not artifacts.get("final_result"):
+            return False, "conversation artifacts do not link raw and final outputs"
+
+    return True, ""
 
 
 def main() -> int:
@@ -347,6 +423,67 @@ def main() -> int:
             failures.append({
                 "check_id": "S-14",
                 "message": f"Result schema is not valid JSON: {exc}",
+            })
+
+    conversation_schema = skill / "eval" / "schemas" / "conversation.schema.json"
+    check(
+        conversation_schema.exists(),
+        "S-30",
+        f"Missing {conversation_schema}",
+        failures,
+    )
+    if conversation_schema.exists():
+        try:
+            json.loads(conversation_schema.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            failures.append({
+                "check_id": "S-30",
+                "message": f"Conversation schema is not valid JSON: {exc}",
+            })
+
+    runner = skill / "eval" / "scripts" / "run_codex_baseline.py"
+    check(runner.exists(), "S-31", f"Missing {runner}", failures)
+    if runner.exists():
+        runner_text = runner.read_text(encoding="utf-8")
+        check(
+            "conversation_dir" in runner_text
+            and "model_conversations_dir" in runner_text
+            and "record_model_conversation" in runner_text,
+            "S-32",
+            "Codex baseline runner must persist model conversation artifacts.",
+            failures,
+        )
+        try:
+            recorder_ok, recorder_message = check_conversation_recorder(runner)
+        except Exception as exc:
+            recorder_ok, recorder_message = False, str(exc)
+        check(
+            recorder_ok,
+            "S-33",
+            f"Conversation recorder behavior check failed: {recorder_message}",
+            failures,
+        )
+
+    run_record_schema = skill / "eval" / "schemas" / "run-record.schema.json"
+    check(run_record_schema.exists(), "S-34", f"Missing {run_record_schema}", failures)
+    if run_record_schema.exists():
+        try:
+            run_schema_doc = json.loads(run_record_schema.read_text(encoding="utf-8"))
+            artifact_props = (
+                (run_schema_doc.get("properties") or {})
+                .get("artifacts", {})
+                .get("properties", {})
+            )
+            check(
+                "model_conversations_dir" in artifact_props,
+                "S-35",
+                "Run record schema must expose artifacts.model_conversations_dir.",
+                failures,
+            )
+        except json.JSONDecodeError as exc:
+            failures.append({
+                "check_id": "S-34",
+                "message": f"Run record schema is not valid JSON: {exc}",
             })
 
     report = {

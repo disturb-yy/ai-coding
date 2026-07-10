@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Cognitive Control Plane Eval Model Conversation",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "case_id",
+    "executor",
+    "created_at",
+    "status",
+    "runner_error",
+    "prompt",
+    "raw_event_count",
+    "artifacts",
+    "messages"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "case_id": {
+      "type": "string"
+    },
+    "executor": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "error"
+      ]
+    },
+    "runner_error": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "prompt": {
+      "type": "object",
+      "required": [
+        "role",
+        "content"
+      ],
+      "properties": {
+        "role": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "raw_event_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "artifacts": {
+      "type": "object",
+      "required": [
+        "raw_events",
+        "final_result"
+      ],
+      "properties": {
+        "raw_events": {
+          "type": "string"
+        },
+        "final_result": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "messages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "role",
+          "kind",
+          "raw_type",
+          "content",
+          "metadata"
+        ],
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant",
+              "tool",
+              "system"
+            ]
+          },
+          "kind": {
+            "type": "string"
+          },
+          "raw_type": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
