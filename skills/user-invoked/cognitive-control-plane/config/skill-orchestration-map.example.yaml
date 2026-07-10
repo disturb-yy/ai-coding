@@ -14,13 +14,39 @@ access:
   purpose: orchestration_map
 
 # version：配置 schema/内容版本。字段含义变化时递增。
-version: 2
+version: 3
 
 # updated：最近一次语义更新日期，格式为 YYYY-MM-DD。
-updated: "2026-07-09"
+updated: "2026-07-10"
 
 # description：一句话说明这个 map 控制什么。
-description: "Default routing map for assigning skills, references, MCP, and tools."
+description: "Default routing map for assigning skills, references, MCP, tools, and platform adapters."
+
+# adapter_contract：平台 adapter 层使用的标准委托契约。
+# skill core 只产出 contract；OpenCode/Codex/Claude Code 等 adapter
+# 负责把 contract 转换为真实 subagent/task，或回退为 handoff。
+adapter_contract:
+  # schema_ref：本仓库内 contract JSON schema 相对定位符。
+  schema_ref: adapters/contract.schema.json
+  # required_for_next_actions：这些 next_action 必须经过 adapter。
+  required_for_next_actions:
+    - delegate_read_only
+    - delegate_write
+  # real_delegation_requires：满足这些条件才算真正启动了 worker。
+  real_delegation_requires:
+    - adapter_result.status_started
+    - adapter_result.task_id_present
+    - adapter_result.subagent_started_true
+  # fallback_behavior：平台没有 subagent API 时的安全退路。
+  fallback_behavior:
+    subagent_unavailable: emit_handoff_contract_and_stop_before_implementation
+    adapter_unavailable: emit_handoff_contract_and_stop_before_implementation
+    missing_task_id: treat_as_handoff_not_real_delegation
+  # platform_adapters：各平台说明文档。
+  platform_adapters:
+    opencode: adapters/opencode.md
+    codex: adapters/codex.md
+    claude-code: adapters/claude-code.md
 
 # skill_registry：路由器可选择的 skill/reference 注册表。
 # 顶层 key 是稳定 route id。对已安装 skill，key 应与 required_skills

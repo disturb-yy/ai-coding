@@ -4,9 +4,27 @@ access:
   model_write: true
   purpose: orchestration_map
 
-version: 2
+version: 3
 updated: "2026-07-10"
-description: "Default routing map for assigning skills, references, MCP, and tools to main-agent and subAgent tasks."
+description: "Default routing map for assigning skills, references, MCP, tools, and platform adapters to main-agent and subAgent tasks."
+
+adapter_contract:
+  schema_ref: adapters/contract.schema.json
+  required_for_next_actions:
+    - delegate_read_only
+    - delegate_write
+  real_delegation_requires:
+    - adapter_result.status_started
+    - adapter_result.task_id_present
+    - adapter_result.subagent_started_true
+  fallback_behavior:
+    subagent_unavailable: emit_handoff_contract_and_stop_before_implementation
+    adapter_unavailable: emit_handoff_contract_and_stop_before_implementation
+    missing_task_id: treat_as_handoff_not_real_delegation
+  platform_adapters:
+    opencode: adapters/opencode.md
+    codex: adapters/codex.md
+    claude-code: adapters/claude-code.md
 
 skill_registry:
   grilling:
