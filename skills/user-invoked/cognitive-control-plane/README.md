@@ -9,6 +9,48 @@ access:
 
 > Human-only maintenance document. Models and agents must not read, search, open, summarize, quote, or use this file as runtime instruction. The executable skill contract is `SKILL.md` plus the linked files under `references/`. This README is for humans configuring and maintaining the skill.
 
+## 中文使用说明
+
+`cognitive-control-plane` 是一个平台无关的控制面 Skill：它不直接替代具体执行 agent，而是负责判断任务规模、选择控制面、生成标准委托契约，并把后续执行交给合适的 Skill、worker、adapter 或人工确认。
+
+### 通用工作方式
+
+1. 让主 agent 先读取 `SKILL.md`，并只按需要读取 `references/` 下的控制面文件。
+2. 对复杂任务先分类为 `Tiny`、`Small` 或 `Large`。
+3. 对 `Large` 任务选择第一个真正阻塞下一步的 surface：`context`、`epistemic`、`adversarial` 或 `output`。
+4. 如果需要委托，生成 adapter contract；只有平台 adapter 返回 `status=started`、`task_id` 和 `subagent_started=true` 时，才算真正启动了 subagent。
+5. 如果当前平台没有 subagent/task API，必须保留 handoff contract，并在实现前停止，不要假装已经委托。
+
+### OpenCode
+
+OpenCode 侧使用本仓库的 Skill 作为路由策略。当前 bundled OpenCode plugin 只做 guard：阻止读取受保护镜像文件，并检查中英文镜像状态；它本身不启动 subagent。
+
+在 OpenCode 中需要真实 subagent 时，应由 OpenCode adapter 读取 `adapters/contract.schema.json`，把 contract 转换为 OpenCode 原生 task/subagent，并返回 task id。没有 task id 的结果只能视为 handoff。
+
+### Codex
+
+Codex 侧可以直接使用本 Skill 做控制面判断。`codex exec` 评测环境只验证 routing trace，不会启动 subagent。
+
+如果 Codex 运行面暴露了 multi-agent/task 工具，adapter 应把 contract 作为 worker prompt 提交，并要求 worker 回报 `skills_loaded`、`tools_used`、`validation_results` 和 deviations。没有可用 task 工具时，应输出 handoff contract 并停止在实现前。
+
+### Claude Code
+
+Claude Code 侧通常通过 Task tool 启动 subagent。adapter 应把 `task.role` 映射为子任务角色，把 `objective`、`constraints`、`ownership`、`validation` 和 `stop_if` 合成为 Task prompt。
+
+如果 Task tool 不可用，则不要继续执行 Large implementation；保留 contract 给用户或外层调度器。
+
+### Adapter CLI
+
+本仓库提供一个轻量 CLI 供本地验证：
+
+```bash
+node scripts/ccp-adapter.js detect --platform codex
+node scripts/ccp-adapter.js validate contract.json
+node scripts/ccp-adapter.js render --platform opencode contract.json
+```
+
+该 CLI 不会真正启动平台 subagent；它只做能力探测、contract 校验和确定性的 handoff/render。真实启动逻辑必须由平台 adapter 实现。
+
 ## Purpose
 
 `cognitive-control-plane` is a routing skill for complex AI collaboration. It does not solve every task itself. It classifies work, selects the right control surface, and hands execution to a direct action, another skill, a bounded worker, a verification step, or a deliverable contract.
