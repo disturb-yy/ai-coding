@@ -28,6 +28,8 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "task_id",
+        "actor_id",
         "role",
         "phase",
         "objective",
@@ -43,6 +45,14 @@
         "stop_if"
       ],
       "properties": {
+        "task_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actor_id": {
+          "type": "string",
+          "minLength": 1
+        },
         "role": {
           "type": "string",
           "minLength": 1
@@ -60,6 +70,31 @@
         "objective": {
           "type": "string",
           "minLength": 1
+        },
+        "review_of_task_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "review_of_actor_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "review_iteration": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "supersedes_review_task_id": {
+          "type": "string"
+        },
+        "review_fallback": {
+          "type": "string",
+          "enum": [
+            "none",
+            "independent_read_only_reviewer"
+          ]
+        },
+        "review_target": {
+          "$ref": "#/$defs/reviewTarget"
         },
         "constraints": {
           "type": "array",
@@ -162,10 +197,98 @@
             "type": "string"
           }
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "phase": {
+                "const": "review"
+              }
+            },
+            "required": [
+              "phase"
+            ]
+          },
+          "then": {
+            "required": [
+              "review_of_task_id",
+              "review_of_actor_id",
+              "review_iteration",
+              "supersedes_review_task_id",
+              "review_fallback",
+              "review_target"
+            ]
+          }
+        }
+      ]
     }
   },
   "$defs": {
+    "reviewTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "git_range",
+            "stable_artifact"
+          ]
+        },
+        "base_sha": {
+          "type": "string",
+          "minLength": 1
+        },
+        "head_sha": {
+          "type": "string",
+          "minLength": 1
+        },
+        "diff_hash": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stable_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "git_range"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "base_sha",
+              "head_sha",
+              "diff_hash"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "stable_artifact"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "stable_id"
+            ]
+          }
+        }
+      ]
+    },
     "requirement": {
       "type": "object",
       "additionalProperties": false,

@@ -31,6 +31,7 @@ conceptual_space:
   exit_conditions:
     - "Every selected review lane has reported findings or an explicit no-findings result."
     - "Findings are deduplicated, severity-ranked, and tied to file/line, hunk, test, spec, or standard evidence."
+    - "Verification status and findings are presented in separate, scannable tables."
     - "Residual risks and skipped lanes are explicit."
 ```
 
@@ -46,8 +47,8 @@ conceptual_space:
    Completion criterion: every selected folder has one completed lane report, or every selected file has a completed split report.
 5. Verify findings. Reject findings based only on vague suspicion. Confirm each material issue by reading the relevant source, diff hunk, test, config, standard, or spec. Use local tooling when it is available and relevant; report tool failures separately from review findings.
    Completion criterion: each retained finding has concrete evidence and a plausible failure mode.
-6. Aggregate. Deduplicate overlapping findings, preserve the lane source, rank by severity, and output actionable review comments plus residual risk.
-   Completion criterion: the user receives one review report with findings first, no pile of raw subtask reports.
+6. Aggregate. Deduplicate overlapping findings, preserve the lane source, rank by severity, and output a verification matrix separate from the actionable findings table plus residual risk.
+   Completion criterion: the user receives one scannable review report, not a pile of raw subtask reports.
 
 ## Reference Packs
 
@@ -118,29 +119,27 @@ Use these labels consistently:
 
 ## Output Shape
 
-Lead with findings. Keep summaries secondary.
+Lead with the gate decision, then keep verification and findings in separate tables. Do not make readers infer whether a check passed, was skipped, or found a defect from prose.
 
 ```text
+Gate Decision: cleared | blocked | advisory
+Review Target: immutable diff/commit/PR artifact identifier
+
+Verification Matrix:
+| Status | Lane / check | Evidence | Result or limitation |
+|---|---|---|---|
+| Passed | functionality | path/to/file:line, focused test | Expected behavior holds |
+| Skipped | security | Reason | Residual limitation |
+
 Findings:
-- Severity - file:line - title
-  Evidence: ...
-  Impact: ...
-  Recommendation: ...
-  Lane: code/functionality/security/etc.
+| ID | Severity | Location | Evidence and impact | Recommendation | Lane |
+|---|---|---|---|---|---|
+| R-01 | High | path/to/file:line | Concrete failure mode | Minimal fix direction | functionality |
 
-No Findings:
-- lane: what was checked
+Use one explicit `No findings` row when no issue is retained. Keep blocking and non-blocking findings distinguishable by severity and gate decision.
 
-Skipped Or Blocked:
-- ...
-
-Residual Risk:
-- ...
-
-Review Summary:
-- target reviewed
-- references loaded
-- tools used
+Residual Risk: ...
+Review Summary: references loaded, tools used, and any blocked checks.
 ```
 
-If there are no issues, say so clearly and still name the lanes, evidence, and test/tool gaps.
+If there are no issues, say so clearly in the findings table and still name the lanes, evidence, and test/tool gaps in the verification matrix.

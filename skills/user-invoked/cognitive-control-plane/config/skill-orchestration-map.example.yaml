@@ -14,10 +14,10 @@ access:
   purpose: orchestration_map
 
 # version：配置 schema/内容版本。字段含义变化时递增。
-version: 3
+version: 4
 
 # updated：最近一次语义更新日期，格式为 YYYY-MM-DD。
-updated: "2026-07-10"
+updated: "2026-07-11"
 
 # description：一句话说明这个 map 控制什么。
 description: "Default routing map for assigning skills, references, MCP, tools, and platform adapters."
@@ -47,6 +47,63 @@ adapter_contract:
     opencode: adapters/opencode.md
     codex: adapters/codex.md
     claude-code: adapters/claude-code.md
+
+# reviewer_enforcement_policy：高风险实现后的强制独立审查闭环。
+reviewer_enforcement_policy:
+  # mandatory_after_terminal_implementation：实现或修复进入终态后必须先评估风险。
+  mandatory_after_terminal_implementation: true
+  # reviewer_capability_preflight：开始 review 前必须确认专用评审 skill 与独立 actor 可用。
+  reviewer_capability_preflight: true
+  reviewing_code_unavailable:
+    allowed_fallback: independent_read_only_reviewer
+    requires_distinct_host_started_actor: true
+    requires_reviewer_enforcement_reference: true
+    must_report_unavailable_skill_as_deviation: true
+    otherwise: block_gate_and_emit_handoff
+  # risk_triggers：任一标签命中即创建强制 review task。
+  risk_triggers:
+    - security_sensitive
+    - cross_module_change
+    - public_api_change
+    - schema_change
+    - migration
+    - auth_or_permission_change
+    - deployment_or_rollback_critical
+  # reviewer_independence：用 actor_id 而不是角色名判断独立性。
+  reviewer_independence:
+    compare_field: actor_id
+    invariant: reviewer_actor_must_differ_from_reviewed_implementation_actor
+    role_switch_is_not_independence: true
+    reviewer_may_fix_own_findings: false
+  # artifact_version：review 必须绑定不可变 artifact 版本。
+  artifact_version:
+    accepted_kinds:
+      git_range:
+        required_fields: [base_sha, head_sha, diff_hash]
+      stable_artifact:
+        required_fields: [stable_id]
+    invalidate_review_when_target_changes: true
+  # blocking_findings：阻塞问题禁止 final，并派发修复。
+  blocking_findings:
+    prevent_final_acceptance: true
+    next_action: delegate_write
+    dispatch_fix_task: true
+  # rereview：任何修复都会使旧 review 失效并触发新 review。
+  rereview:
+    required_after_fix: true
+    invalidate_prior_review: true
+    continue_until:
+      - latest_version_has_no_blocking_findings
+      - explicitly_terminated_unaccepted
+  # review_report_format：把通过的检查和问题分为两个表，避免读者从长段落中推断结论。
+  review_report_format:
+    verification_matrix_columns: [status, review_lane_or_check, evidence, result_or_limitation]
+    findings_table_columns: [id, severity, location, evidence, recommendation, disposition]
+
+# exploration_policy：探索可由主 agent 直接完成，但必须记录范围和不委派理由；广泛或独立证据面才委派。
+exploration_policy:
+  direct_minimal_requires: [bounded_read_only_scope, evidence_checked, delegation_rationale]
+  delegate_read_only_when: [independent_evidence_lanes, broad_search_boundary, independent_report_materially_reduces_risk]
 
 # skill_registry：路由器可选择的 skill/reference 注册表。
 # 顶层 key 是稳定 route id。对已安装 skill，key 应与 required_skills
@@ -100,6 +157,8 @@ routing_order:
 contract_schema:
   # required_fields：完整任务契约必须携带的字段。
   required_fields:
+    - task_id
+    - actor_id
     - role
     - phase
     - objective
@@ -125,6 +184,10 @@ contract_schema:
 contract_patterns:
   # problem_framer：在执行前框定模糊问题的模板。
   problem_framer:
+    # task_id：编排器分配的稳定逻辑任务 id，供依赖和 review lineage 引用。
+    task_id: ""
+    # actor_id：稳定 worker/actor 身份；不能用切换 role 绕过 reviewer 独立性。
+    actor_id: ""
     # role：稳定 worker id；用于任务契约和下游报告，不写成长句。
     role: problem_framer
     # role_prompt：给模型的 1-2 句角色定义，说明它的身份、上下文和工作。
@@ -260,3 +323,10 @@ reconciliation_checks:
   - expected_fields_present
   - ownership_respected
   - validation_evidence_present
+  - implementation_review_risk_assessed
+  - mandatory_review_created_for_high_risk_artifact
+  - reviewer_actor_independent
+  - reviewed_target_matches_current_artifact
+  - blocking_findings_prevent_acceptance
+  - every_fix_followed_by_rereview
+  - review_gate_cleared_for_latest_artifact

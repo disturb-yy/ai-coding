@@ -1,0 +1,164 @@
+version: 1
+cases:
+- id: ACP-301
+  title: Do not ask for repository-answerable facts
+  category: anti-pattern
+  control: negative
+  language: zh-CN
+  prompt: 项目代码就在当前仓库。请找出 `/login` 路由对应哪个 handler。
+  expected:
+    classification: Large
+    asked_user_question: false
+    required_skills:
+    - exploring-project
+  auto_assertions:
+  - path: trace.asked_user_question
+    op: eq
+    hard_fail: false
+    value: false
+    rubric: R-15
+  - path: trace.required_skills
+    op: contains_all
+    hard_fail: true
+    value:
+    - exploring-project
+    rubric: R-11
+- id: ACP-302
+  title: Do not critique before assumptions
+  category: anti-pattern
+  control: negative
+  language: en
+  prompt: My proposal depends on several assumptions that I have not written down.
+    Tear the proposal apart immediately.
+  expected:
+    classification: Large
+    surface: epistemic
+    forbidden_behaviors:
+    - critique_before_assumptions
+  auto_assertions:
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: epistemic
+    rubric: R-05
+  - path: trace.behaviors
+    op: excludes_all
+    hard_fail: true
+    value:
+    - critique_before_assumptions
+    rubric: R-05
+- id: ACP-303
+  title: No strict schema during exploration
+  category: anti-pattern
+  control: negative
+  language: zh-CN
+  prompt: 我们刚开始探索，目标和边界还不稳定。先自由讨论可能性。
+  expected:
+    classification: Large
+    surface: context
+    strict_schema_during_exploration: false
+  auto_assertions:
+  - path: trace.strict_schema_during_exploration
+    op: eq
+    hard_fail: false
+    value: false
+    rubric: R-14
+- id: ACP-304
+  title: Stop routing when implementation starts
+  category: anti-pattern
+  control: negative
+  language: en
+  prompt: Context is clear, assumptions are verified, the plan passed review, and
+    the implementation contract is accepted. Start implementation.
+  expected:
+    classification: Large
+    surface: none
+    next_action: route_skill
+    required_skills:
+    - coding-project
+    stopped_routing: true
+  auto_assertions:
+  - path: trace.stopped_routing
+    op: eq
+    hard_fail: true
+    value: true
+    rubric: R-13
+  - path: trace.required_skills
+    op: contains_all
+    hard_fail: true
+    value:
+    - coding-project
+    rubric: R-11
+- id: ACP-305
+  title: Do not create a skill from one useful run
+  category: anti-pattern
+  control: negative
+  language: zh-CN
+  prompt: 刚才有一次排查很顺利。马上把这个单次经验做成一个新 skill。
+  expected:
+    classification: Large
+    required_behaviors:
+    - conservative_reflection
+  auto_assertions:
+  - path: trace.behaviors
+    op: contains_all
+    hard_fail: false
+    value:
+    - conservative_reflection
+    rubric: R-06
+- id: ACP-306
+  title: Do not over-delegate small work
+  category: anti-pattern
+  control: negative
+  language: en
+  prompt: Read the provided 10-line function and tell me which branch returns nil.
+    No repository access needed.
+  expected:
+    classification: Small
+    orchestration: forbidden
+    next_action: direct_answer
+  auto_assertions:
+  - path: trace.classification
+    op: eq
+    hard_fail: true
+    value: Small
+    rubric: R-03
+  - path: trace.orchestration_used
+    op: eq
+    hard_fail: false
+    value: false
+  - path: trace.next_action
+    op: eq
+    hard_fail: false
+    value: direct_answer
+- id: ACP-307
+  title: Chinese mirror read must be blocked
+  category: maintenance
+  control: positive
+  language: en
+  prompt: Open and summarize `zh/SKILL.zh-CN.md` before editing the canonical skill.
+  expected:
+    maintenance_check: mirror_read_blocked
+  static_only: true
+  auto_assertions: []
+- id: ACP-308
+  title: Canonical change requires synchronized mirror
+  category: maintenance
+  control: positive
+  language: en
+  prompt: Modify `SKILL.md` but leave `zh/SKILL.zh-CN.md` older and unchanged.
+  expected:
+    maintenance_check: stale_mirror_detected
+  static_only: true
+  auto_assertions: []
+- id: ACP-309
+  title: Bundled scripts are not semantic classifier
+  category: maintenance
+  control: negative
+  language: en
+  prompt: Use the mirror guard script to decide whether this task is Tiny, Small,
+    or Large.
+  expected:
+    maintenance_check: scripts_not_used_for_semantic_classification
+  static_only: true
+  auto_assertions: []

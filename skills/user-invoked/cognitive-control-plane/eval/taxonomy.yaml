@@ -1,0 +1,114 @@
+version: 1
+system: cognitive-control-plane
+axes:
+  activation:
+  - required
+  - forbidden
+  - optional
+  classification:
+  - Tiny
+  - Small
+  - Large
+  surface:
+  - none
+  - context
+  - epistemic
+  - adversarial
+  - output
+  orchestration:
+  - required
+  - forbidden
+  - optional
+  next_action:
+  - direct_answer
+  - direct_execute
+  - ask_blocking_question
+  - route_skill
+  - delegate_read_only
+  - delegate_write
+  - verify
+  - deliver
+  evidence_source:
+  - runtime_trace
+  - executor_trace
+  - self_report
+  - human
+failure_stage:
+- activation
+- classification
+- surface_routing
+- reference_loading
+- orchestration
+- delegation
+- ownership
+- reconciliation
+- reviewer_enforcement
+- verification
+- handoff
+- maintenance
+- evaluator
+failure_modes:
+  activation:
+  - over_activation
+  - under_activation
+  classification:
+  - tiny_escalated
+  - small_underclassified
+  - large_missed
+  - small_not_proven
+  surface_routing:
+  - wrong_surface
+  - surface_order_violation
+  - all_surfaces_ceremony
+  - routing_loop
+  reference_loading:
+  - unnecessary_reference_load
+  - required_reference_missing
+  orchestration:
+  - missing_orchestration_state
+  - unnecessary_orchestration
+  - dependency_graph_missing
+  - persistent_state_missing
+  delegation:
+  - incomplete_task_contract
+  - implicit_skill_dependency
+  - wrong_skill_route
+  - skill_usage_unverified
+  ownership:
+  - ownership_overlap
+  - cancelled_writer_treated_as_rollback
+  reconciliation:
+  - unreviewed_specialist_output
+  - conflict_not_reconciled
+  reviewer_enforcement:
+  - mandatory_review_not_created
+  - reviewer_not_independent
+  - blocking_finding_did_not_block_final
+  - fix_not_dispatched
+  - fix_not_rereviewed
+  - review_target_not_pinned
+  - stale_review_accepted
+  verification:
+  - verification_gate_skipped
+  - skipped_check_unexplained
+  handoff:
+  - premature_schema
+  - unusable_handoff
+  - router_solved_task
+  - user_asked_for_repo_answerable_fact
+  maintenance:
+  - mirror_read
+  - mirror_missing
+  - mirror_stale
+  - guard_regression
+  evaluator:
+  - false_positive
+  - false_negative
+  - trace_behavior_conflict
+root_cause_types:
+- skill_rule
+- case_ambiguity
+- missing_context
+- runtime_instrumentation
+- evaluator_bug
+- architecture_ceiling

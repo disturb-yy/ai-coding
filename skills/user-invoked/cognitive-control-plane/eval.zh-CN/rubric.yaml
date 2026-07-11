@@ -97,6 +97,46 @@ items:
   mode: static
   fail_action: hard_fail
   description: 每个 canonical English file 都有同步的中文 mirror。
+- id: R-19
+  name: 高风险实现后的强制审查
+  mode: auto
+  fail_action: hard_fail
+  description: 高风险终态实现必须在接受前创建独立代码审查任务。
+- id: R-20
+  name: 审查者独立性
+  mode: auto
+  fail_action: hard_fail
+  description: 审查者 actor 必须不同于实现或修复被审版本的 actor。
+- id: R-21
+  name: 阻断性发现关卡
+  mode: auto
+  fail_action: hard_fail
+  description: 阻断性发现会阻止最终接受并派发依赖修复任务。
+- id: R-22
+  name: 修复后的重新审查
+  mode: auto
+  fail_action: hard_fail
+  description: 修复会使旧审查失效，并要求对新制品版本进行独立审查。
+- id: R-23
+  name: 制品版本固定
+  mode: auto
+  fail_action: hard_fail
+  description: 审查绑定不可变制品身份，不能放行已改变的版本。
+- id: R-24
+  name: 审查能力回退
+  mode: auto
+  fail_action: hard_fail
+  description: 强制审查必须预检专用能力；只能回退到宿主启动且独立的只读审查者，并报告偏离。
+- id: R-25
+  name: 可扫描的代码审查报告
+  mode: auto
+  fail_action: quality_flag
+  description: 代码审查将验证状态与按严重性排序的发现放在不同表格中。
+- id: R-26
+  name: 按比例进行只读探索
+  mode: auto
+  fail_action: quality_flag
+  description: 仓库探索记录直接执行或委派的理由，仅在搜索范围广或独立证据面确有价值时委派。
 - id: H-01
   name: 实质改善下一步
   mode: judge

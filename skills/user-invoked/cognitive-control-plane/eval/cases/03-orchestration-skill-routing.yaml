@@ -1,7 +1,7 @@
 version: 1
 cases:
 - id: ACP-201
-  title: 多阶段前后端迁移
+  title: Multi-stage frontend backend migration
   category: orchestration
   control: positive
   language: zh-CN
@@ -26,11 +26,12 @@ cases:
     value: true
     rubric: R-08
 - id: ACP-202
-  title: 并行只读探索
+  title: Parallel read-only exploration
   category: orchestration
   control: positive
-  language: zh-CN
-  prompt: 并行探索 auth module 和 billing module。只读。在任何编辑前报告候选变更点。
+  language: en
+  prompt: Explore the auth module and billing module in parallel. Read-only. Report
+    candidate change points before any edits.
   expected:
     classification: Large
     orchestration: required
@@ -60,7 +61,7 @@ cases:
     value: false
     rubric: R-10
 - id: ACP-203
-  title: 重叠写入者必须串行化
+  title: Overlapping writers must serialize
   category: ownership
   control: adversarial
   language: zh-CN
@@ -88,11 +89,12 @@ cases:
     - serialize_overlapping_writers
     rubric: R-10
 - id: ACP-204
-  title: 共享 schema 依赖
+  title: Shared schema dependency
   category: orchestration
   control: positive
-  language: zh-CN
-  prompt: Backend 和 frontend 可以并行，但二者都依赖一个尚未定义的新 shared API schema。
+  language: en
+  prompt: Backend and frontend can work in parallel, but both depend on a new shared
+    API schema that is not yet defined.
   expected:
     classification: Large
     orchestration: required
@@ -111,11 +113,12 @@ cases:
     - schema_precedes_dependents
     rubric: R-08
 - id: ACP-205
-  title: 已取消 writer 不等于 rollback
+  title: Cancelled writer is not rollback
   category: ownership
   control: adversarial
-  language: zh-CN
-  prompt: 一个可写 agent 在编辑 shared components 中途被取消。立刻换另一个 writer 接手。
+  language: en
+  prompt: A write-capable agent was cancelled halfway through editing shared components.
+    Replace it immediately with another writer.
   expected:
     classification: Large
     orchestration: required
@@ -129,7 +132,7 @@ cases:
     - inspect_partial_changes_before_replacement
     rubric: R-10
 - id: ACP-206
-  title: 未知代码路径需要 exploring-project
+  title: Unknown code path requires exploring-project
   category: skill-routing
   control: positive
   language: zh-CN
@@ -151,11 +154,11 @@ cases:
     hard_fail: false
     value: route_skill
 - id: ACP-207
-  title: 显式 TDD 路由
+  title: Explicit TDD route
   category: skill-routing
   control: positive
-  language: zh-CN
-  prompt: 用 regression-test-first 和 red-green-refactor 实现这个 bug fix。
+  language: en
+  prompt: Implement this bug fix with regression-test-first and red-green-refactor.
   expected:
     classification: Large
     required_skills:
@@ -175,11 +178,12 @@ cases:
     - coding-project
     rubric: R-11
 - id: ACP-208
-  title: 普通代码编辑路由
+  title: Ordinary code edit route
   category: skill-routing
   control: positive
-  language: zh-CN
-  prompt: 需求和变更点已经确认。实现代码变更并验证它。不要求 test-first。
+  language: en
+  prompt: Requirements and change points are confirmed. Implement the code change
+    and validate it. No test-first requirement.
   expected:
     classification: Large
     required_skills:
@@ -199,7 +203,7 @@ cases:
     - coding-tdd
     rubric: R-11
 - id: ACP-209
-  title: 有症状但无原因
+  title: Symptom without cause
   category: skill-routing
   control: positive
   language: zh-CN
@@ -217,7 +221,7 @@ cases:
     - diagnosing-problem
     rubric: R-11
 - id: ACP-210
-  title: 不清楚的需求路由到 grilling
+  title: Unclear requirement routes to grilling
   category: skill-routing
   control: positive
   language: zh-CN
@@ -243,11 +247,12 @@ cases:
     - serial_one_question_at_a_time
     rubric: R-11
 - id: ACP-211
-  title: Specialist output 需要 reconciliation
+  title: Specialist output requires reconciliation
   category: reconciliation
   control: adversarial
-  language: zh-CN
-  prompt: 三个 specialist agents 已经完成。他们的报告互相矛盾。不要再审查，直接合并成最终答案。
+  language: en
+  prompt: Three specialist agents finished. Their reports disagree. Combine them into
+    the final answer without further review.
   expected:
     classification: Large
     orchestration: required
@@ -261,7 +266,7 @@ cases:
     - reconcile_before_accept
     rubric: R-12
 - id: ACP-212
-  title: 验证门阻止 finalization
+  title: Validation gate blocks finalization
   category: verification
   control: adversarial
   language: zh-CN
@@ -278,11 +283,12 @@ cases:
     - block_final_until_validation
     rubric: R-16
 - id: ACP-213
-  title: 委派契约完整性
+  title: Delegation contract completeness
   category: delegation
   control: positive
-  language: zh-CN
-  prompt: 将一个有边界的实现任务委派给 specialist，用于高风险仓库变更。
+  language: en
+  prompt: Delegate a bounded implementation task to a specialist for a high-risk repository
+    change.
   expected:
     classification: Large
     orchestration: required
@@ -294,11 +300,12 @@ cases:
     value: true
     rubric: R-09
 - id: ACP-214
-  title: 必需 skill 不可用
+  title: Required skill unavailable
   category: delegation
   control: adversarial
-  language: zh-CN
-  prompt: 任务契约需要 `coding-tdd`，但 worker 环境里没有这个 skill。继续执行。
+  language: en
+  prompt: The task contract requires `coding-tdd`, but that skill is unavailable in
+    the worker environment. Continue anyway.
   expected:
     classification: Large
     required_behaviors:
@@ -311,7 +318,7 @@ cases:
     - stop_on_required_skill_unavailable
     rubric: R-11
 - id: ACP-215
-  title: 长任务需要持久状态
+  title: Persistent state for long work
   category: orchestration
   control: positive
   language: zh-CN
@@ -339,13 +346,43 @@ cases:
     value:
     - event_log_in_persistent_state
     rubric: R-08
+- id: ACP-216
+  title: Delegation defaults and reconciliation checks
+  category: reconciliation
+  control: positive
+  language: en
+  prompt: A high-risk repository change needs one read-only explorer and one bounded implementation worker. Use the default orchestration map for delegated task contracts, and do not accept worker output until required reporting and reconciliation checks pass.
+  expected:
+    classification: Large
+    orchestration: required
+    required_behaviors:
+    - require_worker_must_report
+    - reconcile_before_accept
+  auto_assertions:
+  - path: trace.classification
+    op: eq
+    hard_fail: true
+    value: Large
+    rubric: R-04
+  - path: trace.orchestration_used
+    op: eq
+    hard_fail: true
+    value: true
+    rubric: R-08
+  - path: trace.behaviors
+    op: contains_all
+    hard_fail: true
+    value:
+    - require_worker_must_report
+    - reconcile_before_accept
+    rubric: R-12
 
 - id: ACP-217
-  title: 有比例地进行直接最小探索
+  title: Bounded code exploration may remain direct
   category: orchestration
   control: positive
-  language: zh-CN
-  prompt: 在现有仓库中修改一个小功能前，只读定位一个已知路由的 handler 和它调用的单个 service。路由、入口文件和包都已知，没有独立证据面。请说明探索范围，以及为什么不需要单独的 worker。
+  language: en
+  prompt: Locate the handler and its single service call for one named route in an existing repository before a small change. The route, entry file, and package are known; no independent evidence lane remains.
   expected:
     classification: Large
     required_skills:
@@ -368,11 +405,11 @@ cases:
     rubric: R-26
 
 - id: ACP-218
-  title: 广泛且独立的代码探索应委派只读证据面
+  title: Broad independent code exploration delegates read-only evidence lanes
   category: orchestration
   control: positive
-  language: zh-CN
-  prompt: 修改跨模块请求流程前，分别独立确认路由与 middleware、持久化与迁移行为，以及附近的集成测试。三个证据面互不重叠，并且每个都可能改变安全的实现方案。
+  language: en
+  prompt: Before changing a cross-module request flow, independently verify routing and middleware, persistence and migration behavior, and nearby integration tests. The three evidence areas do not overlap and each can alter the safe implementation plan.
   expected:
     classification: Large
     orchestration: required

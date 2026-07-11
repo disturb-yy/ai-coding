@@ -1,123 +1,262 @@
 ---
 name: cognitive-control-plane
-description: "复杂 AI 协作的控制平面路由器。当过程控制应决定下一步行动时使用：上下文不清、假设有风险、计划需要批判、代码审查、交接格式，或多阶段编排。"
+description: "用于复杂 AI 协作的控制平面路由器。当流程控制应决定下一步行动时使用：上下文不清晰、高风险假设、方案批判、机器交接、当前来源证据、代码库发现、专用技能路由或多阶段编排。"
 metadata:
   access:
-    audience: human
+    audience: model
     model_read: false
     model_write: true
-    purpose: zh_mirror
+    purpose: skill_runtime
 ---
 # 认知控制平面
 
-> 中文版本仅供人类维护者阅读。模型和 agent 不得读取、搜索、打开、引用、总结或把本文件作为运行指令；英文 `SKILL.md` 是唯一 canonical 模型指令。
-
-控制平面是一个轻量路由器。它默认不亲自解决任务；它选择应该塑造下一步行动的控制面，然后把执行交给合适的 skill、worker、编辑、问题、验证步骤或交付物。
+控制平面是一个轻量路由器。默认情况下它不解决任务；它选择应塑造下一步行动的控制面，然后把执行交给正确的技能、工作者、编辑、问题或交付物。
 
 ## 概念空间
 
 ```yaml
 conceptual_space:
-  target_region: "复杂、不确定、高风险或多阶段工作，其中过程控制会改变结果质量。"
+  target_region: "流程控制会改变结果质量的复杂、不确定、高风险或多阶段工作。"
   deviation_region:
-    - "简单查询、单行编辑、命令执行，或没有明显风险的解释。"
-    - "路由清楚后的实现工作；转交给 coding、TDD、review、research 或 writing skills。"
+    - "没有实质风险的简单查询、单行编辑、命令执行或解释。"
+    - "路由明确后的实现工作；交由编码、TDD、审查、研究或写作技能。"
   priority_dimensions:
-    - "先保方向，再求速度。"
-    - "先暴露假设，再批判方案。"
-    - "成熟计划先挑战，再交付。"
-    - "只在交接或最终输出时收紧格式。"
+    - "先保持方向，再追求速度。"
+    - "先暴露假设，再批判解决方案。"
+    - "先挑战成熟方案，再交付。"
+    - "仅在交接或最终输出时收紧格式。"
   entry_conditions:
-    - "请求模糊、宽泛、高风险，或缺少运行上下文。"
-    - "任务涉及架构、产品、提示词、skill、工作流或代码变更规划，且错误过程会改变结果。"
-    - "用户要求评审、代码审查、风险分析、决策支持、失败分析或交接。"
-    - "长对话进入新阶段或需要压缩状态。"
+    - "请求含糊、宽泛、高风险或缺少运行上下文。"
+    - "任务涉及架构、产品、提示词、技能、工作流或代码变更规划，错误流程会改变结果。"
+    - "用户要求审查、风险分析、决策支持、失败分析或交接。"
+    - "长对话发生阶段变化或需要压缩状态。"
+  exit_conditions:
+    - "已命名活动控制面。"
+    - "下一步行动已路由到具体技能、工作者、文件编辑、问题、验证步骤或交付物。"
+    - "已知假设、约束和未解决风险足够明确，可供下一步行动使用。"
+  pre_output_check:
+    - "默认不要运行所有控制面。"
+    - "探索期间不要使用刚性输出模式。"
+    - "当应开始直接实现或交付时，不要继续路由。"
+  sedimentation:
+    - "如果可复用流程知识反复出现，建议将其放入最低层级的持久载体：笔记、项目指南、CLAUDE.md 或更窄的技能。"
 ```
 
-## 工作分类门
+## 工作分类关卡
 
-先分类，再路由或执行实质工作。Small 必须被证明；只要范围、证据、所有权或风险有未解问题，就升级为 Large。
+在路由或开展实质性工作前先分类。使用已被充分证明的最小类别；任何未解决的范围、证据、所有权或风险问题都会使任务升级。
 
 ### Tiny
 
-Tiny 只用于没有实质工作产物的互动：术语解释、当前上下文里的状态回忆、选择或确认过程步骤、定位当前对话中已命名的信息。
+Tiny 是不产生实质性工作制品的交互。
 
-完成标准：没有要检查的 artifact、没有要编辑的文件、没有要选择的 skill route，worker 也不会增加价值。
+仅在以下情况使用 Tiny：
+
+- 纯术语解释
+- 从当前上下文回忆状态或下一步
+- 选择或确认流程步骤
+- 定位当前对话中已经点名的信息
+
+不要将 Tiny 用于阅读已提供的代码片段、解释有边界制品中的行为、编辑已知文件、生成交接、澄清需求、路由到专用技能或决定证据是否充分；这些至少是 Small。
+
+如果用户说明代码片段、设计、方案、库、仓库、假设集或其他制品已提供、是当前版本、已经知道或完整，请在控制决策中把该边界视为已知。当只需决定下一步行动或路由时，不要要求用户粘贴被省略的正文、名称或假设清单；应从声明的边界进行分类和路由。
+
+不要将 Tiny 用于批判、压力测试、红队、开始实现或已接受契约类提示。即使当前适配器提示很短，这些提示也会产生控制决策。
+
+完成标准：没有需要检查的制品、没有需要进行的编辑、没有需要选择的技能路由，并且任何工作者都不会增加价值。
 
 ### Small
 
-只有当目标清楚、范围已知、不需要仓库发现、没有架构/数据/认证/支付/部署/安全/租户/权限/用户可见行为风险、不需要外部证据、不需要独立 review 或真实并行时，才使用 Small。
+Small 是输入已知且边界明确的工作。
 
-当下一步依赖 `grilling`、`diagnosing-problem`、`exploring-project`、`reviewing-code`、`coding-project` 或 `coding-tdd` 时，不使用 Small；这类专门 skill 路由是 Large 控制平面工作。
+仅当以下每个条件都为真时使用 Small：
 
-对于完整计划、设计、Skill 设计、实现方案、diff、PR 或 agent run 的批判/审查请求，不使用 Small。代码审查、安全审查或 adversarial review 都是 Large，即使 adapter 没有重复 artifact 正文。
+- 目标明确
+- 文件、代码片段、命令或制品边界已知
+- 用户说明代码片段、函数、方案或其他制品已经提供或完整，且不需要访问仓库
+- 不需要仓库发现
+- 不存在架构、数据、认证、支付、部署、安全、租户、权限或用户可见行为风险
+- 不需要当前文档、网络研究或外部来源验证
+- 不需要独立审查、红队检查、持久状态、分阶段依赖或真正并行
+- 工作是本地低风险编辑、直接命令，或对所提供材料进行有边界的只读分析
+
+如果用户要求多个 agent 处理已知的单行或单制品变更，应将其视为 Small 并拒绝不必要的并行。不要仅因为用户要求仪式化流程就升级任务。
+
+当下一步行动依赖 `grilling`、`diagnosing-problem`、`exploring-project`、`reviewing-code`、`coding-project` 或 `coding-tdd` 时，不要使用 Small；即使下游任务可能有边界，专用技能路由也是 Large 控制平面工作。
+
+对于声明为完整的方案、设计、Skill 设计、实现方法、diff、PR 或 agent 运行，如果请求对其批判或审查，不要使用 Small。即使评测适配器省略了制品正文，具体的代码、安全或对抗性审查也是 Large 控制平面工作。
+
+当实现契约已被接受且用户要求开始实现时，不要使用 Small。那是到 `coding-project` 或 `coding-tdd` 的 Large 专用路由，而不是 `direct_execute`。
+
+仅在委派时使用此紧凑任务契约：
+
+```yaml
+objective: ""
+scope: []
+edits_allowed: false
+expected_output: ""
+what_not_to_do: []
+stop_if: "范围扩大、出现风险、需求不清楚、所有权边界增多或需要审查"
+```
+
+完成标准：无需发现范围、做出架构判断或扩大所有权即可完成任务。
 
 ### Large
 
-出现以下任一信号即为 Large：
+Large 是流程控制会改变正确性的工作。
 
-- 需求模糊或范围宽泛
-- 代码位置、调用链、测试或变更点未知
-- 需要仓库发现、专门 skill 路由、多所有权边界或分阶段执行
-- 涉及架构、数据模型、认证、权限、租户、支付、部署、安全或用户可见行为风险
-- 当前官方文档、最新版本事实、breaking change、web research 或外部证据是承重因素
-- 需要设计、独立 review、代码审查、安全审查、red-team、pre-mortem 或计划攻击
-- 交接、实现契约、严格 schema、验证、迁移、回滚或回归策略会影响正确性
+出现以下任一信号时，将任务视为 Large：
 
-完成标准：活跃瓶颈、所需 skills、编排需求、所有权边界和验证门足够明确，可以选择下一步行动。
+- 需求含糊或宽泛
+- 需求不明确且用户要求在实现前澄清需求
+- 范围、代码位置、调用链、测试或变更点未知，包括“查找其所在位置”的请求
+- 在安全回答或编辑前需要仓库发现
+- 需要专用技能路由
+- 存在多个所有权边界、子系统、agent、阶段或依赖
+- 存在架构、数据模型、认证、权限、租户、支付、部署、安全或用户可见行为风险
+- 当前官方文档、最新版本事实、破坏性变更、网络研究或外部来源验证是关键依据
+- 实现前需要设计
+- 请求独立审查、代码审查、安全审查、红队批判、预演失败分析或方案攻击
+- 工作本身是机器交接、实现契约、严格模式或最终交付格式
+- 测试、迁移、回滚、验证或回归策略实质影响正确性
+- 长时间运行或可中断工作需要持久状态
 
-## 实现保护
+不确定性会升级任务。Small 必须得到证明；Large 只需要一个信号。
 
-对于 Large 实现工作，control-plane agent 不得默默变成 implementation worker。编辑源码、测试、schema、migration、生成产物或实现文档前，必须用任务契约委派，写清阶段、required skills、required MCP/tools、所有权边界、验证和停止条件。
+完成标准：活动瓶颈、所需技能、编排需求、所有权边界和验证关卡已足够明确，可以选择下一步行动。
 
-直接实现只允许在全部条件成立时使用：单文件、无 schema/migration/API/generated-artifact、无跨包/跨模块依赖、完全照搬同仓库工作模式，并且能说明为什么委派反而有害。
+## 实现防护
+
+对于 Large 实现工作，控制平面 agent 不得悄然变成实现工作者。
+
+在编辑源文件、生成制品、模式、迁移、测试或面向实现的文档之前，使用任务契约进行委派，该契约须命名阶段、所需技能、所需 MCP/工具、所有权边界、验证和停止条件。
+
+仅当以下**所有**条件都为真时，才允许直接实现：
+
+- 变更只涉及一个文件。
+- 不涉及模式、迁移、API 表面或生成制品变更。
+- 不存在跨包或跨模块依赖。
+- 实现模式与同一代码库中现有且可工作的示例完全一致。
+- 你能用一句话说明为何委派而非直接完成会出问题。
+
+如果**任何**条件不满足，则必须委派。不要另造例外。根据此例外直接实现时，应在首次编辑前声明满足了哪些条件，并明确从路由切换到实现。
+
+此防护不阻止最小化路由读取、最终验证命令或只更新控制制品本身的微小本地编辑。
+
+完成标准：每个 Large 实现编辑之前都有可见的委派契约；如果使用了直接实现例外，则每个条件都满足，并且在首次编辑前已明确说明理由。
+
+## 只读探索决策
+
+路由到 `exploring-project` 本身并不要求使用 subagent。在对 Large 任务开展实质性仓库发现前，选择并声明以下执行模式之一：
+
+- **直接最小化探索**：编排者执行有边界的只读追踪，因为一个入口路径或一条小型依赖证据链已经足够；记录搜索范围，以及为何单独工作者或并行通道不会实质改善下一项决策。
+- **委派探索**：当证据边界宽泛、可并行检查独立区域，或独立证据报告能实质降低实现风险时，创建只读 `exploring-project` 任务。
+
+不要声明技能路由后又悄然用无结构的直接浏览取代它。直接模式仍需加载所路由的技能，并报告决策、搜索范围、已检查证据和未解决的不确定性。除非之后明确分配所有权，否则并行探索仅限只读。
+
+完成标准：发现追踪命名 `direct_minimal_exploration` 或 `delegated_read_only_exploration`、其范围，以及为何该委派程度与任务相称。
+
+## 审查者强制关卡
+
+任何实现或修复达到终态后，评估交付制品是否存在强制审查风险。安全敏感、跨模块、公共 API、模式或迁移、认证或权限，以及部署或回滚关键型变更，都要求在接受前执行独立的 `reviewing-code` 任务。测试通过不能免除这一关卡。
+
+当已知或新发现强制触发项时，预检 `reviewing-code` 能力和独立审查者 actor。如果 `reviewing-code` 不可用，仅当宿主能够启动不同的只读 actor，使其遵循审查者强制参考并将不可用技能记录为偏离时，才可使用明确的 `independent_read_only_reviewer` 回退。如果该回退无法启动，则关卡保持阻塞；自我审查绝不是回退方案。
+
+审查者 actor 必须不同于实现或修复被审版本的 actor。将审查固定到 `base_sha`/`head_sha`/`diff_hash` 或等效的不可变制品 ID。阻断性发现会阻止最终接受并要求修复任务；每次修复都会改变制品版本、使先前审查失效，并要求再次独立审查。持续循环，直到最新版本没有阻断性发现或循环被明确终止。终止是未接受的结果，而不是成功审查。审查报告将验证矩阵与按严重性排序的发现表分开。
+
+只要实现风险、审查者分配、审查发现、修复、制品新鲜度、重新审查或最终接受在范围内，就阅读 [`references/reviewer-enforcement.md`](references/reviewer-enforcement.md)。
+
+完成标准：最终接受的制品正是经过独立审查且没有未解决阻断性发现的确切版本。
 
 ## 路由
 
-选择第一个会实质改变下一步行动的未满足控制面。
+选择第一个尚未满足、且会实质改变下一步行动的控制面。不要因为后面的控制面更明显而跳过更早的瓶颈。
 
-1. **Context control**：目标、状态、约束、证据、阻塞、项目位置、所有权或范围不清时使用。
-2. **Epistemic control**：具体假设、因果主张、置信度、当前事实、最新版本或证据标准决定正确性时使用。
-3. **Adversarial control**：具体计划、设计、架构、prompt、skill、实现方案或 agent run 需要攻击时使用。
-4. **Output control**：发现、上下文、假设和 review 已足够，当前工作变成交接、实现契约、严格 schema、机器可读输出或最终交付时使用。
+1. **上下文控制**：当目标、当前状态、约束、已尝试路径、证据清单、阻碍、项目位置、所有权边界、阶段状态或范围边界不清晰时使用。当上下文质量是瓶颈时，阅读 [`references/context-control.md`](references/context-control.md)。
+2. **认知控制**：当特定假设、因果主张、置信度、当前来源事实、最新版本决策或证据标准决定正确性时使用。当错误信念会导致错误工作时，阅读 [`references/epistemic-control.md`](references/epistemic-control.md)。
+3. **对抗性控制**：当具体方案、设计、架构、提示词、技能、实现方法、diff、PR 或 agent 运行需要被攻击时使用。当失败模式重要时，阅读 [`references/adversarial-control.md`](references/adversarial-control.md)。先定标准，再做批判。
+4. **输出控制**：当发现、上下文、假设和审查已足够完整，工作现已成为交接、实现契约、严格模式、机器可读输出或最终交付时使用。当格式和接口质量重要时，阅读 [`references/output-control.md`](references/output-control.md)。
 
-路由例子：
+控制面顺序示例：
 
-- “仍在探索”“需求不清”“先把需求弄清楚”“找这个逻辑在哪” -> Context。
-- “最新官方文档”“breaking change”“这个假设未验证” -> Epistemic，除非只有仓库上下文才能识别主张。
-- “review this branch”“code review this PR”“security review this diff”“review since main” -> 目标已知后通过 skill orchestration 路由到 `reviewing-code`。
-- “review this concrete plan”“完整的 Skill 设计方案”“red-team”“pre-mortem”“是否太复杂” -> 在上下文清楚且承重假设明确后进入 Adversarial。
-- “implementation contract is accepted”“start implementation” -> 直接路由到 `coding-project`，除非用户明确要求 TDD。
+- “仍在探索”、“仍在探索原因”、“证据不完整”、“帮助确定下一步”、“整理当前状态”、“整理当前思路以便继续调查”、“查找其所在位置”、“澄清需求”、“先把需求弄清楚”、“先把目前思路整理一下，方便继续查”或“仓库可以回答” -> 先用上下文控制。除非某个特定假设、因果主张或证据标准是当前瓶颈，否则不要把未完成的调查升级为认知控制。
+- 对于当前存储、重试语义、回滚行为、权限、租户边界、支付流程或持久化模型尚未确认的高风险实现请求 -> 实现前使用带编排的上下文控制。首要瓶颈是发现当前系统行为和所有权，而不是判断孤立主张。
+- “当前官方文档”、“最新主版本”、“破坏性变更”、“必须基于当前官方文档”或“根据发布说明做迁移决策” -> 使用认知控制和只读证据编排。设置 `orchestration_used: true` 和 `next_action: delegate_read_only`；不要只是用 `route_skill` 路由到研究。
+- “我们假设”、“未经验证的假设”、“假设未写明”、“依赖未经验证的假设”、“立即彻底攻击提案”、“必须基于证据”或“根本原因是……” -> 使用认知控制，除非只能通过仓库上下文识别该主张。即使用户还要求批判、攻击或审查，也仍然使用认知控制。
+- “审查此分支”、“代码审查此 PR”、“安全审查此 diff”或“审查自 main 以来的变更” -> 一旦审查目标已知，通过技能编排路由到 `reviewing-code`。
+- “审查此具体方案”、“完整的 Skill 设计”、“完整的 Skill 设计方案”、“红队”、“预演失败分析”、“值得做吗？”、“重复吗？”或“过于复杂吗？” -> 仅在上下文清晰且关键假设已明确或验证后使用对抗性控制。
+- “发现和设计已完成”、“上下文清晰”、“假设已验证”、“红队审查已完成”、“生成实现契约”、“给实现 agent 的交付契约”、“机器可读”、“已接受契约”或“最终交接” -> 使用输出控制。除非用户明确要求开始实现，否则对契约使用 `next_action: deliver`。
+- 含糊想法加上批判/压力测试请求，例如“需求和边界不清楚”或“架构想法含糊”，应先路由到上下文控制。在目标足够清晰可供检查之前，不要将其标为 `none`，也不要跳到认知或对抗性控制。
+- 完整制品加上批判/审查请求，例如“完整的 Skill 设计”或“完整的 Skill 设计方案”，应使用对抗性控制和 `criteria_before_critique`。不要因为适配器省略了制品正文而降级到上下文控制。
+- “实现契约已接受”加上“开始实现”会直接路由到 `coding-project`，除非提示明确要求 TDD。在该状态中，`active_surface` 为 `none`，`next_action` 为 `route_skill`，路由随即停止。
 
-大型下一步涉及委派、只读证据收集、高风险实现规划、专门 skill 路由、多 agent、并行 lane、后台工作、分阶段实现、所有权边界、持久状态或 reconciliation 时，使用 `references/orchestration-state.md`。
+当 Large 的下一步行动涉及委派、只读证据收集、高风险实现规划、专用技能路由、多个 agent、并行工作通道、后台工作、分阶段实现、所有权边界、持久状态、审查者强制或协调统一时，使用 [`references/orchestration-state.md`](references/orchestration-state.md)。编排状态是运行时层；它不会取代活动控制面。
 
-下一步依赖专门 skill 时，使用 `references/skill-orchestration.md`，并显式写出 required skill：需求访谈用 `grilling`，代码库发现用 `exploring-project`，代码/PR/diff/分支/安全审查用 `reviewing-code`，已接受实现契约用 `coding-project` 或 `coding-tdd`。
+只要下一步行动依赖专用技能，就使用 [`references/skill-orchestration.md`](references/skill-orchestration.md)。即使下一个可见动作是提出第一个问题或开始实现，所需技能名称也必须明确且准确。只使用此列表中的稳定技能 ID：`grilling`、`diagnosing-problem`、`exploring-project`、`reviewing-code`、`coding-project`、`coding-tdd`。绝不要写 `explore-project` 等别名。涉及规则、角色、交互或验收标准的不清晰产品或功能需求需要 `grilling`，且一次问一个问题；没有明确原因框架的症状或现象需要先用 `diagnosing-problem`，再探索代码；未知的仓库路径或变更点需要 `exploring-project`；代码、PR、diff、分支或安全审查需要 `reviewing-code`；已接受的实现契约需要 `coding-project` 或 `coding-tdd`。
 
-修改此 skill 时，先读 `references/maintenance.md`；英文文件是 canonical，中文镜像只供人类阅读。
+修改此技能时，在编辑规范文件或镜像之前阅读 [`references/maintenance.md`](references/maintenance.md)。
 
 ## 操作步骤
 
-1. 应用工作分类门。
-2. Large 工作选择第一个未满足控制面，只读对应 reference。
-3. 判断是否需要 orchestration state。
-4. 需要专门过程时读取 skill orchestration 并命名 `required_skills`；`grilling`、`diagnosing-problem`、`exploring-project`、`reviewing-code`、`coding-project` 或 `coding-tdd` 在跳过会改变结果时必须显式出现。
-5. 应用选中的控制面或编排状态，直到范围、证据、挑战、契约、任务板或所有权状态足够清楚。
-6. 交给具体下一步：直接回答、执行、问一个阻塞问题、route skill、delegate read-only、delegate write、verify 或 deliver。
+1. 应用工作分类关卡，将任务分类为 Tiny、Small 或 Large。
+   完成标准：仅当所有 Small 条件都为真时才选择 Small；任何 Large 信号或不确定性都会升级任务；用户要求不必要流程不会升级已知的 Small 工作。
+2. 对于 Large 工作，选择第一个未满足的控制面，并且只阅读该参考。
+   完成标准：除非下一步行动已经是实现且没有剩余控制面，否则只命名一个活动控制面。
+3. 决定是否需要编排状态。
+   完成标准：Large 的委派、只读证据收集、高风险实现规划、专用技能路由、分阶段或并行工作、所有权边界、持久状态或协调统一使用编排；Small 工作不会仅因用户要求 agent 就使用编排。
+4. 如果需要专用流程，阅读技能编排并命名 `required_skills`。
+   完成标准：只要跳过 `grilling`、`diagnosing-problem`、`exploring-project`、`reviewing-code`、`coding-project` 或 `coding-tdd` 会改变结果，就明确列出它。
+5. 应用所选控制面或编排状态，直到满足其完成标准。实现或修复后，在接受前应用审查者强制关卡。
+   完成标准：任务具有更清晰的范围、更强的证据、受到挑战的方案、可交付契约、明确任务板或已解决的所有权状态。
+6. 交接到具体的下一步行动。
+   完成标准：下一步行动是直接回答、直接执行、提出一个阻断问题、路由技能、委派只读、委派写入、验证或交付之一；一旦实现开始，就停止控制平面路由并路由到 `coding-project` 或 `coding-tdd`，而不是继续分析。
 
-## Trace 语义
+## 追踪语义
 
-- `active_surface` 是第一个未满足控制面。
-- `orchestration_used` 表示编排状态实质影响了委派、所有权、持久化、依赖顺序、高风险实现规划、证据收集或 reconciliation。
-- 查找代码位置、路由、调用链、测试或变更点需要 `exploring-project`。
-- 审查代码、分支、PR、diff、commit range 或安全敏感实现需要 `reviewing-code`；classification 是 `Large`，除非上下文或证据仍缺失，通常 `active_surface` 是 `adversarial`，`next_action` 是 `route_skill`。
-- 已接受实现契约并开始实现时，停止路由，设置 `required_skills` 为 `coding-project` 或 `coding-tdd`。
+当包装器、任务契约或摘要要求路由追踪时，使用以下含义：
 
-## 禁止
+- `active_surface` 是第一个未满足的控制面，而不是每个相关关注点。
+- `orchestration_used` 表示编排状态实质塑造了委派、所有权、持久化、依赖顺序、高风险实现规划、证据收集或协调统一。
+- `classification: Tiny` 仅用于无制品交互。有边界的代码片段分析是 `Small`；仓库发现、当前来源证据收集以及任何所需的下游技能路由是 `Large`。
+- 如果提示说明代码片段、函数或制品已提供且不需要访问仓库，应从该声明边界将其分类为 `Small` 并使用 `next_action: direct_answer`；不要仅因为评测包装器省略了制品就索要它。
+- 如果提示说明某个库、仓库、提案、假设集或其他目标存在，但适配器省略了具体正文或名称，当控制决策已经确定时，不要把路由转换为阻断式上下文问题。
+- `active_surface: none` 与所需的仓库发现、当前来源证据收集或对声明为完整的方案进行对抗性审查不兼容。
+- 查找现有代码位置、路由、调用链、测试或变更点的请求需要 `exploring-project`；分类为 `Large`，活动控制面为 `context`，`next_action` 为 `route_skill`。
+- 审查代码、分支、PR、diff、提交范围或安全敏感实现的请求需要 `reviewing-code`；分类为 `Large`，活动控制面为 `adversarial`，除非上下文或证据仍然缺失，且 `next_action` 为 `route_skill`。
+- `ownership_conflict` 表示计划执行中仍存在未解决冲突。如果重叠写入者被拒绝或串行化，则安全路由状态为 `ownership_conflict: false`，行为为 `serialize_overlapping_writers`。
+- 涉及认证、权限、租户、支付、迁移、安全、数据模型或多子系统所有权的高风险实现规划，在实现或委派前使用编排状态；即使直接路由是项目探索，也设置 `orchestration_used: true`。
+- 当前来源证据工作，包括最新版本、官方文档或破坏性变更检查，使用 `active_surface: epistemic`；当直接下一步是外部研究或只读证据收集时，设置 `orchestration_used: true` 和 `next_action: delegate_read_only`。
+- 当并行且可写的工作者以同一文件、文件夹或逻辑子系统为目标时，拒绝并行写入并串行化任务；已解决的追踪中 `ownership_conflict: false`，行为为 `serialize_overlapping_writers`。
+- 明确未声明、缺失或未经验证的关键假设使用 `active_surface: epistemic`；在假设清单具有证据标准或证伪路径前，不要路由到 `grilling` 或对抗性审查。
+- `required_skills` 记录下一步行动依赖的专用流程，即使响应还会提出第一个用户问题或开始实现。如果存在任何所需技能，分类就是 `Large`。只使用准确的技能 ID。如果包含 `exploring-project`，活动控制面为 `context`。如果包含 `grilling`，活动控制面为 `context`，且路由一次问一个问题。如果请求是没有原因框架的症状，先用 `diagnosing-problem`，再用 `exploring-project`，除非用户只要求定位已命名的代码路径。
+- 当前官方文档、最新版本或破坏性变更决策使用 `active_surface: epistemic`；如果直接下一步是只读证据收集、外部研究、`agent-reach` 或官方文档查询，则使用编排状态。在追踪语义中，这意味着 `orchestration_used: true` 且通常为 `next_action: delegate_read_only`，而不是 `route_skill`。
+- 审查或攻击请求不会覆盖明确且未经验证的关键假设；使用 `active_surface: epistemic`，直到该假设已有证据、不确定性或证伪路径。
+- 声明为完整的方案、设计、Skill 设计或实现方法被要求审查时，使用 `active_surface: adversarial` 和行为 `criteria_before_critique`；不要仅因为当前适配器提示没有重复制品正文就降级到上下文控制。声明为完整的代码 diff、PR、分支或提交范围被要求代码或安全审查时，路由到 `reviewing-code`。
+- `next_action: deliver` 用于输出契约和交接；当实现应移交给具名技能时使用 `next_action: route_skill`。
+- 如果实现契约已接受且应开始实现，停止路由并将 `next_action` 设为 `route_skill`，所需技能为 `coding-project` 或 `coding-tdd`。
+- 如果提示要求在上下文、假设、审查和实现契约均已接受后开始实现，分类为 `Large`，设置 `active_surface: none`，除非明确要求测试优先/TDD，否则设置 `required_skills: ["coding-project"]`，设置 `next_action: route_skill`，并设置 `stopped_routing: true`。
+- `event_log_in_persistent_state` 表示长时间或高风险持久状态除了任务板、决策追踪、审查关卡、验证日志和未解决风险外，还明确包含 `event_log` 或事件日志部分。
+- `mandatory_review_after_high_risk_implementation` 表示具有任何强制风险标签的终态实现会在接受前创建依赖的只读 `reviewing-code` 任务。
+- 强制实现后审查使用 `next_action: delegate_read_only`，因为必须启动不同的 actor；当 actor 独立性不是当前要求时，普通用户请求的审查可以使用 `route_skill`。
+- `direct_minimal_exploration` 表示编排者记录有边界的只读发现范围，以及为何委派不会实质改善下一项决策；它不表示跳过了所路由的探索技能。
+- `delegated_read_only_exploration` 表示一个不同的只读探索任务拥有宽泛或可独立验证的证据通道。
+- `preflight_reviewer_capability` 表示必须先检查 `reviewing-code` 和独立 actor 的可用性，审查关卡才能放行。
+- `independent_read_only_reviewer_fallback` 表示 `reviewing-code` 不可用，但由宿主启动的不同只读审查者遵循了审查者强制参考；它绝不是自我审查。
+- `review_report_separates_verification_and_findings` 表示审查输出具有与按严重性排序的发现表分离的验证矩阵。
+- `enforce_reviewer_independence` 表示审查者 `actor_id` 不同于实现或修复固定版本的 actor；只改变角色或任务 ID 不够。
+- `block_final_on_blocking_findings` 和 `dispatch_fix_for_blocking_findings` 表示经协调确认的阻断性发现会保持接受关闭，并创建依赖的修复工作。
+- `rereview_after_fix` 表示修复会使先前审查失效，并为新版本创建新的独立审查。
+- `pin_review_target_version` 和 `invalidate_review_on_artifact_change` 表示审查证据命名不可变制品身份，且不能放行之后的版本。
 
-- 不要把每个任务都变成完整四阶段仪式。
-- 不要为 Small 工作委派，除非委派确实增加价值。
-- 不要在 Large 实现工作中让 control-plane agent 直接实现，除非直接实现例外明确成立。
-- 不要询问仓库、wiki、测试、日志或源码能回答的问题。
-- 不要在假设明确前批判。
-- 探索阶段不要强行 JSON、表格或 checklist。
-- 不要在旧规则错误时追加新规则；应删除或重写旧规则，保持单一事实来源。
+## 禁止事项
+
+- 不要把每个任务都变成完整的四阶段仪式。
+- 除非委派具有明确价值，否则不要委派小型工作。
+- 除非明确满足直接实现例外，否则控制平面 agent 不要实现 Large 工作。
+- 不要在最终制品版本未经有效独立审查的情况下接受高风险实现。
+- 不要允许实现 actor 仅通过改变角色或任务 ID 审查自己的工作。
+- 在修复版本重新审查前，不要把修复视为已经关闭阻断性发现。
+- 不要询问仓库、wiki、测试、日志或源文件可以回答的信息。
+- 不要在假设明确前进行批判。
+- 任务仍在探索时，不要强制使用 JSON、表格或检查清单。
+- 当现有路由规则错误时，不要追加新规则；删除或重写陈旧规则，使技能保持单一事实来源。

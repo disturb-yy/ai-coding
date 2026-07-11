@@ -126,6 +126,82 @@ def check_conversation_recorder(runner_path: Path) -> tuple[bool, str]:
     return True, ""
 
 
+def check_adapter_review_contract(adapter_cli: Path) -> tuple[bool, str]:
+    requirement = {"name": "reviewing-code", "source": "available_skill", "required": True, "reason": "review"}
+    task = {
+        "task_id": "review-1",
+        "actor_id": "reviewer-b",
+        "role": "code_reviewer",
+        "phase": "review",
+        "objective": "Review the pinned artifact.",
+        "review_of_task_id": "implementation-1",
+        "review_of_actor_id": "implementer-a",
+        "review_iteration": 1,
+        "supersedes_review_task_id": "",
+        "review_fallback": "none",
+        "review_target": {
+            "kind": "git_range",
+            "base_sha": "111",
+            "head_sha": "222",
+            "diff_hash": "sha256:abc",
+        },
+        "constraints": [],
+        "required_skills": [requirement],
+        "required_references": [],
+        "required_mcp": [],
+        "required_tools": [],
+        "ownership": {"writable_paths": [], "read_only_paths": ["."], "forbidden_paths": []},
+        "edits_allowed": False,
+        "expected_output": {"format": "code_review_report", "required_fields": [], "must_report": []},
+        "validation": [],
+        "stop_if": [],
+    }
+    valid_contract = {"ccp_version": 4, "next_action": "delegate_read_only", "task": task}
+
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "contract.json"
+        path.write_text(json.dumps(valid_contract), encoding="utf-8")
+        valid = subprocess.run(["node", str(adapter_cli), "validate", str(path)], text=True, capture_output=True)
+        if valid.returncode != 0:
+            return False, f"valid review contract was rejected: {valid.stdout or valid.stderr}"
+
+        self_review = json.loads(json.dumps(valid_contract))
+        self_review["task"]["actor_id"] = "implementer-a"
+        path.write_text(json.dumps(self_review), encoding="utf-8")
+        rejected = subprocess.run(["node", str(adapter_cli), "validate", str(path)], text=True, capture_output=True)
+        if rejected.returncode == 0:
+            return False, "self-review contract was accepted"
+
+        stale_target = json.loads(json.dumps(valid_contract))
+        del stale_target["task"]["review_target"]["diff_hash"]
+        path.write_text(json.dumps(stale_target), encoding="utf-8")
+        rejected = subprocess.run(["node", str(adapter_cli), "validate", str(path)], text=True, capture_output=True)
+        if rejected.returncode == 0:
+            return False, "unversioned git review target was accepted"
+
+        fallback = json.loads(json.dumps(valid_contract))
+        fallback["task"]["review_fallback"] = "independent_read_only_reviewer"
+        fallback["task"]["required_skills"] = []
+        fallback["task"]["required_references"] = [{
+            "name": "reviewer-enforcement",
+            "source": "file_reference",
+            "required": True,
+            "reason": "fallback review policy",
+        }]
+        path.write_text(json.dumps(fallback), encoding="utf-8")
+        accepted = subprocess.run(["node", str(adapter_cli), "validate", str(path)], text=True, capture_output=True)
+        if accepted.returncode != 0:
+            return False, f"valid independent reviewer fallback was rejected: {accepted.stdout or accepted.stderr}"
+
+        fallback["task"]["required_references"] = []
+        path.write_text(json.dumps(fallback), encoding="utf-8")
+        rejected = subprocess.run(["node", str(adapter_cli), "validate", str(path)], text=True, capture_output=True)
+        if rejected.returncode == 0:
+            return False, "fallback without reviewer-enforcement reference was accepted"
+
+    return True, ""
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--skill-dir", required=True)
@@ -157,6 +233,7 @@ def main() -> int:
         "references/output-control.md",
         "references/orchestration-state.md",
         "references/skill-orchestration.md",
+        "references/reviewer-enforcement.md",
         "references/maintenance.md",
     }
     for rel in required_refs:
@@ -275,6 +352,131 @@ def main() -> int:
             failures,
         )
 
+        review_policy = data.get("reviewer_enforcement_policy") or {}
+        risk_triggers_ok, risk_triggers_missing = list_contains_all(
+            review_policy.get("risk_triggers"),
+            {
+                "security_sensitive",
+                "cross_module_change",
+                "public_api_change",
+                "schema_change",
+                "migration",
+                "auth_or_permission_change",
+                "deployment_or_rollback_critical",
+            },
+        )
+        check(
+            bool(review_policy.get("mandatory_after_terminal_implementation")) and risk_triggers_ok,
+            "S-36",
+            f"reviewer_enforcement_policy is missing mandatory risk triggers: {risk_triggers_missing}",
+            failures,
+        )
+        independence = review_policy.get("reviewer_independence") or {}
+        check(
+            independence.get("compare_field") == "actor_id"
+            and bool(independence.get("role_switch_is_not_independence"))
+            and independence.get("reviewer_may_fix_own_findings") is False,
+            "S-37",
+            "Reviewer independence must compare actor_id, reject role-switch self-review, and keep reviewers out of fixes.",
+            failures,
+        )
+        artifact_version = review_policy.get("artifact_version") or {}
+        accepted_kinds = artifact_version.get("accepted_kinds") or {}
+        git_fields_ok, git_fields_missing = list_contains_all(
+            (accepted_kinds.get("git_range") or {}).get("required_fields"),
+            {"base_sha", "head_sha", "diff_hash"},
+        )
+        stable_fields_ok, stable_fields_missing = list_contains_all(
+            (accepted_kinds.get("stable_artifact") or {}).get("required_fields"),
+            {"stable_id"},
+        )
+        check(
+            git_fields_ok and stable_fields_ok and bool(artifact_version.get("invalidate_review_when_target_changes")),
+            "S-38",
+            "Artifact pinning must require base/head/diff hash or stable_id and invalidate stale review; "
+            f"missing git={git_fields_missing}, stable={stable_fields_missing}",
+            failures,
+        )
+        blocking = review_policy.get("blocking_findings") or {}
+        check(
+            bool(blocking.get("prevent_final_acceptance"))
+            and bool(blocking.get("dispatch_fix_task"))
+            and blocking.get("next_action") == "delegate_write",
+            "S-39",
+            "Blocking findings must prevent final acceptance and dispatch a write-capable fix task.",
+            failures,
+        )
+        rereview = review_policy.get("rereview") or {}
+        continue_ok, continue_missing = list_contains_all(
+            rereview.get("continue_until"),
+            {"latest_version_has_no_blocking_findings", "explicitly_terminated_unaccepted"},
+        )
+        check(
+            bool(rereview.get("required_after_fix"))
+            and bool(rereview.get("invalidate_prior_review"))
+            and continue_ok,
+            "S-40",
+            f"Re-review loop is incomplete; missing terminal states: {continue_missing}",
+            failures,
+        )
+        final_requirements_ok, final_requirements_missing = list_contains_all(
+            review_policy.get("final_acceptance_requires"),
+            {
+                "implementation_risk_assessed",
+                "mandatory_review_task_terminal",
+                "reviewer_actor_independent",
+                "reviewed_target_matches_current_artifact",
+                "no_unresolved_blocking_findings",
+                "every_fix_followed_by_rereview",
+                "review_gate_cleared",
+            },
+        )
+        check(
+            final_requirements_ok,
+            "S-41",
+            f"Final acceptance reviewer gate is missing requirements: {final_requirements_missing}",
+            failures,
+        )
+        fallback = review_policy.get("reviewing_code_unavailable") or {}
+        check(
+            bool(review_policy.get("reviewer_capability_preflight"))
+            and fallback.get("allowed_fallback") == "independent_read_only_reviewer"
+            and bool(fallback.get("requires_distinct_host_started_actor"))
+            and bool(fallback.get("requires_reviewer_enforcement_reference"))
+            and bool(fallback.get("must_report_unavailable_skill_as_deviation"))
+            and fallback.get("otherwise") == "block_gate_and_emit_handoff",
+            "S-44",
+            "Reviewer fallback must preflight capability, require an independent host actor and reviewer-enforcement reference, then block when unavailable.",
+            failures,
+        )
+        report_format = review_policy.get("review_report_format") or {}
+        verification_ok, verification_missing = list_contains_all(
+            report_format.get("verification_matrix_columns"),
+            {"status", "review_lane_or_check", "evidence", "result_or_limitation"},
+        )
+        findings_ok, findings_missing = list_contains_all(
+            report_format.get("findings_table_columns"),
+            {"id", "severity", "location", "evidence", "recommendation", "disposition"},
+        )
+        check(
+            verification_ok and findings_ok,
+            "S-45",
+            "Review report format is missing verification or findings table columns: "
+            f"verification={verification_missing}, findings={findings_missing}",
+            failures,
+        )
+        contract_patterns = data.get("contract_patterns") or {}
+        missing_pattern_identity = sorted(
+            name for name, pattern in contract_patterns.items()
+            if not isinstance(pattern, dict) or "task_id" not in pattern or "actor_id" not in pattern
+        )
+        check(
+            not missing_pattern_identity,
+            "S-43",
+            f"Contract patterns missing task_id/actor_id identity fields: {missing_pattern_identity}",
+            failures,
+        )
+
         adapter_contract = data.get("adapter_contract") or {}
         schema_ref = adapter_contract.get("schema_ref")
         check(
@@ -331,6 +533,17 @@ def main() -> int:
                 "check_id": "S-28",
                 "message": f"Adapter contract schema is not valid JSON: {exc}",
             })
+    if adapter_cli.exists() and shutil.which("node"):
+        try:
+            adapter_review_ok, adapter_review_message = check_adapter_review_contract(adapter_cli)
+        except Exception as exc:
+            adapter_review_ok, adapter_review_message = False, str(exc)
+        check(
+            adapter_review_ok,
+            "S-42",
+            f"Adapter reviewer-enforcement behavior check failed: {adapter_review_message}",
+            failures,
+        )
 
     # Maintenance policy must preserve canonical/mirror invariants.
     maintenance = skill / "references" / "maintenance.md"

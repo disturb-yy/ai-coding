@@ -27,6 +27,14 @@ For Large implementation work, the orchestrator must delegate implementation. Di
 
 Completion criterion: the orchestrator owns coordination and verification; specialists own bounded work when delegation adds clear value.
 
+## Read-only Exploration Strategy
+
+For Large repository discovery, decide before broad source reading whether the orchestrator will run **direct minimal exploration** or delegate one or more **read-only exploration** tasks. `exploring-project` names the required procedure; it does not automatically require a subagent.
+
+Use direct minimal exploration only for a small, dependent evidence chain. Record the bounded search scope, sources checked, and why a separate worker or parallel lane would not materially improve the next decision. Delegate read-only exploration when the search crosses independent areas, benefits from an independent evidence report, or has enough breadth that parallel lanes reduce uncertainty. Do not claim a route to `exploring-project` while silently skipping its procedure.
+
+Completion criterion: the task board or trace records `direct_minimal_exploration` or `delegated_read_only_exploration`, the evidence scope, and the reason for the choice.
+
 ## Dependency Graph
 
 Before delegating, identify:
@@ -44,9 +52,21 @@ Completion criterion: no task is delegated without knowing whether it is indepen
 Every delegated task must be self-contained:
 
 ```yaml
+task_id: ""
+actor_id: ""
 role: ""
 phase: context | design | implementation | review | verification
 objective: ""
+review_of_task_id: "" # required for review phase
+review_of_actor_id: "" # required for review phase
+review_iteration: 0
+supersedes_review_task_id: ""
+review_target: # required for review phase
+  kind: none # none | git_range | stable_artifact
+  base_sha: ""
+  head_sha: ""
+  diff_hash: ""
+  stable_id: ""
 constraints: []
 required_skills:
   - name: ""
@@ -86,7 +106,7 @@ validation: []
 stop_if: []
 ```
 
-Completion criterion: the specialist can work without guessing role, phase, scope, permissions, required skills, required references, required MCP/tools, expected output, stop conditions, or validation.
+Completion criterion: the specialist can work without guessing task or actor identity, role, phase, scope, permissions, required skills, required references, required MCP/tools, review lineage and target, expected output, stop conditions, or validation.
 
 ## Skill Routing
 
@@ -140,10 +160,37 @@ Rules:
 - If a user requests overlapping write-capable workers, reject parallel writes, serialize the tasks, and resolve the conflict before delegation.
 - Read-only discovery can run in parallel with most work.
 - Review tasks must wait for the work they review to reach terminal state.
+- A review actor must differ from the actor that implemented or fixed the reviewed version. A new task id or role name does not make the same actor independent.
+- A review worker must stay read-only and must not own the fix task for its findings.
 - UI work that changes shared components must not overlap with implementation work on those components.
 - Cancelling a writer is not rollback; inspect and reconcile partial changes before replacement.
 
-Completion criterion: no two running write tasks can modify the same file, folder, or logical subsystem.
+Completion criterion: no two running write tasks can modify the same file, folder, or logical subsystem, and no accepted review is self-review.
+
+## Reviewer Enforcement Loop
+
+After each implementation or fix task becomes terminal, read [`reviewer-enforcement.md`](reviewer-enforcement.md) and assess the actual artifact for these mandatory-review tags:
+
+- `security_sensitive`
+- `cross_module_change`
+- `public_api_change`
+- `schema_change`
+- `migration`
+- `auth_or_permission_change`
+- `deployment_or_rollback_critical`
+
+When any tag applies, preflight `reviewing-code` and an independent reviewer actor. When available, create a dependent read-only `reviewing-code` task. If the skill is unavailable, use the `independent_read_only_reviewer` fallback only when the host can start a distinct read-only actor that loads [`reviewer-enforcement.md`](reviewer-enforcement.md) and reports the unavailable skill as a deviation. Otherwise keep the review gate blocked and emit a handoff; never substitute self-review. Record distinct implementation and reviewer `actor_id` values and pin `review_target` with `base_sha`, `head_sha`, and `diff_hash`, or with an equivalent immutable `stable_id`.
+
+Reconcile findings before advancing the gate:
+
+- no blocking findings on the current pinned version -> mark the review gate `cleared`
+- blocking findings -> mark it `blocked`, prevent final acceptance, and dispatch a dependent fix task
+- fix completed or any other artifact change -> mark the previous review `invalidated`, compute the new version, and create a new independent review task
+- explicit loop termination -> mark it `terminated` and report an unaccepted result with residual risk
+
+Repeat until the latest artifact version is independently reviewed with no blocking findings. Tests and verification complement review; they do not waive mandatory review.
+
+Completion criterion: every mandatory review gate is cleared for the current artifact version before acceptance, or the run ends explicitly as terminated and unaccepted.
 
 ## Persistent State
 
@@ -152,10 +199,11 @@ Track delegated work as a small job board:
 ```yaml
 tasks:
   - id: ""
+    actor_id: ""
     specialist: ""
     phase: ""
     objective: ""
-    state: running # running | completed | error | cancelled | timed_out
+    state: pending # pending | running | completed | error | cancelled | timed_out
     required_skills: []
     skills_confirmed: []
     required_references: []
@@ -168,6 +216,20 @@ tasks:
       files: []
       areas: []
     dependencies: []
+    risk_tags: []
+    review_required: false
+    review_of_task_id: ""
+    review_of_actor_id: ""
+    review_iteration: 0
+    review_status: not_required # not_required | pending | running | blocked | cleared | invalidated | terminated
+    review_target:
+      kind: none # none | git_range | stable_artifact
+      base_sha: ""
+      head_sha: ""
+      diff_hash: ""
+      stable_id: ""
+    blocking_finding_ids: []
+    supersedes_review_task_id: ""
     result: ""
 event_log:
   - timestamp: ""
@@ -205,11 +267,14 @@ When a task completes:
 3. Check whether required skills were loaded and whether deviations are justified.
 4. Check whether required references were loaded and whether deviations are justified.
 5. Check whether required MCP/tools were used and whether deviations are justified.
-6. Decide whether to accept, revise, reject, or dispatch follow-up work.
-7. Update the task board.
-8. Preserve useful decisions in the next handoff.
+6. For implementation and fix results, assess mandatory-review risk from the delivered artifact.
+7. For review results, confirm actor independence and exact artifact-version match before consuming findings.
+8. If blocking findings remain, block acceptance and dispatch a fix; if a fix changed the artifact, invalidate prior review and dispatch re-review.
+9. Decide whether to accept, revise, reject, dispatch follow-up work, or terminate without acceptance.
+10. Update the task board and review gate.
+11. Preserve useful decisions in the next handoff.
 
-Completion criterion: final work does not rely on unreviewed specialist output, unverified required-skill use, unverified required-reference use, or unverified required-capability use.
+Completion criterion: final work does not rely on unreviewed specialist output, self-review, stale review, unresolved blocking findings, unverified required-skill use, unverified required-reference use, or unverified required-capability use.
 
 ## Conservative Reflection
 
@@ -232,6 +297,11 @@ Before final response:
 - dependent work consumed the outputs it waited for
 - required skills, references, MCP, and tools were confirmed or deviations were accepted explicitly
 - file ownership conflicts are resolved
+- every implementation artifact was assessed against mandatory review triggers
+- every mandatory reviewer actor differs from the actor that implemented or fixed the reviewed version
+- the latest artifact version exactly matches a valid pinned review target
+- the mandatory review gate for the current artifact is `cleared`; historical superseded review records may remain `invalidated`
+- every blocking-finding fix was followed by re-review and the latest valid review has no blocking findings
 - relevant checks ran, or skipped checks are explained
 - residual risks are explicit
 

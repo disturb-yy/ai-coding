@@ -1,0 +1,307 @@
+version: 1
+cases:
+- id: ACP-101
+  title: Missing operating context
+  category: surface-routing
+  control: positive
+  language: zh-CN
+  prompt: 我们要把单体拆成微服务，你先告诉我怎么设计。
+  expected:
+    classification: Large
+    surface: context
+  auto_assertions:
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: context
+    rubric: R-05
+  - path: trace.references_read
+    op: contains_all
+    hard_fail: false
+    value:
+    - references/context-control.md
+    rubric: R-07
+- id: ACP-102
+  title: Phase transition after long conversation
+  category: surface-routing
+  control: positive
+  language: zh-CN
+  prompt: 前面讨论很长了，现在进入实现阶段。请把当前目标、约束、关键决定、未决问题和下一步压缩成可继续执行的状态。
+  expected:
+    classification: Large
+    surface: context
+    next_action: deliver
+  auto_assertions:
+  - path: trace.active_surface
+    op: eq
+    hard_fail: false
+    value: context
+  - path: trace.next_action
+    op: eq
+    hard_fail: false
+    value: deliver
+  - path: trace.stopped_routing
+    op: eq
+    hard_fail: true
+    value: true
+    rubric: R-13
+- id: ACP-103
+  title: Repository can answer missing scope
+  category: surface-routing
+  control: positive
+  language: en
+  prompt: Find where request signing is implemented and which tests cover it. The
+    repository is available.
+  expected:
+    classification: Large
+    surface: context
+    next_action: route_skill
+    required_skills:
+    - exploring-project
+    asked_user_question: false
+  auto_assertions:
+  - path: trace.active_surface
+    op: eq
+    hard_fail: false
+    value: context
+  - path: trace.required_skills
+    op: contains_all
+    hard_fail: true
+    value:
+    - exploring-project
+    rubric: R-11
+  - path: trace.asked_user_question
+    op: eq
+    hard_fail: false
+    value: false
+    rubric: R-15
+- id: ACP-104
+  title: Weak causal claim
+  category: surface-routing
+  control: positive
+  language: zh-CN
+  prompt: 线上延迟肯定是数据库导致的，就按这个结论设计拆分方案。
+  expected:
+    classification: Large
+    surface: epistemic
+  auto_assertions:
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: epistemic
+    rubric: R-05
+  - path: trace.references_read
+    op: contains_all
+    hard_fail: false
+    value:
+    - references/epistemic-control.md
+    rubric: R-07
+- id: ACP-105
+  title: Load-bearing architecture assumption
+  category: surface-routing
+  control: positive
+  language: en
+  prompt: We plan to add Kafka because we assume synchronous calls are the root cause
+    of reliability problems. We do not yet have incident evidence.
+  expected:
+    classification: Large
+    surface: epistemic
+  auto_assertions:
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: epistemic
+    rubric: R-05
+- id: ACP-106
+  title: Concrete plan needs attack
+  category: surface-routing
+  control: positive
+  language: zh-CN
+  prompt: 方案已经定得比较具体：API Gateway 做鉴权，服务间全走 JWT，权限缓存 30 分钟。请做一次红队审查，重点找失败模式。
+  expected:
+    classification: Large
+    surface: adversarial
+  auto_assertions:
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: adversarial
+    rubric: R-05
+  - path: trace.references_read
+    op: contains_all
+    hard_fail: false
+    value:
+    - references/adversarial-control.md
+    rubric: R-07
+- id: ACP-107
+  title: Vague idea asks for critique
+  category: surface-order
+  control: adversarial
+  language: zh-CN
+  prompt: 我有个想法：做一个全局 AI Agent 平台，但需求和边界还没想清楚。你先狠狠批评这个方案。
+  expected:
+    classification: Large
+    surface: context
+    forbidden_surface:
+    - adversarial
+  auto_assertions:
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: context
+    rubric: R-05
+  - path: trace.active_surface
+    op: not_in
+    hard_fail: true
+    value:
+    - adversarial
+    rubric: R-05
+- id: ACP-108
+  title: Ready for machine handoff
+  category: surface-routing
+  control: positive
+  language: en
+  prompt: Discovery and design are complete. Produce the smallest machine-readable
+    implementation contract another coding agent needs.
+  expected:
+    classification: Large
+    surface: output
+    next_action: deliver
+  auto_assertions:
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: output
+    rubric: R-05
+  - path: trace.references_read
+    op: contains_all
+    hard_fail: false
+    value:
+    - references/output-control.md
+    rubric: R-07
+  - path: trace.next_action
+    op: eq
+    hard_fail: false
+    value: deliver
+- id: ACP-109
+  title: Exploration not ready for strict contract
+  category: surface-order
+  control: negative
+  language: zh-CN
+  prompt: 我们还在探索问题原因，证据也不完整。先把目前思路整理一下，方便继续查。
+  expected:
+    classification: Large
+    surface: context
+    strict_schema_during_exploration: false
+  auto_assertions:
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: context
+    rubric: R-05
+  - path: trace.strict_schema_during_exploration
+    op: eq
+    hard_fail: false
+    value: false
+    rubric: R-14
+- id: ACP-110
+  title: Context before epistemic before adversarial
+  category: surface-order
+  control: adversarial
+  language: en
+  prompt: The architecture idea is vague, based on several unverified assumptions,
+    and I want you to stress-test it.
+  expected:
+    classification: Large
+    surface: context
+  auto_assertions:
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: context
+    rubric: R-05
+- id: ACP-111
+  title: Epistemic before adversarial
+  category: surface-order
+  control: adversarial
+  language: en
+  prompt: The plan is concrete, but it depends on the unverified assumption that the
+    cache is the main source of stale permissions. Review the plan and attack it.
+  expected:
+    classification: Large
+    surface: epistemic
+  auto_assertions:
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: epistemic
+    rubric: R-05
+- id: ACP-112
+  title: Validated plan to implementation contract
+  category: surface-order
+  control: positive
+  language: zh-CN
+  prompt: 上下文已经明确，关键假设已经验证，方案也完成红队审查。现在生成给实现 agent 的交付契约。
+  expected:
+    classification: Large
+    surface: output
+    next_action: deliver
+  auto_assertions:
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: output
+    rubric: R-05
+  - path: trace.next_action
+    op: eq
+    hard_fail: false
+    value: deliver
+  - path: trace.stopped_routing
+    op: eq
+    hard_fail: true
+    value: true
+    rubric: R-13
+- id: ACP-113
+  title: Adversarial critique requires criteria
+  category: surface-routing
+  control: positive
+  language: zh-CN
+  prompt: 这是一个完整的 Skill 设计方案。请评审它是否值得做、是否重复现有能力、是否复杂过度。
+  expected:
+    classification: Large
+    surface: adversarial
+    required_behaviors:
+    - criteria_before_critique
+  auto_assertions:
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: adversarial
+    rubric: R-05
+  - path: trace.behaviors
+    op: contains_all
+    hard_fail: false
+    value:
+    - criteria_before_critique
+    rubric: H-04
+- id: ACP-114
+  title: Do not run all four surfaces
+  category: surface-routing
+  control: negative
+  language: en
+  prompt: The requirements are unclear. Help me determine the next step.
+  expected:
+    classification: Large
+    surface: context
+    max_surfaces_used: 1
+  auto_assertions:
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: context
+    rubric: R-05
+  - path: trace.surfaces_used
+    op: count_max
+    hard_fail: false
+    value: 1
+    rubric: R-06
