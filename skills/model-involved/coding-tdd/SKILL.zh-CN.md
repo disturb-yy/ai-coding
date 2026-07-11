@@ -1,13 +1,12 @@
 ---
 name: coding-tdd
-description: "在现有项目中结合 TDD 和 coding-project 执行测试先行的代码变更。适用于 red-green-refactor、回归修复、集成式测试、从入口到输出的工作流，以及要求一次只实现一个小函数或小模块的请求。不用于仅解释 TDD、只读测试评审，或没有测试先行要求的一般编码任务。"
+description: "在现有项目中执行测试先行的代码变更。适用于红灯-绿灯开发、回归修复，以及可拆为小型可观察切片的集成行为。"
 ---
 
 # Coding TDD
 
 > 本文件是 `SKILL.md` 的中文描述副本，仅供用户阅读和发布展示使用。
 > 严禁模型读取本文件作为操作指令、任务上下文或执行依据。
-> 修改英文版本 `SKILL.md` 时，必须在同一次变更中同步更新本中文版本。
 
 ## 本地化维护
 
@@ -17,206 +16,68 @@ description: "在现有项目中结合 TDD 和 coding-project 执行测试先行
 
 ## 目标
 
-运行一个测试先行的编码工作流，组合 `/tdd` 和 `/coding-project`。
+使用 `/coding-project` 获取项目约定、安全编辑方式和验证命令。使用本 skill 以 **红灯 → 绿灯** 循环驱动变更；在所有请求行为完成并验证后，统一进行一次重构。
 
-- TDD 负责测试用例、行为切片、red-green-refactor 循环和端到端验证形态。
-- `coding-project` 负责语言感知的代码编辑、项目约定、依赖使用、安全预检和验证命令。
-- 保持模块最小化。每个循环只实现一个小模块或一个函数，除非项目结构要求不可拆分的变更。
+每个循环只处理一个纵向、外部可观察的行为：一个测试、一个最小实现、一次 GREEN。测试是探路弹，不是预先写完的测试计划。
 
-## 概念空间
+## 开始
 
-```yaml
-conceptual_space:
-  target_region: "现有仓库中的测试先行实现工作：能先用一个外部可观察行为、回归、endpoint 路径、函数或模块驱动 red-green-refactor，再继续推进。"
-  deviation_region:
-    - "没有明确测试先行要求的一般代码变更；路由到 coding-project。"
-    - "概念性 TDD 解释、测试计划评审或只读测试分析；直接回答，或只使用 tdd 指导，不编辑代码。"
-    - "无法先暴露小型失败行为的大范围多模块重写；使用本 skill 前先缩小切片。"
-    - "把最终集成、公开契约、schema、迁移或安全敏感决策完全委托给 subAgent。"
-  priority_dimensions:
-    - "保护 red-green-refactor 循环：一个聚焦的失败测试、最小实现、同一测试 GREEN、只在 GREEN 时重构。"
-    - "通过 coding-project 保持项目贴合度：语言规范、本地约定、依赖模式、安全预检和验证命令。"
-    - "优先垂直行为切片，再在函数或模块可独立观察时使用窄循环分解。"
-    - "默认串行推进；只有独立性、稳定契约和低合并风险同时成立时才使用 subAgent 并行。"
-  entry_conditions:
-    - "用户明确要求 test-first、red-green-refactor、先写回归测试、先写集成测试或 TDD 实现。"
-    - "任务发生在现有代码库中，并需要代码编辑和可执行验证。"
-    - "实现开始前能命名一个小的外部可观察行为或回归。"
-  exit_conditions:
-    - "每个行为或模块都完成失败测试、最小实现、GREEN 验证，以及任何 GREEN-only 重构后的重跑。"
-    - "合并独立工作后，受影响 package/module 测试通过。"
-    - "最终入口到输出命令验证完整工作流，或在继续未验证实现前报告具体阻塞。"
-  pre_output_check:
-    - "确认除不可避免的测试支架外，没有在驱动测试之前编写生产代码。"
-    - "确认验证失败时停止继续推进，并在修复后重新运行。"
-    - "确认如使用 subAgent，其工作边界独立，且已通过组合后的受影响测试集成。"
-  sedimentation:
-    - "只有会改变测试先行执行方式的新工作流规则才留在本 skill；语言、项目和安全规则留在 coding-project，TDD 理论留在 tdd。"
-    - "新增示例或决策行时，删去重叠表述，让触发边界保持单一来源且可检查。"
-```
+1. 加载 `/coding-project`，完成受影响代码和测试面的上下文扫描。存在时读取 `CONTEXT.md` 和本地 ADR。
+   - 完成条件：已知第一个公开 seam、项目术语和最窄测试命令。
+2. 命名最小可观察行为及其公开 seam：API 响应、命令输出、公共函数结果、事件或用户可见状态。
+   - 完成条件：该行为拥有独立推导出的预期结果。若多个 seam 都合理且选择会实质改变范围，先与用户确认。
+3. 将请求拆为有序的细纵向切片。从最小有用的成功场景或回归场景开始。
+   - 完成条件：下一个切片可表达为一个聚焦测试。后续切片只保留简短名称，暂不编写测试。
 
-## 必要组合流程
+## 红灯 → 绿灯循环
 
-每个编码任务都按以下顺序执行：
+对每个切片重复本循环。完成当前行后再开始下一行。
 
-1. 加载 `/coding-project`，观察仓库、识别语言、加载匹配的语言和单元测试规范，并确定验证命令。
-2. 应用 `/tdd` 纪律，选择最小的外部可观察行为优先测试。
-3. 在实现前，为该行为写一个聚焦的失败测试。
-4. 使用 `/coding-project` 只实现让该测试通过所需的最小函数或模块。
-5. 运行最窄相关测试命令，并确认 GREEN。
-6. 只在 GREEN 状态下重构，然后重新运行同一个测试命令。
-7. 对下一个独立行为或函数重复上述循环。
-8. 所有模块完成后，编写并运行端到端命令，验证完整的入口到输出路径。
-
-如果任何验证失败，停止继续推进，检查原因、修复问题，并重新运行失败的检查点。
-
-## 行为切片
-
-优先使用垂直行为切片，而不是宽泛实现计划。
-
-```text
-Request A -> function B -> function C -> function D -> Response E
-```
-
-测试按以下形态组织：
-
-| 范围 | 测试职责 | 依赖规则 |
+| 状态 | 动作 | 完成条件 |
 | --- | --- | --- |
-| Request A 行为 | 验证公开请求/API 行为和预期响应契约。 | mock 本切片之外的下游依赖。 |
-| Function B | 通过公开接口验证 B 的行为。 | mock B 的依赖，例如 C 或外部 client。 |
-| Function C | 通过公开接口验证 C 的行为。 | mock C 的依赖。 |
-| Function D | 通过公开接口验证 D 的行为。 | mock D 的依赖。 |
-| 端到端路径 | 验证 Request A 在运行中的应用或最接近的项目支持环境中产生 Response E。 | 优先使用真实 wiring；只按项目约定 mock 不可用的外部系统。 |
+| **Red** | 通过已确认的公开 seam 写一个测试，运行最窄测试命令。 | 测试因预期的缺失或错误行为失败，而不是因测试支架损坏或无关失败。 |
+| **Green** | 只修改让同一测试通过所需的生产代码，再运行同一命令。 | 测试通过，且没有加入后续切片的行为。 |
+| **下一切片** | 根据 GREEN 结果选择下一个最小行为。 | 新切片拥有自己的聚焦 RED 测试，前一切片保持 GREEN。 |
 
-不要先写完所有测试再写所有实现。一次写一个测试、实现一个小目标、验证通过后再继续。
+若检查点没有按预期进入 RED 或 GREEN，先调查并恢复该检查点，再继续推进。
 
-## 并行 SubAgent 规则
+## 测试设计
 
-只有当 subagent 工具可用，并且工作单元相互独立时，才使用 subAgent。如果没有 subagent 工具，则按相同边界串行处理。
+有价值的测试通过公开 seam 规定行为，并应能承受内部重写。预期值应来自规格、fixture、已推导的示例或已知正确的字面量，而非重复实现中的算法。
 
-| 场景 | 动作 |
-| --- | --- |
-| 函数之间没有直接依赖，且测试可独立运行 | 工具可用时，每个函数或模块启动一个 subAgent。每个 subAgent 必须使用 `/coding-project`，只实现分配目标，并运行自己的窄验证命令。 |
-| Function B 依赖 C 的接口或行为 | 在契约清晰稳定前，不并行 B 和 C。 |
-| 涉及共享文件、迁移、生成代码或公开 API 契约 | 保持串行，除非 subAgent 边界明确且不容易产生合并冲突。 |
-| 涉及安全敏感代码 | 分配 subAgent 前先执行 `/coding-project` 安全预检。 |
+每个测试只聚焦一个结果。仅在切片外的依赖处使用项目原生 fake 或 mock。对于端到端行为，优先使用真实项目 wiring；仅按本地约定替换不可用的外部系统。
 
-每个 subAgent 必须收到：
+选择纵向切片，而不是按层推进：
 
 ```text
-Use /coding-project. Implement only <function/module>. The TDD test already defines the expected behavior. Keep the change minimal, follow project conventions, and run <targeted validation command>.
+请求 → 可观察响应
 ```
 
-subAgent 完成后，统一检查它们的 diff，解决集成问题，并在端到端验证前运行组合后的受影响测试。不要把共享 API 设计、schema 变更或最终集成决策委托给 subAgent。
+若请求行为是最清晰的 seam，应先驱动它。仅当函数或模块的公共接口存在独立重要行为时，才为它增加单独测试。这样测试会绑定能力，而非内部协作关系。
 
-## 验证检查点
+## 重构前检视
 
-使用快速失败检查点：
+当每个请求切片都已 GREEN，且受影响测试范围通过后，加载 `/reviewing-code` 并检视已完成的 diff，再改变其结构。将完成的实现、测试和验证证据作为检视目标。
 
-1. 每写完一个测试后，运行窄测试，并确认它因预期原因失败。
-2. 实现目标函数或模块后，重新运行同一测试并确认通过。
-3. 重构后，重新运行同一测试。
-4. 合并独立模块后，运行受影响 package/module 测试。
-5. 所有模块完成后，运行入口到输出命令。
+先解决实质性检视发现，再进行重构。若修复改变可观察行为，带着它自己的测试回到红灯 → 绿灯循环；若它只修正已完成的实现，重新运行受影响测试以恢复 GREEN。将接受的残余风险明确记录，不要把它伪装为重构工作。
 
-对于 HTTP API，写出可直接复制的最终 `curl` 命令：
+## 最终重构
 
-```bash
-curl -i -X POST "$BASE_URL/path" \
-  -H "Content-Type: application/json" \
-  -d '{"example":"value"}'
-```
+只有在 `/reviewing-code` 检视完成且实质性发现已解决后，才进入这个阶段。重构是独立的最终阶段，不属于红灯 → 绿灯循环的一部分。
 
-根据项目调整 method、headers、auth 和 payload。运行 `curl` 前，使用仓库记录的本地服务启动命令或测试环境设置。
+1. 检查已完成的变更，寻找重复、含义不清的命名和掩盖已测行为的结构。
+2. 做不改变可观察契约的最小重构。
+3. 每次重构后运行受影响测试集。再次重构或汇报完成前必须恢复 GREEN。
+4. 运行 `/coding-project` 要求的更广 package/module 验证；若项目支持且请求行为跨越该边界，运行入口到输出检查。
 
-对于非 HTTP 工作流，使用最接近的项目支持入口命令：
+当每个请求行为都有已见证的 RED 测试和 GREEN 结果、重构前检视已完成、最终重构通过 GREEN，且验证证据覆盖受影响范围时，本 skill 完成。
 
-```bash
-<project command> <input-or-fixture>
-```
+## 适用边界
 
-说明预期可观察输出，并通过 stdout、生成文件、数据库可见行为或项目支持的检查命令验证。
-
-## 决策表
-
-| 用户请求 | 使用本 skill? | 动作 |
+| 请求 | 使用本 skill? | 动作 |
 | --- | --- | --- |
-| “测试先行构建这个功能” | 是 | 使用 `/coding-project`，然后开始 TDD 循环。 |
-| “先写回归测试再修这个 bug” | 是 | 写失败的回归测试，再实现最小修复。 |
-| “围绕这个 endpoint 增加集成测试” | 是 | 从请求级行为开始，再按需要测试和实现内部函数。 |
-| “解释 TDD” | 否 | 做概念性回答，或仅在可用时用 `/tdd` 辅助指导。 |
-| “直接实现这个变更” | 否，除非用户要求测试先行 | 使用 `/coding-project`。 |
-| “评审我的测试计划” | 否 | 只评审，不编辑，除非用户要求实现。 |
-
-## 示例
-
-### Endpoint 功能
-
-输入：
-
-```text
-Add POST /orders/quote test-first. It should return a quote total and reject empty carts.
-```
-
-期望行为：
-
-```text
-Use /coding-project to inspect routes, handlers, services, test patterns, and validation commands.
-Write one failing request-level test for the valid quote path.
-Implement only the handler/service function needed for that test.
-Run the targeted test to GREEN.
-Add the empty-cart test, implement the smallest validation change, and rerun.
-Finish with a curl command that verifies POST /orders/quote returns the expected response.
-```
-
-### 独立函数
-
-输入：
-
-```text
-Request A calls normalizeCustomer, calculateDiscount, and formatResponse. They do not depend on each other. Build this TDD.
-```
-
-期望行为：
-
-```text
-Write focused tests for each public behavior with dependencies mocked.
-If the functions are independent and touch separate files or stable contracts, assign one subAgent per function.
-Each subAgent uses /coding-project, implements only its function, and runs the targeted test.
-After merging, run the affected module tests and the request-level test.
-Finish with the request-to-response curl command.
-```
-
-### 回归修复
-
-输入：
-
-```text
-Fix the null status bug red-green-refactor style.
-```
-
-期望行为：
-
-```text
-Use /coding-project to locate the failing path and test command.
-Write one regression test that fails because null status is mishandled.
-Implement the smallest function-level fix.
-Run the targeted test to GREEN, refactor only if needed, and rerun.
-Run the broader affected tests if the fix touches shared status mapping.
-```
-
-### 测试环境阻塞
-
-输入：
-
-```text
-Add this endpoint with TDD, but there is no documented test command.
-```
-
-期望行为：
-
-```text
-Use /coding-project to search project docs, CI, package scripts, Makefiles, and build files for validation commands.
-If no command exists, infer the narrowest standard command for the detected language and state the assumption.
-If the test framework is missing or cannot run, report the blocker before implementation unless a small local test harness is appropriate for the project.
-```
+| 测试先行构建功能 | 是 | 找到第一个可观察切片并从 RED 开始。 |
+| 先写回归测试再修 bug | 是 | 先让回归测试 RED，再用最小修复让它 GREEN。 |
+| 为 endpoint 增加集成行为 | 是 | 从请求/响应 seam 开始，以小切片迭代。 |
+| 只解释或评审 TDD，不改代码 | 否 | 不进入循环，直接回答或评审。 |
+| 无测试先行要求的实现 | 否 | 使用 `/coding-project`。 |
