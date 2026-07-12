@@ -9,6 +9,8 @@ The adapter layer is the host-specific bridge:
 3. Convert the contract into a native task, subagent call, or handoff.
 4. Report whether a real worker started.
 
+Every task contract carries a stable `actor_id`. Review-phase contracts also carry `review_of_task_id`, `review_of_actor_id`, `review_iteration`, `supersedes_review_task_id`, and an immutable `review_target`. Adapters must reject a review whose actor matches the reviewed implementation actor, whose target is unversioned, or whose task is write-capable.
+
 Real delegation is true only when the adapter returns a terminal launch record with a `task_id`. If a platform has no subagent API available to the current run, the adapter must return a handoff result and the orchestrator must stop before implementation instead of claiming that delegation happened.
 
 ## Result Semantics

@@ -1,0 +1,115 @@
+version: 1
+cases:
+- id: META-001
+  title: Correct negative control
+  case_prompt: Explain EOF only.
+  golden:
+    activation: forbidden
+    classification: Tiny
+    surface: none
+  observed:
+    trace:
+      activated: false
+      classification: Tiny
+      active_surface: none
+    response: EOF indicates end of file/input.
+  expected_judge:
+    min_scores:
+      materially_improves_next_action: 2
+      thin_router_behavior: 2
+      anti_ceremony: 2
+    forbidden_flags:
+    - trace_behavior_conflict
+- id: META-002
+  title: Self-report correct but response runs all surfaces
+  case_prompt: Requirements are unclear. Help me determine the next step.
+  golden:
+    surface: context
+  observed:
+    trace:
+      activated: true
+      classification: Large
+      active_surface: context
+      surfaces_used:
+      - context
+    response: First I will run Context, then Epistemic, then Adversarial, then Output
+      control before we can decide the next step.
+  expected_judge:
+    required_flags:
+    - trace_behavior_conflict
+    max_scores:
+      thin_router_behavior: 0
+      anti_ceremony: 0
+- id: META-003
+  title: Wrong surface order
+  case_prompt: Vague idea, unverified assumptions, please attack it.
+  golden:
+    surface: context
+  observed:
+    trace:
+      activated: true
+      classification: Large
+      active_surface: adversarial
+      surfaces_used:
+      - adversarial
+    response: I will red-team the architecture immediately.
+  expected_judge:
+    max_scores:
+      materially_improves_next_action: 1
+    expected_failure_mode: surface_order_violation
+- id: META-004
+  title: Good thin route
+  case_prompt: Find the login call chain in the repository.
+  golden:
+    surface: context
+    required_skills:
+    - exploring-project
+  observed:
+    trace:
+      activated: true
+      classification: Large
+      active_surface: context
+      required_skills:
+      - exploring-project
+      next_action: route_skill
+    response: The path is not yet verified. Route to project exploration first; inspect
+      the repository rather than asking the user where it lives.
+  expected_judge:
+    min_scores:
+      materially_improves_next_action: 2
+      thin_router_behavior: 2
+      anti_ceremony: 2
+- id: META-005
+  title: Premature delivery schema
+  case_prompt: We are still exploring causes and evidence is incomplete.
+  golden:
+    surface: context
+    strict_schema_during_exploration: false
+  observed:
+    trace:
+      activated: true
+      classification: Large
+      active_surface: output
+      strict_schema_during_exploration: true
+    response: Return exactly this 25-field JSON schema before continuing discovery.
+  expected_judge:
+    max_scores:
+      phase_appropriate_output: 0
+    expected_failure_mode: premature_schema
+- id: META-006
+  title: Unreviewed specialist output
+  case_prompt: Specialist reports disagree; produce final answer.
+  golden:
+    required_behaviors:
+    - reconcile_before_accept
+  observed:
+    trace:
+      activated: true
+      classification: Large
+      active_surface: none
+      behaviors: []
+    response: Agent A said X, so X is the final answer.
+  expected_judge:
+    max_scores:
+      materially_improves_next_action: 0
+    expected_failure_mode: unreviewed_specialist_output

@@ -1,0 +1,178 @@
+version: 1
+scoring:
+  auto_assertion_pass: 1
+  auto_assertion_fail: 0
+  judge_scale:
+  - 0
+  - 1
+  - 2
+items:
+- id: R-01
+  name: Activation precision
+  mode: auto
+  fail_action: quality_flag
+  description: Activate only when process control materially changes the next action.
+- id: R-02
+  name: Tiny stays direct
+  mode: auto
+  fail_action: quality_flag
+  description: Tiny tasks do not spawn workers or control ceremony.
+- id: R-03
+  name: Small is proven
+  mode: auto
+  fail_action: hard_fail
+  description: Small is selected only when every Small condition is true.
+- id: R-04
+  name: Uncertainty upgrades
+  mode: auto
+  fail_action: hard_fail
+  description: One Large signal or material uncertainty upgrades the task to Large.
+- id: R-05
+  name: First unsatisfied surface
+  mode: auto
+  fail_action: hard_fail
+  description: When multiple surfaces apply, route Context -> Epistemic -> Adversarial
+    -> Output.
+- id: R-06
+  name: Single active surface
+  mode: auto
+  fail_action: quality_flag
+  description: Do not run all surfaces by default.
+- id: R-07
+  name: Minimal reference loading
+  mode: auto
+  fail_action: quality_flag
+  description: Load only the reference needed for the active bottleneck.
+- id: R-08
+  name: Large orchestration state
+  mode: auto
+  fail_action: hard_fail
+  description: Large multi-agent or staged work uses orchestration state before delegation.
+- id: R-09
+  name: Self-contained task contract
+  mode: auto
+  fail_action: hard_fail
+  description: Delegated work has scope, ownership, skills, output, validation, and
+    stop conditions.
+- id: R-10
+  name: Ownership safety
+  mode: auto
+  fail_action: hard_fail
+  description: No two running write-capable workers own the same path or logical subsystem.
+- id: R-11
+  name: Explicit skill dependency
+  mode: auto
+  fail_action: hard_fail
+  description: Specialized procedure is declared in required_skills and later verified.
+- id: R-12
+  name: Reconciliation
+  mode: auto
+  fail_action: hard_fail
+  description: Specialist outputs are reviewed, reconciled, and accepted/revised/rejected
+    before final use.
+- id: R-13
+  name: Stop routing
+  mode: auto
+  fail_action: hard_fail
+  description: Stop control routing when implementation or delivery should begin.
+- id: R-14
+  name: Phase-appropriate structure
+  mode: auto
+  fail_action: quality_flag
+  description: Do not force delivery schemas during exploration.
+- id: R-15
+  name: Repository-before-question
+  mode: auto
+  fail_action: quality_flag
+  description: Do not ask the user for facts the repository, tests, logs, or sources
+    can answer.
+- id: R-16
+  name: Verification gate
+  mode: auto
+  fail_action: hard_fail
+  description: Final response waits for required terminal tasks, dependency consumption,
+    ownership resolution, and checks.
+- id: R-17
+  name: Mirror read prohibition
+  mode: static
+  fail_action: hard_fail
+  description: Chinese mirrors are write-only user artifacts and are never read/searched/opened.
+- id: R-18
+  name: Mirror synchronization
+  mode: static
+  fail_action: hard_fail
+  description: Every canonical English file has a synchronized Chinese mirror.
+- id: R-19
+  name: Mandatory high-risk review
+  mode: auto
+  fail_action: hard_fail
+  description: High-risk terminal implementation creates an independent code review task before acceptance.
+- id: R-20
+  name: Reviewer independence
+  mode: auto
+  fail_action: hard_fail
+  description: Reviewer actor identity differs from the actor that implemented or fixed the reviewed version.
+- id: R-21
+  name: Blocking finding gate
+  mode: auto
+  fail_action: hard_fail
+  description: Blocking findings prevent final acceptance and dispatch dependent fix work.
+- id: R-22
+  name: Re-review after fix
+  mode: auto
+  fail_action: hard_fail
+  description: Fixes invalidate prior review and require independent review of the new artifact version.
+- id: R-23
+  name: Artifact version pinning
+  mode: auto
+  fail_action: hard_fail
+  description: Review is bound to an immutable artifact identity and cannot clear a changed version.
+- id: R-24
+  name: Reviewer capability fallback
+  mode: auto
+  fail_action: hard_fail
+  description: Mandatory review preflights the dedicated capability and may fall back only to a host-started independent read-only reviewer that reports the deviation.
+- id: R-25
+  name: Scannable code review report
+  mode: auto
+  fail_action: quality_flag
+  description: Code review separates verification status from severity-ranked findings in distinct tables.
+- id: R-26
+  name: Proportionate read-only exploration
+  mode: auto
+  fail_action: quality_flag
+  description: Repository discovery records why it is direct or delegated, and delegates only when breadth or independent evidence lanes materially warrant it.
+- id: H-01
+  name: Materially improves next action
+  mode: judge
+  fail_action: quality_flag
+  description: The control step changes the next move in a useful way.
+- id: H-02
+  name: Thin router behavior
+  mode: judge
+  fail_action: quality_flag
+  description: The router shapes and hands off work instead of becoming the default
+    solver.
+- id: H-03
+  name: Epistemic quality
+  mode: judge
+  fail_action: quality_flag
+  description: Load-bearing assumptions have evidence, uncertainty, or falsification
+    paths when relevant.
+- id: H-04
+  name: Adversarial quality
+  mode: judge
+  fail_action: quality_flag
+  description: Critique is tied to explicit criteria and separates valid failures
+    from noise when relevant.
+- id: H-05
+  name: Usable handoff
+  mode: judge
+  fail_action: quality_flag
+  description: The next consumer can act without reinterpretation when a handoff is
+    the goal.
+- id: H-06
+  name: Anti-ceremony
+  mode: judge
+  fail_action: quality_flag
+  description: The response uses the minimum control needed for the current phase.

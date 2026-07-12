@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Cognitive Control Plane Eval Result",
+  "type": "object",
+  "properties": {
+    "case_id": {
+      "type": "string"
+    },
+    "evidence_source": {
+      "type": "string",
+      "enum": [
+        "runtime_trace",
+        "executor_trace",
+        "self_report",
+        "human"
+      ]
+    },
+    "trace": {
+      "type": "object",
+      "properties": {
+        "activated": {
+          "type": "boolean"
+        },
+        "classification": {
+          "type": "string",
+          "enum": [
+            "Tiny",
+            "Small",
+            "Large"
+          ]
+        },
+        "active_surface": {
+          "type": "string",
+          "enum": [
+            "none",
+            "context",
+            "epistemic",
+            "adversarial",
+            "output"
+          ]
+        },
+        "surfaces_used": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "references_read": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "orchestration_used": {
+          "type": "boolean"
+        },
+        "dependency_graph_created": {
+          "type": "boolean"
+        },
+        "persistent_state_used": {
+          "type": "boolean"
+        },
+        "required_skills": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "next_action": {
+          "type": "string",
+          "enum": [
+            "direct_answer",
+            "direct_execute",
+            "ask_blocking_question",
+            "route_skill",
+            "delegate_read_only",
+            "delegate_write",
+            "verify",
+            "deliver"
+          ]
+        },
+        "asked_user_question": {
+          "type": "boolean"
+        },
+        "strict_schema_during_exploration": {
+          "type": "boolean"
+        },
+        "stopped_routing": {
+          "type": "boolean"
+        },
+        "task_contract_complete": {
+          "type": "boolean"
+        },
+        "ownership_conflict": {
+          "type": "boolean"
+        },
+        "behaviors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "activated",
+        "classification",
+        "active_surface",
+        "surfaces_used",
+        "references_read",
+        "orchestration_used",
+        "dependency_graph_created",
+        "persistent_state_used",
+        "required_skills",
+        "next_action",
+        "asked_user_question",
+        "strict_schema_during_exploration",
+        "stopped_routing",
+        "task_contract_complete",
+        "ownership_conflict",
+        "behaviors"
+      ],
+      "additionalProperties": false
+    },
+    "response": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "case_id",
+    "evidence_source",
+    "trace",
+    "response"
+  ],
+  "additionalProperties": false
+}

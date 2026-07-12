@@ -1,0 +1,294 @@
+version: 1
+cases:
+- id: ACP-001
+  title: Simple term explanation
+  category: activation
+  control: negative
+  language: zh-CN
+  prompt: 只解释一下 Go 日志里的 EOF 是什么意思，不需要排查代码。
+  expected:
+    activation: forbidden
+    classification: Tiny
+    surface: none
+    orchestration: forbidden
+    next_action: direct_answer
+  auto_assertions:
+  - path: trace.activated
+    op: eq
+    hard_fail: false
+    value: false
+    rubric: R-01
+  - path: trace.classification
+    op: eq
+    hard_fail: false
+    value: Tiny
+    rubric: R-02
+  - path: trace.active_surface
+    op: eq
+    hard_fail: false
+    value: none
+  - path: trace.next_action
+    op: eq
+    hard_fail: false
+    value: direct_answer
+  - path: trace.orchestration_used
+    op: eq
+    hard_fail: false
+    value: false
+- id: ACP-002
+  title: Recall from current context
+  category: activation
+  control: negative
+  language: zh-CN
+  prompt: 根据当前对话，我们刚才确定下一步先做什么？只告诉我下一步。
+  expected:
+    activation: forbidden
+    classification: Tiny
+    surface: none
+    orchestration: forbidden
+    next_action: direct_answer
+  auto_assertions:
+  - path: trace.activated
+    op: eq
+    hard_fail: false
+    value: false
+  - path: trace.classification
+    op: eq
+    hard_fail: false
+    value: Tiny
+  - path: trace.next_action
+    op: eq
+    hard_fail: false
+    value: direct_answer
+- id: ACP-003
+  title: Known local typo edit
+  category: classification
+  control: negative
+  language: en
+  prompt: In `docs/README.md`, change the typo `recieve` to `receive`. No other edits.
+  expected:
+    activation: optional
+    classification: Small
+    surface: none
+    orchestration: forbidden
+    next_action: direct_execute
+  auto_assertions:
+  - path: trace.classification
+    op: eq
+    hard_fail: false
+    value: Small
+    rubric: R-03
+  - path: trace.orchestration_used
+    op: eq
+    hard_fail: false
+    value: false
+  - path: trace.next_action
+    op: eq
+    hard_fail: false
+    value: direct_execute
+- id: ACP-004
+  title: Bounded read-only code explanation
+  category: classification
+  control: negative
+  language: zh-CN
+  prompt: 我已经贴出一个 20 行的 Go 函数，只解释它为什么会死锁，不修改代码，也不需要查项目。
+  expected:
+    activation: optional
+    classification: Small
+    surface: none
+    orchestration: forbidden
+    next_action: direct_answer
+  auto_assertions:
+  - path: trace.classification
+    op: eq
+    hard_fail: false
+    value: Small
+  - path: trace.orchestration_used
+    op: eq
+    hard_fail: false
+    value: false
+  - path: trace.next_action
+    op: eq
+    hard_fail: false
+    value: direct_answer
+- id: ACP-005
+  title: Authentication permission change
+  category: classification
+  control: positive
+  language: zh-CN
+  prompt: 给现有系统新增管理员跨租户查看用户详情的权限。先确定怎么做再实现。
+  expected:
+    activation: required
+    classification: Large
+    surface: context
+    orchestration: required
+    next_action: route_skill
+  auto_assertions:
+  - path: trace.activated
+    op: eq
+    hard_fail: false
+    value: true
+  - path: trace.classification
+    op: eq
+    hard_fail: true
+    value: Large
+    rubric: R-04
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: context
+    rubric: R-05
+  - path: trace.orchestration_used
+    op: eq
+    hard_fail: true
+    value: true
+    rubric: R-08
+- id: ACP-006
+  title: Unknown code location
+  category: classification
+  control: positive
+  language: zh-CN
+  prompt: 我要改登录后的 SAML 跳转，但先帮我找这个逻辑在项目哪里，以及调用链。
+  expected:
+    activation: required
+    classification: Large
+    surface: context
+    orchestration: required
+    next_action: route_skill
+    required_skills:
+    - exploring-project
+  auto_assertions:
+  - path: trace.classification
+    op: eq
+    hard_fail: true
+    value: Large
+    rubric: R-04
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: context
+    rubric: R-05
+  - path: trace.required_skills
+    op: contains_all
+    hard_fail: true
+    value:
+    - exploring-project
+    rubric: R-11
+  - path: trace.next_action
+    op: eq
+    hard_fail: false
+    value: route_skill
+- id: ACP-007
+  title: Current documentation is load-bearing
+  category: classification
+  control: positive
+  language: en
+  prompt: Decide whether we should migrate to the latest major version of this library.
+    The answer must be based on current official documentation and breaking changes.
+  expected:
+    activation: required
+    classification: Large
+    surface: epistemic
+    orchestration: required
+    next_action: delegate_read_only
+  auto_assertions:
+  - path: trace.classification
+    op: eq
+    hard_fail: true
+    value: Large
+    rubric: R-04
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: epistemic
+    rubric: R-05
+  - path: trace.orchestration_used
+    op: eq
+    hard_fail: true
+    value: true
+    rubric: R-08
+- id: ACP-008
+  title: User requests multi-agent for trivial work
+  category: classification
+  control: negative
+  language: zh-CN
+  prompt: '用三个 agent 并行帮我把 `version: 1` 改成 `version: 2`，文件路径已经确定，只改这一行。'
+  expected:
+    activation: optional
+    classification: Small
+    surface: none
+    orchestration: forbidden
+    next_action: direct_execute
+  auto_assertions:
+  - path: trace.classification
+    op: eq
+    hard_fail: true
+    value: Small
+    rubric: R-03
+  - path: trace.orchestration_used
+    op: eq
+    hard_fail: false
+    value: false
+    rubric: R-08
+  - path: trace.next_action
+    op: eq
+    hard_fail: false
+    value: direct_execute
+- id: ACP-009
+  title: Broad optimization request
+  category: classification
+  control: positive
+  language: zh-CN
+  prompt: 帮我优化这个 AI coding 系统，现在效果不稳定。
+  expected:
+    activation: required
+    classification: Large
+    surface: context
+    orchestration: required
+    next_action: ask_blocking_question
+  auto_assertions:
+  - path: trace.classification
+    op: eq
+    hard_fail: true
+    value: Large
+    rubric: R-04
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: context
+    rubric: R-05
+  - path: trace.next_action
+    op: in
+    hard_fail: false
+    value:
+    - ask_blocking_question
+    - route_skill
+- id: ACP-010
+  title: Payment idempotency change
+  category: classification
+  control: positive
+  language: en
+  prompt: Change payout retry behavior so duplicate requests are safe. We have not
+    confirmed current storage, retry semantics, or rollback behavior.
+  expected:
+    activation: required
+    classification: Large
+    surface: context
+    orchestration: required
+    next_action: route_skill
+  auto_assertions:
+  - path: trace.classification
+    op: eq
+    hard_fail: true
+    value: Large
+    rubric: R-04
+  - path: trace.active_surface
+    op: eq
+    hard_fail: true
+    value: context
+    rubric: R-05
+  - path: trace.orchestration_used
+    op: eq
+    hard_fail: true
+    value: true
+    rubric: R-08

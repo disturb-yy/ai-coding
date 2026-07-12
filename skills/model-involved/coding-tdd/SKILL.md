@@ -1,6 +1,6 @@
 ---
 name: coding-tdd
-description: "Run test-first code changes in existing projects by combining TDD with coding-project. Use for red-green-refactor, regression fixes, integration-style tests, endpoint-to-response workflows, and requests to implement one small function or module at a time. Do not use for TDD explanation only, read-only test review, or general coding without a test-first requirement."
+description: "Run test-first changes in an existing project. Use for red-green development, regression fixes, and integration behavior that can be delivered as small observable slices."
 ---
 
 # Coding TDD
@@ -13,206 +13,68 @@ description: "Run test-first code changes in existing projects by combining TDD 
 
 ## Purpose
 
-Run a test-first coding workflow that composes `/tdd` and `/coding-project`.
+Use `/coding-project` for project conventions, safe edits, and validation commands. Use this skill to drive the change in **red → green** cycles, then refactor once after the requested behavior is complete and verified.
 
-- TDD owns the test cases, behavior slicing, red-green-refactor loop, and end-to-end verification shape.
-- `coding-project` owns language-aware code edits, project conventions, dependency usage, security prechecks, and validation commands.
-- Keep modules minimal. Implement one small module or one function per cycle unless the project structure requires an inseparable change.
+Each cycle is one vertical, externally observable behavior: one test, one minimal implementation, one GREEN result. A test is a tracer bullet, not a speculative test plan.
 
-## Conceptual Space
+## Start
 
-```yaml
-conceptual_space:
-  target_region: "Test-first implementation work in existing repositories where one externally observable behavior, regression, endpoint path, function, or module can be driven red-green-refactor before moving on."
-  deviation_region:
-    - "General code changes without an explicit test-first requirement; route to coding-project."
-    - "Conceptual TDD explanations, test-plan reviews, or read-only test analysis; answer or use tdd guidance without editing."
-    - "Broad multi-module rewrites that cannot expose a small failing behavior first; narrow the slice before using this skill."
-    - "Final integration, public contract, schema, migration, or security-sensitive decisions delegated entirely to subAgents."
-  priority_dimensions:
-    - "Protect the red-green-refactor loop: one focused failing test, smallest implementation, same test green, refactor only while green."
-    - "Preserve project fit through coding-project: language references, local conventions, dependency patterns, security prechecks, and validation commands."
-    - "Optimize for vertical behavior slices before internal decomposition, then use narrow function/module loops when they are independently observable."
-    - "Prefer serial progress unless independence, stable contracts, and low merge risk make subAgent parallelism safe."
-  entry_conditions:
-    - "The user explicitly asks for test-first, red-green-refactor, regression-test-first, integration-test-first, or TDD implementation."
-    - "The task is in an existing codebase and requires code edits plus executable validation."
-    - "A small externally observable behavior or regression can be named before implementation starts."
-  exit_conditions:
-    - "Each behavior or module has gone through a failing test, minimal implementation, GREEN validation, and any GREEN-only refactor rerun."
-    - "Affected package/module tests pass after combining independent work."
-    - "A final entry-to-output command verifies the completed workflow or a concrete blocker is reported before unverified implementation continues."
-  pre_output_check:
-    - "Confirm no production code was written before its driving test except for unavoidable test harness setup."
-    - "Confirm validation failures stopped forward progress and were rerun after fixes."
-    - "Confirm subAgent work, if used, was independently bounded and integrated with combined affected tests."
-  sedimentation:
-    - "Keep new workflow rules in this skill only when they change test-first execution; otherwise leave language, project, and security rules in coding-project and TDD theory in tdd."
-    - "When adding examples or decision rows, prune overlapping wording so trigger boundaries stay single-source and checkable."
-```
+1. Load `/coding-project` and complete its context scan for the affected code and test surface. Read `CONTEXT.md` and local ADRs when they exist.
+   - Complete when the first public seam, its project vocabulary, and the narrowest test command are known.
+2. Name the smallest observable behavior and its public seam: an API response, command output, public function result, event, or user-visible state.
+   - Complete when the behavior has an independently derived expected result. If several seams are plausible and the choice materially changes scope, confirm the seam with the user.
+3. Split the request into an ordered list of thin vertical slices. Start with the smallest useful success or regression case.
+   - Complete when the next slice can be expressed as one focused test. Keep later slices as brief names; do not write their tests yet.
 
-## Required Composition
+## Red → Green Loop
 
-Use this order for every coding task:
+Repeat this loop for every slice. Finish the current row before beginning the next.
 
-1. Load `/coding-project` to observe the repository, detect language, load matching language and unit-test references, and identify validation commands.
-2. Apply `/tdd` discipline to choose the smallest externally observable behavior to test first.
-3. Write one focused failing test for that behavior before implementation.
-4. Use `/coding-project` to implement only the smallest function or module needed to pass that test.
-5. Run the narrowest relevant test command and confirm GREEN.
-6. Refactor only while GREEN, then rerun the same test command.
-7. Repeat for the next independent behavior or function.
-8. After all modules are complete, write and run an end-to-end command that verifies the full entry-to-output path.
+| State | Action | Completion criterion |
+| --- | --- | --- |
+| **Red** | Write one test through the agreed public seam. Run the narrow test command. | It fails for the expected missing or incorrect behavior, not because of a broken harness or unrelated failure. |
+| **Green** | Change only the production code needed to make that same test pass. Run the same command again. | The test passes. No behavior for a later slice was added. |
+| **Next slice** | Use what the GREEN result revealed to choose the next smallest behavior. | The new slice has its own focused RED test; the previous slice remains green. |
 
-If any validation fails, stop forward progress, inspect the cause, fix it, and rerun the failed checkpoint before continuing.
+When a checkpoint is not RED or GREEN as expected, investigate and restore that checkpoint before advancing.
 
-## Behavior Slicing
+## Test Design
 
-Prefer vertical behavior slices over broad implementation plans.
+A useful test specifies behavior through its public seam and can survive an internal rewrite. Derive expected values from a specification, fixture, worked example, or known-good literal—not by restating the implementation's algorithm.
+
+Keep each test focused on one outcome. Use project-native fakes or mocks only at dependencies outside the slice. For end-to-end behavior, prefer real project wiring and replace only unavailable external systems according to local conventions.
+
+Choose vertical slices over horizontal layers:
 
 ```text
-Request A -> function B -> function C -> function D -> Response E
+request → observable response
 ```
 
-Test in this shape:
+Drive the request behavior first when it is the clearest seam. Add separate function or module tests only when their public interfaces contain independently important behavior. This keeps tests tied to capabilities rather than internal collaboration.
 
-| Scope | Test responsibility | Dependency rule |
-|-------|---------------------|-----------------|
-| Request A behavior | Verify the public request/API behavior and expected response contract. | Mock downstream dependencies that are outside this slice. |
-| Function B | Verify B's behavior through its public interface. | Mock B's dependencies, such as C or external clients. |
-| Function C | Verify C's behavior through its public interface. | Mock C's dependencies. |
-| Function D | Verify D's behavior through its public interface. | Mock D's dependencies. |
-| End-to-end path | Verify Request A produces Response E in the running app or closest project-supported environment. | Prefer real wiring; mock only unavailable external systems according to project conventions. |
+## Review Before Refactor
 
-Do not write all tests first and then all code. Write one test, implement one small target, validate, then continue.
+After every requested slice is GREEN and the affected test scope passes, load `/reviewing-code` and review the completed diff before changing its structure. Treat the completed implementation, its tests, and the validation evidence as the review target.
 
-## Parallel SubAgent Rule
+Resolve material findings before refactoring. When a fix changes observable behavior, return to the red → green loop with its own test; when it only corrects the completed implementation, rerun the affected tests to restore GREEN. Record accepted residual risks instead of disguising them as refactoring work.
 
-Use subAgents only when subagent tooling is available and work units are independent. If no subagent tool is available, process the same units serially with the same boundaries.
+## Final Refactor
 
-| Situation | Action |
-|-----------|--------|
-| Functions have no direct dependency on each other and their tests can run independently | Start one subAgent per function or module when tooling is available. Each subAgent must use `/coding-project`, implement only its assigned target, and run its narrow validation command. |
-| Function B depends on C's interface or behavior | Do not parallelize B and C until the contract is clear and stable. |
-| Shared files, migrations, generated code, or public API contracts are involved | Keep work serial unless the subAgent boundaries are explicit and merge conflicts are unlikely. |
-| Security-sensitive code is involved | Run `/coding-project` security precheck before assigning subAgents. |
+Enter this stage only after the `/reviewing-code` review is complete and material findings are resolved. Refactoring is a separate final pass, not a step inside the red → green loop.
 
-Each subAgent must receive:
+1. Review the completed change for duplication, unclear names, and structure that obscures the tested behavior.
+2. Make the smallest refactor that improves the design without changing the observable contracts.
+3. Run the affected test suite after each refactor. Restore GREEN before another refactor or before reporting completion.
+4. Run the broader package/module validation required by `/coding-project`; run an entry-to-output check when the project supports one and the requested behavior crosses that boundary.
 
-```text
-Use /coding-project. Implement only <function/module>. The TDD test already defines the expected behavior. Keep the change minimal, follow project conventions, and run <targeted validation command>.
-```
+The skill is complete when every requested behavior has a witnessed RED test and GREEN result, the pre-refactor review is complete, the final refactor pass is GREEN, and validation evidence covers the affected scope.
 
-After subAgents finish, inspect their diffs together, resolve integration issues, and run the combined affected tests before end-to-end validation. Do not delegate shared API design, schema changes, or final integration decisions.
+## Boundaries
 
-## Verification Checkpoints
-
-Use fail-fast checkpoints:
-
-1. After writing each test, run the narrow test and confirm it fails for the expected reason.
-2. After implementing the target function or module, rerun the same test and confirm it passes.
-3. After refactoring, rerun the same test.
-4. After combining independent modules, run the affected package/module tests.
-5. After all modules are complete, run an entry-to-output command.
-
-For HTTP APIs, write the final `curl` command in a copyable form:
-
-```bash
-curl -i -X POST "$BASE_URL/path" \
-  -H "Content-Type: application/json" \
-  -d '{"example":"value"}'
-```
-
-Adjust method, headers, auth, and payload to match the project. Use documented local server commands or test environment setup from the repository before running `curl`.
-
-For non-HTTP workflows, use the closest project-supported entry command:
-
-```bash
-<project command> <input-or-fixture>
-```
-
-State the expected observable output and verify it from stdout, generated files, database-visible behavior, or the project-supported inspection command.
-
-## Decision Table
-
-| User request | Use this skill? | Action |
-|--------------|-----------------|--------|
-| "Build this feature test-first" | Yes | Use `/coding-project`, then start the TDD loop. |
-| "Fix this bug with a regression test first" | Yes | Write the failing regression test, then implement the smallest fix. |
-| "Add integration tests around this endpoint" | Yes | Start with request-level behavior, then test and implement internal functions as needed. |
-| "Explain TDD" | No | Answer conceptually or use `/tdd` if available for guidance only. |
-| "Just implement this change" | No, unless the user asks for test-first | Use `/coding-project`. |
-| "Review my test plan" | No | Review without editing unless asked to implement. |
-
-## Examples
-
-### Endpoint Feature
-
-Input:
-
-```text
-Add POST /orders/quote test-first. It should return a quote total and reject empty carts.
-```
-
-Expected behavior:
-
-```text
-Use /coding-project to inspect routes, handlers, services, test patterns, and validation commands.
-Write one failing request-level test for the valid quote path.
-Implement only the handler/service function needed for that test.
-Run the targeted test to GREEN.
-Add the empty-cart test, implement the smallest validation change, and rerun.
-Finish with a curl command that verifies POST /orders/quote returns the expected response.
-```
-
-### Independent Functions
-
-Input:
-
-```text
-Request A calls normalizeCustomer, calculateDiscount, and formatResponse. They do not depend on each other. Build this TDD.
-```
-
-Expected behavior:
-
-```text
-Write focused tests for each public behavior with dependencies mocked.
-If the functions are independent and touch separate files or stable contracts, assign one subAgent per function.
-Each subAgent uses /coding-project, implements only its function, and runs the targeted test.
-After merging, run the affected module tests and the request-level test.
-Finish with the request-to-response curl command.
-```
-
-### Regression Fix
-
-Input:
-
-```text
-Fix the null status bug red-green-refactor style.
-```
-
-Expected behavior:
-
-```text
-Use /coding-project to locate the failing path and test command.
-Write one regression test that fails because null status is mishandled.
-Implement the smallest function-level fix.
-Run the targeted test to GREEN, refactor only if needed, and rerun.
-Run the broader affected tests if the fix touches shared status mapping.
-```
-
-### Blocked Test Environment
-
-Input:
-
-```text
-Add this endpoint with TDD, but there is no documented test command.
-```
-
-Expected behavior:
-
-```text
-Use /coding-project to search project docs, CI, package scripts, Makefiles, and build files for validation commands.
-If no command exists, infer the narrowest standard command for the detected language and state the assumption.
-If the test framework is missing or cannot run, report the blocker before implementation unless a small local test harness is appropriate for the project.
-```
+| Request | Use this skill? | Action |
+| --- | --- | --- |
+| Build a feature test-first | Yes | Find the first observable slice and start RED. |
+| Fix a bug with a regression test | Yes | Make the regression RED, then make it GREEN with the smallest fix. |
+| Add integration behavior around an endpoint | Yes | Start from the request/response seam and iterate in small slices. |
+| Explain or review TDD without code changes | No | Answer or review without entering the loop. |
+| Implement without a test-first requirement | No | Use `/coding-project`. |

@@ -43,6 +43,7 @@ failure_stage:
 - delegation
 - ownership
 - reconciliation
+- reviewer_enforcement
 - verification
 - handoff
 - maintenance
@@ -80,6 +81,14 @@ failure_modes:
   reconciliation:
   - unreviewed_specialist_output
   - conflict_not_reconciled
+  reviewer_enforcement:
+  - mandatory_review_not_created
+  - reviewer_not_independent
+  - blocking_finding_did_not_block_final
+  - fix_not_dispatched
+  - fix_not_rereviewed
+  - review_target_not_pinned
+  - stale_review_accepted
   verification:
   - verification_gate_skipped
   - skipped_check_unexplained

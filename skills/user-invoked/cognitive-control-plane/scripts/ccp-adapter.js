@@ -86,6 +86,25 @@ function validateRequirement(item, label, errors) {
   if (typeof item.required !== "boolean") errors.push(`${label}.required must be boolean`);
 }
 
+function validateReviewTarget(target, label, errors) {
+  if (!requireObject(target, label, errors)) return;
+  if (target.kind === "git_range") {
+    for (const key of ["base_sha", "head_sha", "diff_hash"]) {
+      if (typeof target[key] !== "string" || !target[key]) errors.push(`${label}.${key} must be a non-empty string for git_range`);
+    }
+    return;
+  }
+  if (target.kind === "stable_artifact") {
+    if (typeof target.stable_id !== "string" || !target.stable_id) errors.push(`${label}.stable_id must be a non-empty string for stable_artifact`);
+    return;
+  }
+  errors.push(`${label}.kind must be git_range or stable_artifact`);
+}
+
+function hasRequirement(items, name) {
+  return Array.isArray(items) && items.some((item) => item && item.name === name);
+}
+
 function validateContract(contract) {
   const errors = [];
   if (!requireObject(contract, "$", errors)) return errors;
@@ -95,6 +114,8 @@ function validateContract(contract) {
 
   const task = contract.task;
   for (const key of [
+    "task_id",
+    "actor_id",
     "role",
     "phase",
     "objective",
@@ -111,6 +132,8 @@ function validateContract(contract) {
   ]) {
     if (!(key in task)) errors.push(`$.task.${key} is required`);
   }
+  if (typeof task.task_id !== "string" || !task.task_id) errors.push("$.task.task_id must be a non-empty string");
+  if (typeof task.actor_id !== "string" || !task.actor_id) errors.push("$.task.actor_id must be a non-empty string");
   if (typeof task.role !== "string" || !task.role) errors.push("$.task.role must be a non-empty string");
   if (!PHASES.has(task.phase)) errors.push("$.task.phase is invalid");
   if (typeof task.objective !== "string" || !task.objective) errors.push("$.task.objective must be a non-empty string");
@@ -131,6 +154,25 @@ function validateContract(contract) {
     if (typeof task.expected_output.format !== "string" || !task.expected_output.format) errors.push("$.task.expected_output.format must be a non-empty string");
     requireArray(task.expected_output.required_fields, "$.task.expected_output.required_fields", errors);
     requireArray(task.expected_output.must_report, "$.task.expected_output.must_report", errors);
+  }
+
+  if (task.phase === "review") {
+    for (const key of ["review_of_task_id", "review_of_actor_id", "review_iteration", "supersedes_review_task_id", "review_fallback", "review_target"]) {
+      if (!(key in task)) errors.push(`$.task.${key} is required for review phase`);
+    }
+    if (typeof task.review_of_task_id !== "string" || !task.review_of_task_id) errors.push("$.task.review_of_task_id must be a non-empty string for review phase");
+    if (typeof task.review_of_actor_id !== "string" || !task.review_of_actor_id) errors.push("$.task.review_of_actor_id must be a non-empty string for review phase");
+    if (!Number.isInteger(task.review_iteration) || task.review_iteration < 1) errors.push("$.task.review_iteration must be a positive integer for review phase");
+    if (typeof task.supersedes_review_task_id !== "string") errors.push("$.task.supersedes_review_task_id must be a string for review phase");
+    if (!["none", "independent_read_only_reviewer"].includes(task.review_fallback)) errors.push("$.task.review_fallback must be none or independent_read_only_reviewer for review phase");
+    validateReviewTarget(task.review_target, "$.task.review_target", errors);
+    if (task.actor_id && task.actor_id === task.review_of_actor_id) errors.push("review actor_id must differ from review_of_actor_id");
+    if (task.edits_allowed !== false) errors.push("review phase requires $.task.edits_allowed=false");
+    if (task.review_fallback === "none" && !hasRequirement(task.required_skills, "reviewing-code")) errors.push("standard review requires reviewing-code");
+    if (task.review_fallback === "independent_read_only_reviewer") {
+      if (hasRequirement(task.required_skills, "reviewing-code")) errors.push("fallback review must not claim unavailable reviewing-code");
+      if (!hasRequirement(task.required_references, "reviewer-enforcement")) errors.push("fallback review requires reviewer-enforcement reference");
+    }
   }
 
   if (contract.next_action === "delegate_write" && task.edits_allowed !== true) {

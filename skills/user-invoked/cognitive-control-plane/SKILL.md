@@ -145,6 +145,29 @@ This guard does not block minimal routing reads, final verification commands, or
 
 Completion criterion: every Large implementation edit is preceded by a visible delegation contract; if the direct-implementation exception was used, every condition is met and the justification is explicit before the first edit.
 
+## Read-only Exploration Decision
+
+Routing to `exploring-project` does not by itself require a subagent. Before substantive repository discovery for a Large task, choose and state one of these execution modes:
+
+- **direct minimal exploration**: the orchestrator performs a bounded, read-only trace because one entry path or a small, dependent evidence chain is sufficient; record the search scope and why a separate worker or parallel lane would not materially improve the next decision.
+- **delegated exploration**: create a read-only `exploring-project` task when the evidence boundary is broad, independent areas can be checked in parallel, or a separate evidence report materially reduces implementation risk.
+
+Do not claim a skill route and then silently replace it with unstructured direct browsing. A direct mode still loads the routed skill and reports the decision, search scope, evidence checked, and unresolved uncertainty. Parallel exploration is read-only unless ownership is explicitly assigned later.
+
+Completion criterion: the discovery trace names `direct_minimal_exploration` or `delegated_read_only_exploration`, its scope, and why its level of delegation is proportionate.
+
+## Reviewer Enforcement Gate
+
+After any implementation or fix reaches terminal state, assess the delivered artifact for mandatory-review risk. Security-sensitive, cross-module, public-API, schema or migration, auth or permission, and deployment or rollback-critical changes require an independent `reviewing-code` task before acceptance. Passing tests do not waive this gate.
+
+Preflight both the `reviewing-code` capability and an independent reviewer actor when a mandatory trigger is known or becomes known. If `reviewing-code` is unavailable, a host may use the explicit `independent_read_only_reviewer` fallback only when it starts a distinct, read-only actor under the reviewer-enforcement reference and records the unavailable skill as a deviation. If that fallback cannot start, the gate remains blocked; self-review is never a fallback.
+
+The reviewer actor must differ from the actor that implemented or fixed the reviewed version. Pin the review to `base_sha`/`head_sha`/`diff_hash` or an equivalent immutable artifact id. Blocking findings prevent final acceptance and require a fix task; every fix changes the artifact version, invalidates the prior review, and requires another independent review. Continue until the latest version has no blocking findings or the loop is explicitly terminated. Termination is an unaccepted outcome, not a successful review. The review report separates a verification matrix from a severity-ranked findings table.
+
+Read [`references/reviewer-enforcement.md`](references/reviewer-enforcement.md) whenever implementation risk, reviewer assignment, review findings, fixes, artifact freshness, re-review, or final acceptance is in scope.
+
+Completion criterion: the final accepted artifact is the exact version independently reviewed with no unresolved blocking findings.
+
 ## Route
 
 Pick the first unsatisfied surface that would materially change the next action. Do not skip an earlier bottleneck because a later surface is more visible.
@@ -167,7 +190,7 @@ Surface order examples:
 - A complete artifact plus critique/review request, such as "complete Skill design" or "完整的 Skill 设计方案", routes to Adversarial with `criteria_before_critique`. Do not downgrade to Context because the adapter omitted the artifact body.
 - "Implementation contract is accepted" plus "start implementation" routes directly to `coding-project` unless the prompt explicitly asks for TDD. In that state `active_surface` is `none`, `next_action` is `route_skill`, and routing stops.
 
-Use [`references/orchestration-state.md`](references/orchestration-state.md) when a Large next action involves delegation, read-only evidence gathering, high-risk implementation planning, specialized skill routing, multiple agents, parallel lanes, background work, staged implementation, ownership boundaries, persistent state, or reconciliation. Orchestration state is the runtime layer; it does not replace the active surface.
+Use [`references/orchestration-state.md`](references/orchestration-state.md) when a Large next action involves delegation, read-only evidence gathering, high-risk implementation planning, specialized skill routing, multiple agents, parallel lanes, background work, staged implementation, ownership boundaries, persistent state, reviewer enforcement, or reconciliation. Orchestration state is the runtime layer; it does not replace the active surface.
 
 Use [`references/skill-orchestration.md`](references/skill-orchestration.md) whenever the next action depends on a specialized skill. Required skill names must be explicit and exact, even if the next visible act is asking the first question or starting implementation. Use only stable skill ids from this list: `grilling`, `diagnosing-problem`, `exploring-project`, `reviewing-code`, `coding-project`, `coding-tdd`. Never write aliases such as `explore-project`. Unclear product or feature requirements involving rules, roles, interactions, or acceptance criteria require `grilling` and one question at a time; symptoms or phenomena without a framed cause require `diagnosing-problem` before code exploration; unknown repository paths or change points require `exploring-project`; code, PR, diff, branch, or security review requires `reviewing-code`; accepted implementation contracts require `coding-project` or `coding-tdd`.
 
@@ -183,7 +206,7 @@ When modifying this skill, read [`references/maintenance.md`](references/mainten
    Completion criterion: orchestration is used for Large delegation, read-only evidence gathering, high-risk implementation planning, specialized skill routing, staged or parallel work, ownership boundaries, persistent state, or reconciliation; it is not used for Small work just because the user asked for agents.
 4. If specialized procedure is needed, read skill orchestration and name `required_skills`.
    Completion criterion: `grilling`, `diagnosing-problem`, `exploring-project`, `reviewing-code`, `coding-project`, or `coding-tdd` is explicit whenever skipping it would change the result.
-5. Apply the selected surface or orchestration state until its completion criterion is met.
+5. Apply the selected surface or orchestration state until its completion criterion is met. After implementation or a fix, apply the Reviewer Enforcement Gate before acceptance.
    Completion criterion: the task has a clearer scope, stronger evidence, challenged plan, deliverable contract, explicit task board, or resolved ownership state.
 6. Hand off to the concrete next action.
    Completion criterion: the next action is one of direct answer, direct execute, ask one blocking question, route skill, delegate read-only, delegate write, verify, or deliver; once implementation starts, stop control-plane routing and route to `coding-project` or `coding-tdd` instead of continuing to analyze.
@@ -213,12 +236,26 @@ When a wrapper, task contract, or summary asks for a routing trace, use these me
 - If an implementation contract is accepted and implementation should start, stop routing and set `next_action: route_skill` with `coding-project` or `coding-tdd` as the required skill.
 - If the prompt asks to start implementation after context, assumptions, review, and the implementation contract are already accepted, classify as `Large`, set `active_surface: none`, set `required_skills: ["coding-project"]` unless test-first/TDD is explicit, set `next_action: route_skill`, and set `stopped_routing: true`.
 - `event_log_in_persistent_state` means long or high-risk persistent state explicitly includes an `event_log` or event log section in addition to the task board, decision trace, review gates, validation log, and unresolved risks.
+- `mandatory_review_after_high_risk_implementation` means a terminal implementation with any mandatory risk tag creates a dependent, read-only `reviewing-code` task before acceptance.
+- Mandatory post-implementation review uses `next_action: delegate_read_only` because it must start a distinct actor; ordinary user-requested review may use `route_skill` when actor independence is not the active requirement.
+- `direct_minimal_exploration` means the orchestrator records a bounded, read-only discovery scope and why delegation would not materially improve the next decision; it does not mean the routed exploration skill was skipped.
+- `delegated_read_only_exploration` means a distinct read-only exploration task owns a broad or independently verifiable evidence lane.
+- `preflight_reviewer_capability` means the availability of `reviewing-code` and an independent actor is checked before the review gate can be cleared.
+- `independent_read_only_reviewer_fallback` means `reviewing-code` was unavailable, but a distinct host-launched read-only reviewer followed the reviewer-enforcement reference; it is never self-review.
+- `review_report_separates_verification_and_findings` means review output has a verification matrix distinct from the severity-ranked findings table.
+- `enforce_reviewer_independence` means the reviewer `actor_id` differs from the actor that implemented or fixed the pinned version; changing only the role or task id is insufficient.
+- `block_final_on_blocking_findings` and `dispatch_fix_for_blocking_findings` mean reconciled blocking findings keep acceptance closed and create dependent fix work.
+- `rereview_after_fix` means a fix invalidates the prior review and creates a new independent review for the new version.
+- `pin_review_target_version` and `invalidate_review_on_artifact_change` mean review evidence names an immutable artifact identity and cannot clear a later version.
 
 ## Do Not
 
 - Do not turn every task into a full four-stage ceremony.
 - Do not delegate small work unless delegation adds clear value.
 - Do not implement Large work as the control-plane agent unless the direct-implementation exception is explicit.
+- Do not accept high-risk implementation without a valid independent review of the final artifact version.
+- Do not let an implementation actor review its own work by changing role or task id.
+- Do not treat a fix as closing a blocking finding until the fixed version is re-reviewed.
 - Do not ask for information the repository, wiki, tests, logs, or source files can answer.
 - Do not critique before assumptions are explicit.
 - Do not force JSON, tables, or checklists while the task is still exploratory.

@@ -4,8 +4,8 @@ access:
   model_write: true
   purpose: orchestration_map
 
-version: 3
-updated: "2026-07-10"
+version: 4
+updated: "2026-07-11"
 description: "Default routing map for assigning skills, references, MCP, tools, and platform adapters to main-agent and subAgent tasks."
 
 adapter_contract:
@@ -25,6 +25,86 @@ adapter_contract:
     opencode: adapters/opencode.md
     codex: adapters/codex.md
     claude-code: adapters/claude-code.md
+
+reviewer_enforcement_policy:
+  mandatory_after_terminal_implementation: true
+  reviewer_capability_preflight: true
+  reviewing_code_unavailable:
+    allowed_fallback: independent_read_only_reviewer
+    requires_distinct_host_started_actor: true
+    requires_reviewer_enforcement_reference: true
+    must_report_unavailable_skill_as_deviation: true
+    otherwise: block_gate_and_emit_handoff
+  risk_triggers:
+    - security_sensitive
+    - cross_module_change
+    - public_api_change
+    - schema_change
+    - migration
+    - auth_or_permission_change
+    - deployment_or_rollback_critical
+  reviewer_independence:
+    compare_field: actor_id
+    invariant: reviewer_actor_must_differ_from_reviewed_implementation_actor
+    role_switch_is_not_independence: true
+    reviewer_may_fix_own_findings: false
+  artifact_version:
+    accepted_kinds:
+      git_range:
+        required_fields:
+          - base_sha
+          - head_sha
+          - diff_hash
+      stable_artifact:
+        required_fields:
+          - stable_id
+    mutable_identifiers_forbidden:
+      - branch_name_only
+      - file_path_only
+      - latest_changes
+    invalidate_review_when_target_changes: true
+  blocking_findings:
+    prevent_final_acceptance: true
+    next_action: delegate_write
+    dispatch_fix_task: true
+  rereview:
+    required_after_fix: true
+    invalidate_prior_review: true
+    next_action: delegate_read_only
+    continue_until:
+      - latest_version_has_no_blocking_findings
+      - explicitly_terminated_unaccepted
+  final_acceptance_requires:
+    - implementation_risk_assessed
+    - mandatory_review_task_terminal
+    - reviewer_actor_independent
+    - reviewed_target_matches_current_artifact
+    - no_unresolved_blocking_findings
+    - every_fix_followed_by_rereview
+    - review_gate_cleared
+  review_report_format:
+    verification_matrix_columns:
+      - status
+      - review_lane_or_check
+      - evidence
+      - result_or_limitation
+    findings_table_columns:
+      - id
+      - severity
+      - location
+      - evidence
+      - recommendation
+      - disposition
+
+exploration_policy:
+  direct_minimal_requires:
+    - bounded_read_only_scope
+    - evidence_checked
+    - delegation_rationale
+  delegate_read_only_when:
+    - independent_evidence_lanes
+    - broad_search_boundary
+    - independent_report_materially_reduces_risk
 
 skill_registry:
   grilling:
@@ -71,6 +151,7 @@ skill_registry:
       - pr_or_diff_or_branch_review_requested
       - review_since_ref_requested
       - implementation_artifact_needs_code_review
+      - mandatory_review_risk_triggered_after_implementation
     exit_when:
       - findings_or_no_findings_are_evidence_backed_and_severity_ranked
 
@@ -120,6 +201,9 @@ routing_order:
   - condition: code_or_security_review_requested
     skill: reviewing-code
     delegate: optional_read_only
+  - condition: mandatory_review_risk_triggered_after_implementation
+    skill: reviewing-code
+    delegate: mandatory_independent_read_only
   - condition: concrete_artifact_needs_adversarial_review
     skill: adversarial-control
     delegate: optional_read_only
@@ -132,6 +216,8 @@ routing_order:
 
 contract_schema:
   required_fields:
+    - task_id
+    - actor_id
     - role
     - phase
     - objective
@@ -154,6 +240,8 @@ contract_schema:
 
 contract_patterns:
   requirements_interviewer:
+    task_id: ""
+    actor_id: ""
     role: requirements_interviewer
     role_prompt: "You clarify ambiguous requirements before execution. Your job is to turn unclear goals, rules, roles, interactions, constraints, and acceptance criteria into an implementable next action."
     personality: "Patient, direct, and precise. Ask one high-leverage question at a time and avoid turning uncertainty into premature design."
@@ -200,6 +288,8 @@ contract_patterns:
       - repository_or_source_artifacts_can_answer_better_than_user
 
   problem_framer:
+    task_id: ""
+    actor_id: ""
     role: problem_framer
     role_prompt: "You frame ambiguous problems before execution. Your job is to select the most useful interpretation, expose assumptions, define evidence standards, and hand off the next investigation or action."
     personality: "Diagnostic, skeptical, and evidence-oriented. Separate what is known, assumed, rejected, and still uncertain without overcomplicating the frame."
@@ -250,6 +340,8 @@ contract_patterns:
       - concrete_implementation_starts_before_problem_frame_is_accepted
 
   codebase_explorer:
+    task_id: ""
+    actor_id: ""
     role: codebase_explorer
     role_prompt: "You explore an existing codebase before safe edits or explanations. Your job is to locate verified entry points, flows, change points, risks, and nearby tests with minimal broad reading."
     personality: "Concrete, evidence-first, and restrained. Treat maps and search hits as leads until source or tests verify them."
@@ -265,6 +357,7 @@ contract_patterns:
       - do_not_edit_files
       - do_not_claim_behavior_from_search_hits_alone
       - avoid_repository_wide_reading_when_targeted_search_suffices
+      - record_direct_or_delegated_exploration_decision
       - stop_when_next_action_is_clear
     output:
       sections:
@@ -304,6 +397,8 @@ contract_patterns:
       - implementation_requested_before_change_points_are_verified
 
   adversarial_reviewer:
+    task_id: ""
+    actor_id: ""
     role: adversarial_reviewer
     role_prompt: "You attack a concrete artifact before acceptance. Your job is to apply explicit criteria, identify valid failure modes, reject weak attacks, and leave mitigations and residual risk."
     personality: "Rigorous, fair, and unsentimental. Critique the artifact against criteria rather than producing generic objections."
@@ -359,28 +454,39 @@ contract_patterns:
       - review_would_require_editing_instead_of_critique
 
   code_reviewer:
+    task_id: ""
+    actor_id: ""
     role: code_reviewer
     role_prompt: "You review concrete code changes before acceptance. Your job is to find syntax, functionality, standards, and security issues with evidence and aggregate the review lanes into severity-ranked findings."
     personality: "Direct, evidence-backed, and severity-aware. Separate material defects from preferences and report skipped checks plainly."
-    goal: "Produce a code review report with findings, no-findings lanes, skipped checks, residual risk, and review summary."
+    goal: "Produce a code review report with a verification matrix, severity-ranked findings table, skipped checks, residual risk, and gate decision."
     success_criteria:
       - review_target_is_pinned
       - syntax_functionality_standards_and_security_lanes_are_selected_or_skipped_with_reason
       - findings_have_file_or_hunk_evidence
       - findings_are_deduplicated_and_severity_ranked
       - residual_risk_and_blocked_checks_are_explicit
+      - verification_matrix_is_separate_from_findings_table
     constraints:
       - do_not_edit_files
+      - actor_must_differ_from_reviewed_implementation_actor
+      - review_target_must_be_immutable
       - do_not_report_unverified_suspicion_as_a_finding
       - do_not_mix_plan_critique_with_code_review
       - distinguish_tool_failures_from_code_findings
     output:
       sections:
+        - verification_matrix
+        - findings_table
         - findings
+        - blocking_findings
+        - non_blocking_findings
         - no_findings
         - skipped_or_blocked
         - residual_risk
         - review_summary
+        - review_target
+        - gate_decision
       length: concise_to_moderate
       tone: code_review
     stop_rules:
@@ -388,11 +494,25 @@ contract_patterns:
       - required_evidence_inaccessible
       - task_becomes_implementation_instead_of_review
     phase: review
+    review_of_task_id: ""
+    review_of_actor_id: ""
+    review_iteration: 1
+    supersedes_review_task_id: ""
+    review_fallback: none
+    review_target:
+      kind: git_range
+      base_sha: ""
+      head_sha: ""
+      diff_hash: ""
+      stable_id: ""
     required_skills:
       - name: reviewing-code
         source: available_skill
         required: true
-    required_references: []
+    required_references:
+      - name: reviewer-enforcement
+        source: file_reference
+        required: true
     required_mcp:
       - name: GitHub
         required: false
@@ -405,17 +525,27 @@ contract_patterns:
         required: false
     edits_allowed: false
     expected_output_fields:
+      - verification_matrix
+      - findings_table
       - findings
+      - blocking_findings
+      - non_blocking_findings
       - no_findings
       - skipped_or_blocked
       - residual_risk
       - review_summary
+      - review_target
+      - gate_decision
     stop_if:
       - review_target_unavailable
+      - review_target_is_mutable_or_unversioned
+      - reviewer_actor_matches_reviewed_implementation_actor
       - required_evidence_inaccessible
       - task_becomes_implementation_instead_of_review
 
   implementation_worker:
+    task_id: ""
+    actor_id: ""
     role: implementation_worker
     role_prompt: "You implement ordinary code, test, dependency, generated-artifact, or implementation-doc changes in an existing repository. Your job is to make narrow project-conventional edits and validate them."
     personality: "Pragmatic, careful, and validation-driven. Prefer existing project patterns and avoid opportunistic refactors."
@@ -434,6 +564,8 @@ contract_patterns:
     output:
       sections:
         - changed_files
+        - artifact_version
+        - review_risk_tags
         - validation_commands
         - validation_results
         - residual_risks
@@ -457,6 +589,8 @@ contract_patterns:
     edits_allowed: true
     expected_output_fields:
       - changed_files
+      - artifact_version
+      - review_risk_tags
       - validation_commands
       - validation_results
       - residual_risks
@@ -466,6 +600,8 @@ contract_patterns:
       - risk_appears_outside_contract
 
   tdd_worker:
+    task_id: ""
+    actor_id: ""
     role: tdd_worker
     role_prompt: "You implement behavior through a test-first loop. Your job is to make each behavior slice go red, then green, then refactor while preserving evidence of the loop."
     personality: "Disciplined, incremental, and evidence-driven. Keep slices small and do not write production code before the intended failing test exists."
@@ -485,6 +621,8 @@ contract_patterns:
       sections:
         - failing_test
         - implementation_slice
+        - artifact_version
+        - review_risk_tags
         - green_validation
         - refactor_validation
         - final_entry_to_output_check
@@ -509,6 +647,8 @@ contract_patterns:
     expected_output_fields:
       - failing_test
       - implementation_slice
+      - artifact_version
+      - review_risk_tags
       - green_validation
       - refactor_validation
       - final_entry_to_output_check
@@ -571,3 +711,11 @@ reconciliation_checks:
   - expected_fields_present
   - ownership_respected
   - validation_evidence_present
+  - implementation_review_risk_assessed
+  - mandatory_review_created_for_high_risk_artifact
+  - reviewer_actor_independent
+  - reviewed_target_matches_current_artifact
+  - blocking_findings_prevent_acceptance
+  - blocking_findings_dispatch_fix
+  - every_fix_followed_by_rereview
+  - review_gate_cleared_for_latest_artifact
