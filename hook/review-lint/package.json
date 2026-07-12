@@ -1,0 +1,13 @@
+{
+  "name": "review-lint-hooks",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check bin/review-lint.mjs && node --check lib/review-lint.mjs && node --check adapters/shared/hook.mjs && node --check adapters/opencode/review-lint.mjs && node --check scripts/install.mjs"
+  }
+}

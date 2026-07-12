@@ -1,0 +1,21 @@
+version: 1
+
+languages:
+  go:
+    enabled: true
+    max_function_lines: 49
+    max_cyclomatic_complexity: 10
+    min_test_coverage: 80
+    exclude:
+      - "**/*_test.go"
+      - "**/vendor/**"
+
+  java:
+    enabled: true
+    max_function_lines: 49
+    max_cyclomatic_complexity: 10
+    min_test_coverage: 80
+    exclude:
+      - "**/src/test/**"
+      - "**/target/**"
+      - "**/build/**"
