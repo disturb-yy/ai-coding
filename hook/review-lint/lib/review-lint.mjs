@@ -557,17 +557,55 @@ export function reviewProject({ cwd = process.cwd(), policyPath, commandRunner =
 
 export function formatReview(result) {
   if (!result.violations.length) return "review-lint: passed";
-  const lines = [`review-lint: ${result.violations.length} violation(s)`];
+
+  const hints = [];
+  const seen = {};
+
   for (const violation of result.violations) {
     if (violation.type === "function-lines") {
-      lines.push(`${violation.path}:${violation.line} ${violation.language} ${violation.name}: effective lines ${violation.effectiveLines} > ${violation.limit}`);
+      hints.push(
+        `${violation.path}:${violation.line} ${violation.language} ${violation.name}: ` +
+        `effective lines ${violation.effectiveLines} > ${violation.limit} ` +
+        `(exceeds by ${violation.effectiveLines - violation.limit} lines)` +
+        `\n  FIX: Split this function into smaller helper functions. ` +
+        `Extract logical blocks into separate well-named functions, each doing one thing. ` +
+        `Target: each function ≤ ${violation.limit} effective lines.`,
+      );
+      seen["function-lines"] = true;
     } else if (violation.type === "cyclomatic-complexity") {
-      lines.push(`${violation.path}:${violation.line} ${violation.language} ${violation.name}: cyclomatic complexity ${violation.complexity} > ${violation.limit}`);
+      hints.push(
+        `${violation.path}:${violation.line} ${violation.language} ${violation.name}: ` +
+        `cyclomatic complexity ${violation.complexity} > ${violation.limit} ` +
+        `(exceeds by ${violation.complexity - violation.limit})` +
+        `\n  FIX: Reduce branches in this function. ` +
+        `Use early returns to flatten nesting, extract conditional blocks into separate functions, ` +
+        `replace complex if-else chains with lookup tables/maps or polymorphism. ` +
+        `Target: complexity ≤ ${violation.limit}.`,
+      );
+      seen["cyclomatic-complexity"] = true;
     } else if (violation.type === "test-coverage") {
-      lines.push(`${violation.path} ${violation.language}: test coverage ${violation.actual.toFixed(1)}% < ${violation.limit}%`);
+      hints.push(
+        `${violation.path} ${violation.language}: test coverage ${violation.actual.toFixed(1)}% < ${violation.limit}% ` +
+        `(missing ${(violation.limit - violation.actual).toFixed(1)}%)` +
+        `\n  FIX: Add tests for uncovered code paths. ` +
+        (violation.language === "go"
+          ? `Run "go test ./... -coverprofile=cover.out && go tool cover -func cover.out" to identify uncovered lines.`
+          : `Check the JaCoCo report to find untested branches and add unit tests for them.`) +
+        ` Target: coverage ≥ ${violation.limit}%.`,
+      );
+      seen["test-coverage"] = true;
     } else {
-      lines.push(`${violation.path} ${violation.language}: coverage could not be verified: ${violation.detail}`);
+      hints.push(
+        `${violation.path} ${violation.language}: coverage could not be verified: ${violation.detail}` +
+        `\n  FIX: Ensure the build tool (${violation.language === "java" ? "Maven/Gradle with JaCoCo" : "go test -coverprofile"}) is configured correctly.`,
+      );
     }
   }
-  return lines.join("\n");
+
+  const summary = [`review-lint: ${result.violations.length} violation(s)`];
+  summary.push(...hints);
+  summary.push("\n---");
+  summary.push("Fix ALL violations above, then re-run to pass the check.");
+
+  return summary.join("\n");
 }
