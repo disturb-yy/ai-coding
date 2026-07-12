@@ -485,19 +485,62 @@ function coverageViolation(language, moduleDirectory, root, limit, outcome) {
   return null;
 }
 
-export function reviewProject({ cwd = process.cwd(), policyPath, commandRunner = runCommand } = {}) {
+function extractPaths(value, into) {
+  if (typeof value === "string") {
+    if (value.endsWith(".go") || value.endsWith(".java")) into.add(value);
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) extractPaths(item, into);
+    return;
+  }
+  if (value && typeof value === "object") {
+    for (const key of Object.keys(value)) {
+      if (key === "content" || key === "old_string" || key === "new_string" || key === "command" || key === "reason") continue;
+      extractPaths(value[key], into);
+    }
+  }
+}
+
+export function changedGoJavaFiles(input, cwd) {
+  const paths = new Set();
+  extractPaths(input, paths);
+  const resolved = [];
+  for (const raw of paths) {
+    if (!path.isAbsolute(raw)) continue;
+    try {
+      const rel = path.relative(cwd, raw);
+      if (rel && !rel.startsWith("..")) resolved.push(raw);
+    } catch {
+      // ignore unresolvable paths
+    }
+  }
+  return resolved;
+}
+
+export function reviewProject({ cwd = process.cwd(), policyPath, files, commandRunner = runCommand } = {}) {
   const root = path.resolve(cwd);
   const resolvedPolicy = findPolicy(root, policyPath);
   const policy = parsePolicy(fs.readFileSync(resolvedPolicy, "utf8"));
   const violations = [];
   const languagesWithProductionCode = new Set();
 
-  for (const absolutePath of collectFiles(root)) {
+  const allFiles = collectFiles(root);
+  const checkSet = files && files.length > 0
+    ? new Set(files.map((f) => path.resolve(root, f)))
+    : null;
+  const checked = [];
+
+  for (const absolutePath of allFiles) {
     const language = absolutePath.endsWith(".go") ? "go" : "java";
     const config = policy.languages[language];
     if (!config?.enabled) continue;
     const relativePath = path.relative(root, absolutePath).replaceAll(path.sep, "/");
     if (config.exclude.some((pattern) => globMatches(pattern, relativePath))) continue;
+
+    if (checkSet && !checkSet.has(absolutePath)) continue;
+    checked.push(relativePath);
+
     languagesWithProductionCode.add(language);
     const source = fs.readFileSync(absolutePath, "utf8");
     for (const metric of analyzeSource(source, language)) {
@@ -552,7 +595,7 @@ export function reviewProject({ cwd = process.cwd(), policyPath, commandRunner =
     }
   }
 
-  return { policyPath: resolvedPolicy, root, violations };
+  return { policyPath: resolvedPolicy, root, violations, checked };
 }
 
 export function formatReview(result) {

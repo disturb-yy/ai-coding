@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
-import { analyzeSource, parseJaCoCoLineCoverage, parsePolicy, reviewProject } from "../lib/review-lint.mjs";
+import { analyzeSource, changedGoJavaFiles, parseJaCoCoLineCoverage, parsePolicy, reviewProject } from "../lib/review-lint.mjs";
 import { install } from "../scripts/install.mjs";
 
 function temporaryDirectory(t) {
@@ -171,4 +171,41 @@ test("installer registers all adapters idempotently", (t) => {
   assert.ok(fs.existsSync(path.join(home, ".config", "opencode", "plugins", "review-lint.mjs")));
   assert.ok(opencode.plugin.includes(path.join(home, ".config", "opencode", "plugins", "review-lint.mjs")));
   assert.ok(fs.existsSync(path.join(home, ".local", "share", "review-lint", "bin", "review-lint.mjs")));
+});
+
+test("extracts changed Go/Java files from tool input", (t) => {
+  const dir = temporaryDirectory(t);
+  const goFile = path.join(dir, "order.go");
+  const javaFile = path.join(dir, "src", "main", "java", "Order.java");
+  fs.writeFileSync(goFile, "package p\n");
+  fs.mkdirSync(path.dirname(javaFile), { recursive: true });
+  fs.writeFileSync(javaFile, "class Order {}\n");
+
+  const input = {
+    hook_event_name: "PostToolUse",
+    tool_name: "Write",
+    tool_input: { file_path: goFile },
+  };
+  const files = changedGoJavaFiles(input, dir);
+  assert.deepEqual(files, [goFile]);
+
+  // ignores non-Go/Java paths
+  const input2 = { tool_name: "Write", tool_input: { file_path: path.join(dir, "README.md") } };
+  assert.deepEqual(changedGoJavaFiles(input2, dir), []);
+});
+
+test("reviewProject scoped to changed files ignores other files", (t) => {
+  const project = temporaryDirectory(t);
+  fs.writeFileSync(path.join(project, ".review-policy.yaml"), TEST_POLICY);
+  fs.writeFileSync(path.join(project, "good.go"), "package p\nfunc OK() { println(1) }\n");
+  fs.writeFileSync(path.join(project, "bad.go"), "package p\nfunc TooBig(a bool, b bool, c bool) {\n  if a && b || c {\n    println(\"1\")\n    println(\"2\")\n    println(\"3\")\n    println(\"4\")\n    println(\"5\")\n    println(\"6\")\n  }\n}\n");
+
+  // unscoped — checks both files
+  const full = reviewProject({ cwd: project });
+  assert.ok(full.violations.length >= 2, `expected >= 2 violations, got ${full.violations.length}`);
+
+  // scoped to good.go only — skips bad.go
+  const scoped = reviewProject({ cwd: project, files: [path.join(project, "good.go")] });
+  assert.equal(scoped.violations.length, 0);
+  assert.deepEqual(scoped.checked, ["good.go"]);
 });
