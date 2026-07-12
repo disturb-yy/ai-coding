@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const SOURCE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const ALL_TARGETS = ["codex", "claude", "opencode"];
+const ALL_TARGETS = ["cac", "claude", "codex", "opencode"];
 
 function quoteCommand(value) {
   return `"${value.replaceAll('"', '\\"')}"`;
@@ -73,6 +73,13 @@ export function install({ home = os.homedir(), targets = ALL_TARGETS } = {}) {
       "^(Bash|apply_patch|Edit|Write)$",
     );
   }
+  if (targets.includes("cac")) {
+    installJsonHooks(
+      path.join(home, ".cac", "settings.json"),
+      command,
+      "^(Bash|Edit|Write|MultiEdit|NotebookEdit)$",
+    );
+  }
   if (targets.includes("claude")) {
     installJsonHooks(
       path.join(home, ".claude", "settings.json"),
@@ -85,10 +92,16 @@ export function install({ home = os.homedir(), targets = ALL_TARGETS } = {}) {
       path.join(installRoot, "adapters", "opencode", "review-lint.mjs"),
     ).href;
     const plugin = `export { default } from ${JSON.stringify(adapterUrl)};\n`;
-    backupAndWrite(
-      path.join(home, ".config", "opencode", "plugins", "review-lint.mjs"),
-      plugin,
-    );
+    const pluginFile = path.join(home, ".config", "opencode", "plugins", "review-lint.mjs");
+    backupAndWrite(pluginFile, plugin);
+
+    const configFile = path.join(home, ".config", "opencode", "opencode.json");
+    const config = readJson(configFile);
+    config.plugin ||= [];
+    if (!config.plugin.includes(pluginFile)) {
+      config.plugin.push(pluginFile);
+      backupAndWrite(configFile, `${JSON.stringify(config, null, 2)}\n`);
+    }
   }
 
   return { installRoot, targets };
@@ -102,7 +115,7 @@ function main() {
     if (args[index] === "--home") home = path.resolve(args[++index]);
     else if (args[index] === "--targets") targets = args[++index].split(",").filter(Boolean);
     else if (args[index] === "--help" || args[index] === "-h") {
-      process.stdout.write("Usage: node scripts/install.mjs [--home DIR] [--targets codex,claude,opencode]\n");
+      process.stdout.write("Usage: node scripts/install.mjs [--home DIR] [--targets cac,claude,codex,opencode]\n");
       return;
     } else throw new Error(`unknown argument: ${args[index]}`);
   }

@@ -1,7 +1,7 @@
-# review-lint：Codex、Claude Code、OpenCode 共用的 Go/Java 代码检查 Hook
+# review-lint：Codex、Claude Code、OpenCode、CodeAgent 共用的 Go/Java 代码检查 Hook
 
-`review-lint` 把代码质量规则实现为一个共享检查核心，再通过三套适配器接入
-Codex、Claude Code 和 OpenCode。
+`review-lint` 把代码质量规则实现为一个共享检查核心，再通过四套适配器接入
+Codex、Claude Code、OpenCode 和 CodeAgent。
 
 默认规则是：
 
@@ -36,7 +36,8 @@ review-lint/
 | --- | --- | --- |
 | Codex | `~/.codex/hooks.json` | `PostToolUse`、`Stop` |
 | Claude Code | `~/.claude/settings.json` | `PostToolUse`、`Stop` |
-| OpenCode | `~/.config/opencode/plugins/review-lint.mjs` | `tool.execute.after` |
+| CodeAgent | `~/.cac/settings.json` | `PostToolUse`、`Stop` |
+| OpenCode | `~/.config/opencode/opencode.json` 的 `plugin` 数组 + `~/.config/opencode/plugins/review-lint.mjs` | `tool.execute.after` |
 
 ## 环境要求
 
@@ -60,9 +61,11 @@ node scripts/install.mjs
 1. 把运行时复制到 `~/.local/share/review-lint/`；
 2. 合并 Codex 的 `~/.codex/hooks.json`；
 3. 合并 Claude Code 的 `~/.claude/settings.json`；
-4. 创建 OpenCode 插件
-   `~/.config/opencode/plugins/review-lint.mjs`；
-5. 修改已有 JSON 配置前创建带时间戳的备份。
+4. 合并 CodeAgent 的 `~/.cac/settings.json`；
+5. 创建 OpenCode 插件
+   `~/.config/opencode/plugins/review-lint.mjs`，
+   并注册到 `~/.config/opencode/opencode.json` 的 `plugin` 数组；
+6. 修改已有 JSON 配置前创建带时间戳的备份。
 
 安装是幂等的。重复运行不会重复注册同一个 Hook。
 
@@ -71,6 +74,7 @@ node scripts/install.mjs
 ```bash
 node scripts/install.mjs --targets codex
 node scripts/install.mjs --targets claude
+node scripts/install.mjs --targets cac
 node scripts/install.mjs --targets opencode
 node scripts/install.mjs --targets codex,opencode
 ```
@@ -181,6 +185,13 @@ Codex 的 `PostToolUse` 发生在文件修改之后，因此检查失败不能�
 3. 在目标项目中进行一次代码修改；
 4. 确认违规信息会返回到当前会话。
 
+### CodeAgent
+
+1. 重新启动 CodeAgent；
+2. 检查 `~/.cac/settings.json` 中已注册 `PostToolUse` 和 `Stop` Hook；
+3. 在目标项目中进行一次代码修改；
+4. 确认违规信息会返回到当前会话。
+
 ### OpenCode
 
 1. 重新启动 OpenCode；
@@ -282,8 +293,9 @@ go test ./...
 1. 从 `~/.codex/hooks.json` 删除命令中包含
    `review-lint/adapters/shared/hook.mjs` 的 `PostToolUse`、`Stop` 条目；
 2. 从 `~/.claude/settings.json` 删除相同条目；
-3. 删除 `~/.config/opencode/plugins/review-lint.mjs`；
-4. 删除 `~/.local/share/review-lint/`。
+3. 从 `~/.cac/settings.json` 删除相同条目；
+4. 删除 `~/.config/opencode/plugins/review-lint.mjs`；
+5. 删除 `~/.local/share/review-lint/`。
 
 如果需要恢复安装前的配置，可以使用安装程序生成的
 `.bak-review-lint-时间戳` 文件。

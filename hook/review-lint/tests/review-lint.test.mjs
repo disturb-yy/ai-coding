@@ -160,10 +160,15 @@ test("installer registers all adapters idempotently", (t) => {
 
   const codex = JSON.parse(fs.readFileSync(path.join(home, ".codex", "hooks.json"), "utf8"));
   const claude = JSON.parse(fs.readFileSync(path.join(home, ".claude", "settings.json"), "utf8"));
+  const cac = JSON.parse(fs.readFileSync(path.join(home, ".cac", "settings.json"), "utf8"));
   assert.equal(codex.hooks.PostToolUse.length, 1);
   assert.equal(codex.hooks.Stop.length, 1);
   assert.equal(claude.hooks.PostToolUse.length, 1);
   assert.equal(claude.hooks.Stop.length, 1);
+  assert.equal(cac.hooks.PostToolUse.length, 1);
+  assert.equal(cac.hooks.Stop.length, 1);
+  const opencode = JSON.parse(fs.readFileSync(path.join(home, ".config", "opencode", "opencode.json"), "utf8"));
   assert.ok(fs.existsSync(path.join(home, ".config", "opencode", "plugins", "review-lint.mjs")));
+  assert.ok(opencode.plugin.includes(path.join(home, ".config", "opencode", "plugins", "review-lint.mjs")));
   assert.ok(fs.existsSync(path.join(home, ".local", "share", "review-lint", "bin", "review-lint.mjs")));
 });
