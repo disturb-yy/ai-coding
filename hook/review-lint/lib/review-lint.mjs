@@ -80,6 +80,10 @@ export function parsePolicy(text) {
       policy.version = parseScalar(content.slice("version:".length));
       continue;
     }
+    if (indent === 0 && content.startsWith("structure_scope:")) {
+      policy.structure_scope = parseScalar(content.slice("structure_scope:".length));
+      continue;
+    }
     if (indent === 0 && content === "languages:") continue;
 
     const languageMatch = content.match(/^(go|java):$/);
@@ -124,6 +128,10 @@ export function parsePolicy(text) {
 function validatePolicy(policy) {
   if (!policy || typeof policy !== "object") throw new Error("policy must be an object");
   if (policy.version !== 1) throw new Error(`unsupported policy version: ${policy.version}`);
+  policy.structure_scope ??= "full";
+  if (!["full", "changed"].includes(policy.structure_scope)) {
+    throw new Error("structure_scope must be 'full' or 'changed'");
+  }
   if (!policy.languages || typeof policy.languages !== "object") {
     throw new Error("policy.languages is required");
   }
@@ -529,6 +537,7 @@ export function reviewProject({ cwd = process.cwd(), policyPath, files, commandR
   const checkSet = files && files.length > 0
     ? new Set(files.map((f) => path.resolve(root, f)))
     : null;
+  const shouldCheckStructure = policy.structure_scope === "full" || checkSet !== null;
   const checked = [];
 
   for (const absolutePath of allFiles) {
@@ -542,25 +551,27 @@ export function reviewProject({ cwd = process.cwd(), policyPath, files, commandR
     checked.push(relativePath);
 
     languagesWithProductionCode.add(language);
-    const source = fs.readFileSync(absolutePath, "utf8");
-    for (const metric of analyzeSource(source, language)) {
-      if (metric.effectiveLines > config.max_function_lines) {
-        violations.push({
-          type: "function-lines",
-          language,
-          path: relativePath,
-          ...metric,
-          limit: config.max_function_lines,
-        });
-      }
-      if (metric.complexity > config.max_cyclomatic_complexity) {
-        violations.push({
-          type: "cyclomatic-complexity",
-          language,
-          path: relativePath,
-          ...metric,
-          limit: config.max_cyclomatic_complexity,
-        });
+    if (shouldCheckStructure) {
+      const source = fs.readFileSync(absolutePath, "utf8");
+      for (const metric of analyzeSource(source, language)) {
+        if (metric.effectiveLines > config.max_function_lines) {
+          violations.push({
+            type: "function-lines",
+            language,
+            path: relativePath,
+            ...metric,
+            limit: config.max_function_lines,
+          });
+        }
+        if (metric.complexity > config.max_cyclomatic_complexity) {
+          violations.push({
+            type: "cyclomatic-complexity",
+            language,
+            path: relativePath,
+            ...metric,
+            limit: config.max_cyclomatic_complexity,
+          });
+        }
       }
     }
   }

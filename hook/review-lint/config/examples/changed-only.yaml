@@ -1,0 +1,34 @@
+# review-lint：仅检查已修改文件的结构
+#
+# 设为 "changed" 后，结构检查（函数行数、圈复杂度）仅在能从工具输入中识别
+# 出本次修改了哪些文件时执行（PostToolUse 场景）。Stop 和 CLI 因为没有工具
+# 输入，会跳过结构检查，只执行覆盖率门禁。
+#
+# 取舍：Stop/CLI 运行更快，但未修改文件中累积的结构违规只有等到这些文件
+# 被修改时才会被发现。
+#
+# 覆盖率检查仍会在所有模式下针对整个项目运行。
+
+version: 1
+
+structure_scope: changed
+
+languages:
+  go:
+    enabled: true
+    max_function_lines: 49
+    max_cyclomatic_complexity: 10
+    min_test_coverage: 80
+    exclude:
+      - "**/*_test.go"
+      - "**/vendor/**"
+
+  java:
+    enabled: true
+    max_function_lines: 49
+    max_cyclomatic_complexity: 10
+    min_test_coverage: 80
+    exclude:
+      - "**/src/test/**"
+      - "**/target/**"
+      - "**/build/**"
