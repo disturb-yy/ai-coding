@@ -153,6 +153,64 @@ test("does not pass Java coverage when JaCoCo XML is missing", (t) => {
   assert.match(coverage.detail, /JaCoCo XML report was not generated/);
 });
 
+const CHANGED_ONLY_POLICY = `
+version: 1
+structure_scope: changed
+languages:
+  go:
+    enabled: true
+    max_function_lines: 4
+    max_cyclomatic_complexity: 2
+    min_test_coverage: 0
+    exclude:
+      - "**/*_test.go"
+  java:
+    enabled: true
+    max_function_lines: 4
+    max_cyclomatic_complexity: 2
+    min_test_coverage: 0
+    exclude:
+      - "**/src/test/**"
+`;
+
+test("parses structure_scope", () => {
+  assert.equal(parsePolicy(CHANGED_ONLY_POLICY).structure_scope, "changed");
+  assert.equal(parsePolicy(TEST_POLICY).structure_scope, "full"); // default
+});
+
+test("rejects invalid structure_scope values", () => {
+  assert.throws(
+    () => parsePolicy("version: 1\nstructure_scope: unknown\nlanguages:\n  go:\n    enabled: true\n    max_function_lines: 4\n    max_cyclomatic_complexity: 2"),
+    /structure_scope must be/,
+  );
+});
+
+test("skips structure checks when scope is changed and no files provided", (t) => {
+  const project = temporaryDirectory(t);
+  fs.writeFileSync(path.join(project, ".review-policy.yaml"), CHANGED_ONLY_POLICY);
+  fs.writeFileSync(path.join(project, "bad.go"), "package p\nfunc TooBig(a bool, b bool, c bool) {\n  if a && b || c {\n    println(\"1\")\n    println(\"2\")\n    println(\"3\")\n    println(\"4\")\n    println(\"5\")\n    println(\"6\")\n  }\n}\n");
+
+  // No files param — structure checks should be skipped
+  const result = reviewProject({ cwd: project });
+  const structureViolations = result.violations.filter(
+    (v) => v.type === "function-lines" || v.type === "cyclomatic-complexity",
+  );
+  assert.equal(structureViolations.length, 0, "expected no structure violations when scope is changed and no files param");
+});
+
+test("reports structure violations when scope is full and no files provided", (t) => {
+  const project = temporaryDirectory(t);
+  const policy = CHANGED_ONLY_POLICY.replace("structure_scope: changed", "structure_scope: full");
+  fs.writeFileSync(path.join(project, ".review-policy.yaml"), policy);
+  fs.writeFileSync(path.join(project, "bad.go"), "package p\nfunc TooBig(a bool, b bool, c bool) {\n  if a && b || c {\n    println(\"1\")\n    println(\"2\")\n    println(\"3\")\n    println(\"4\")\n    println(\"5\")\n    println(\"6\")\n  }\n}\n");
+
+  const result = reviewProject({ cwd: project });
+  const structureViolations = result.violations.filter(
+    (v) => v.type === "function-lines" || v.type === "cyclomatic-complexity",
+  );
+  assert.ok(structureViolations.length > 0, "expected structure violations when scope is full");
+});
+
 test("installer registers all adapters idempotently", (t) => {
   const home = temporaryDirectory(t);
   install({ home });

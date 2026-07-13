@@ -1,0 +1,47 @@
+# review-lint：全量结构检查（默认行为）
+#
+# 结构检查（函数行数、圈复杂度）在任何触发方式下都会扫描全部生产文件——
+# PostToolUse、Stop、CLI 均执行全量检查。
+#
+# 适合希望每次检查都按统一标准覆盖整个代码库的项目。
+
+version: 1
+
+# "full" 每次检查都扫描全部生产文件。
+# "changed" 仅检查当前工具调用涉及的文件；当没有已修改文件时
+# （Stop / CLI 场景），跳过结构检查，只运行覆盖率门禁。
+# 覆盖率始终在全项目上测量，不受此配置影响。
+structure_scope: full
+
+languages:
+  go:
+    enabled: true
+
+    # 每个函数的最大有效代码行数（严格小于此值）。
+    # 设为 50 表示函数必须 ≤ 50 个有效代码行。
+    # 空行和纯注释行不计入。
+    max_function_lines: 50
+
+    # 每个函数的最大圈复杂度。
+    max_cyclomatic_complexity: 10
+
+    # 最低测试覆盖率百分比（0–100）。
+    # 设为 0 可关闭该语言的覆盖率门禁。
+    min_test_coverage: 80
+
+    # 需要排除的文件/目录的 glob 模式。
+    exclude:
+      - "**/*_test.go"
+      - "**/vendor/**"
+
+  java:
+    enabled: true
+
+    max_function_lines: 49
+    max_cyclomatic_complexity: 10
+    min_test_coverage: 80
+
+    exclude:
+      - "**/src/test/**"
+      - "**/target/**"
+      - "**/build/**"

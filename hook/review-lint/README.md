@@ -99,6 +99,13 @@ cp config/default.review-policy.yaml /path/to/your-project/.review-policy.yaml
 ```yaml
 version: 1
 
+# 结构检查范围（函数行数、圈复杂度）
+# - "full":    扫描所有生产文件（默认；Stop/CLI 下生效）
+# - "changed": 仅检查当前工具调用涉及的文件；当没有已修改文件时
+#              （Stop/CLI 模式），跳过结构检查
+# 覆盖率检查始终针对整个项目运行。
+structure_scope: full
+
 languages:
   go:
     enabled: true
@@ -125,6 +132,21 @@ languages:
 
 `min_test_coverage: 80` 表示测试覆盖率至少为 80%。临时设为 `0` 可以关闭该
 语言的覆盖率门禁，但默认策略不会关闭它。
+
+`structure_scope` 控制结构检查（函数行数、圈复杂度）的范围：
+
+- **`full`**（默认）：每次都扫描所有生产文件。PostToolUse 触发时仍会根据工
+  具输入定位到本次修改的文件，但 Stop 和 CLI 会执行全量检查。
+- **`changed`**：仅在能从工具输入中提取到已修改文件时检查结构（PostToolUse
+  场景）。Stop 和 CLI 因为没有工具输入，会跳过结构检查，只运行覆盖率门禁。
+
+选择 `changed` 可以加快 Stop 和 CLI 的执行速度，但未修改文件中累积的结构违
+规只有在这些文件下次被修改时才会被发现。覆盖率检查不受此设置影响，始终针
+对整个项目。
+
+示例配置文件位于 `config/examples/` 目录：
+- `full.yaml` — 全量结构检查（默认行为）
+- `changed-only.yaml` — 仅检查已修改文件的结构
 
 检查器从当前工作目录开始向父目录查找最近的 `.review-policy.yaml`。如果没有
 找到，就使用安装包内的默认策略。

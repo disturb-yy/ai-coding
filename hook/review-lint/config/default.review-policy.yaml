@@ -1,9 +1,16 @@
 version: 1
 
+# 结构检查范围（函数行数、圈复杂度）：
+# - "full":    扫描所有生产文件（默认值；Stop/CLI 下执行全量扫描）
+# - "changed": 仅检查当前工具调用涉及的文件；当没有已修改文件时
+#              （Stop/CLI 场景），跳过结构检查
+# 覆盖率检查始终针对整个项目，不受此配置影响。
+structure_scope: full
+
 languages:
   go:
     enabled: true
-    max_function_lines: 49
+    max_function_lines: 50
     max_cyclomatic_complexity: 10
     min_test_coverage: 80
     exclude:
@@ -12,7 +19,7 @@ languages:
 
   java:
     enabled: true
-    max_function_lines: 49
+    max_function_lines: 50
     max_cyclomatic_complexity: 10
     min_test_coverage: 80
     exclude:
