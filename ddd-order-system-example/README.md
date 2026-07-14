@@ -21,6 +21,7 @@ domain -> (无项目模块依赖)
 `OrderCommandServiceImpl` 从不直接修改订单状态：确认用例调用 `order.confirm()`，由聚合根保证只有待确认订单能被确认。
 
 根目录和每个模块的 `AGENTS.md` 同时说明模块边界；它们由 ArchUnit 规则和 Maven 构建共同兜底，而非仅靠文本约定。
+需要新增或维护项目规约时，先阅读 [项目规约编写指南](PROJECT_GOVERNANCE_GUIDE.md)。
 
 ## 目录层级与职责
 

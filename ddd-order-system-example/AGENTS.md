@@ -2,6 +2,9 @@
 
 本项目使用 Java 21、Maven 多模块和分层 DDD。改动前先确定业务规则的归属，不以包名或目录名替代边界判断。
 
+首次参与项目或需要新增规约时，先阅读 [PROJECT_GOVERNANCE_GUIDE.md](PROJECT_GOVERNANCE_GUIDE.md)，
+再读取本文件和目标模块的 `AGENTS.md`。
+
 ## 允许的依赖方向
 
 ```text
