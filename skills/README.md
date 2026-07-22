@@ -9,7 +9,7 @@
 | 目录 | 定位 | 使用方式 | 技能数 |
 | --- | --- | --- | ---: |
 | [model-involved](model-involved/README.md) | 可由模型根据请求自动匹配的通用工作流 | 描述命中时自动使用，也可显式点名 | 8 |
-| [user-invoked](user-invoked/README.md) | 需要用户明确发起的高控制度工作流 | 在请求中写 `$skill-name` | 9 |
+| [user-invoked](user-invoked/README.md) | 需要用户明确发起的高控制度工作流 | 在请求中写 `$skill-name` | 11 |
 | [third-skill](third-skill/README.md) | 引入的第三方或复用型技能 | 依照该技能自身的安装与调用说明 | 8 |
 
 目录名 `model-involved` 是当前仓库的实际路径，保留其既有拼写。
@@ -27,6 +27,8 @@
 | 为仓库生成或刷新 AI 导航索引 | `gen-index` | 普通 README 写作不需要生成完整索引 |
 | 维护有 YAML frontmatter 的知识文档 | `okf-frontmatter` | 只查一个精确术语时先用 `rg` |
 | 把复杂过程做成可离线打开的交互式说明页 | `work-canvas` | 交付产品页面应使用前端构建技能 |
+| 将口述或已有流程整理为可执行 DAG SOP | `create-sop` | 未知或有争议的流程应先做发现或决策 |
+| 将问题单受控地拆为用户执行的 DAG tickets | `execute-sop` | 直接改代码或自动推进工单时应改用明确授权的实现流程 |
 
 ## 阅读约定
 

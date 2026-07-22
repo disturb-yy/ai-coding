@@ -18,6 +18,8 @@ $grill-ui-with-docs，为现有 React 项目设计预警中心页面。
 | [grill-me](grill-me/SKILL.md) | 单纯用追问打磨计划或设计 | `$grill-me` 后给出计划、设计或目标 | 进入一次 `grilling` 会话：每次只问一个会影响后续决策的问题，并提供建议答案。 |
 | [grill-ui-with-docs](grill-ui-with-docs/SKILL.md) | 将模糊 UI 想法收敛为经确认的设计交接包 | `$grill-ui-with-docs`，描述页面/流程意图及现有项目约束 | 逐个确认设计决策，先交 Markdown/ASCII wireframe；用户批准后形成可实现的设计系统和交接文档。 |
 | [grill-with-docs](grill-with-docs/SKILL.md) | 一边追问设计，一边沉淀领域文档 | `$grill-with-docs` 后给出待澄清的方案 | 结合 `grilling` 与 `domain-modeling`，将稳定结论写入术语表或 ADR，而不是只停留在对话中。 |
+| [create-sop](create-sop/SKILL.md) | 将用户提供的流程转成可执行的 DAG 标准作业程序（SOP） | `$create-sop`，提供流程描述及需要的交付位置或格式 | 形成含节点、阻塞边、角色、决策门、例外升级、证据和完成条件的可干跑 SOP，并明确假设和待确认项。 |
+| [execute-sop](execute-sop/SKILL.md) | 以阶段门和持久状态处理问题单 | `$execute-sop`，提供问题描述和可选的状态目录 | 先分析、等待用户批准，再建立用户执行的 DAG tickets；`STATE.md` 记录阶段、frontier、证据和交接状态。 |
 | [reviewing-code](reviewing-code/SKILL.md) | 对具体代码变更做多通道、可追溯审查 | `$reviewing-code`，提供 PR、分支、diff、文件或比较基准 | 分开检查语法、功能、规范及按需安全面；每项发现都需有文件、hunk、测试或标准证据，并汇总为严重度排序的报告。 |
 | [work-canvas](work-canvas/SKILL.md) | 将工作状态、决策或比较做成离线可打开的交互页面 | `$work-canvas`，说明是状态、决策还是比较场景 | 生成一个自包含 HTML 文件，带真实待确认事项、图例和来源脚注；不修改用户源码，也不依赖外网/CDN。 |
 | [writing-great-skills](writing-great-skills/SKILL.md) | 编写或评估可预测、边界清晰的技能规则 | `$writing-great-skills`，用于创建或修改 skill 的描述、结构和引用层级 | 依据触发成本、信息层级、概念空间、拆分粒度和 no-op 剪枝原则，产出更可执行、易维护的 `SKILL.md` 设计。 |
@@ -31,6 +33,8 @@ $grill-ui-with-docs，为现有 React 项目设计预警中心页面。
 | 留下一份可供后续 agent 快速导航的仓库说明 | `gen-index` |
 | 把产品、架构或方案的决策逐一问透 | `grill-me` |
 | 同时要 UI wireframe、设计系统和实现交接 | `grill-ui-with-docs` |
+| 将现有流程固化为可执行、可审计的 DAG SOP | `create-sop` |
+| 让问题单经用户批准后拆为 tickets，并跨模型维护处理状态 | `execute-sop` |
 | 不只做设计讨论，还要把领域语言和决策落为文档 | `grill-with-docs` |
 | 要判断变更能否接受 | `reviewing-code` |
 | 需要在浏览器里审阅进展、方案或多个选项 | `work-canvas` |
