@@ -202,6 +202,171 @@ def check_adapter_review_contract(adapter_cli: Path) -> tuple[bool, str]:
     return True, ""
 
 
+def check_work_item_trace_contract(result_schema_path: Path, runner_path: Path) -> tuple[bool, str]:
+    schema = json.loads(result_schema_path.read_text(encoding="utf-8"))
+    trace = (schema.get("properties") or {}).get("trace") or {}
+    properties = trace.get("properties") or {}
+    required = set(trace.get("required") or [])
+    run_states = set((properties.get("run_state") or {}).get("enum") or [])
+    expected_run_states = {"none", "leased", "running", "checkpointed", "continued", "completed"}
+    expected_terminal_states = {
+        "none",
+        "resolved",
+        "concluded",
+        "duplicate",
+        "blocked",
+        "escalated",
+        "cancelled",
+    }
+
+    if run_states != expected_run_states:
+        return False, f"run_state must be exactly {sorted(expected_run_states)}, got {sorted(run_states)}"
+    if {"blocked", "escalated"} & run_states:
+        return False, "run_state must not include work-item terminal states"
+    terminal_states = set((properties.get("work_item_terminal_state") or {}).get("enum") or [])
+    if terminal_states != expected_terminal_states:
+        return False, f"work_item_terminal_state must be exactly {sorted(expected_terminal_states)}"
+    if "transaction_idempotency_key_present" not in required:
+        return False, "transaction_idempotency_key_present must be required in the trace"
+    if (properties.get("transaction_idempotency_key_present") or {}).get("type") != "boolean":
+        return False, "transaction_idempotency_key_present must be boolean"
+
+    module = import_python_module(runner_path, "ccp_eval_runner_trace_check")
+    fallback = module.fallback_result("ACP-TRACE", "synthetic error")
+    default_trace = fallback.get("trace") or {}
+    expected_defaults = {
+        "work_item_kind": "none",
+        "run_state": "none",
+        "lease_acquired": False,
+        "checkpoint_written": False,
+        "transaction_idempotency_key_present": False,
+        "scheduler_action": "none",
+        "work_item_terminal_state": "none",
+    }
+    if any(default_trace.get(name) != value for name, value in expected_defaults.items()):
+        return False, "fallback trace must use the documented work-item defaults"
+    return True, ""
+
+
+def check_adapter_work_item_schema(schema_path: Path) -> tuple[bool, str]:
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    work_item = ((schema.get("$defs") or {}).get("workItemContext") or {})
+    key_schema = (work_item.get("properties") or {}).get("idempotency_key") or {}
+    if key_schema.get("type") != "string" or key_schema.get("minLength") != 1:
+        return False, "workItemContext.idempotency_key must be a non-empty string"
+
+    for rule in work_item.get("allOf") or []:
+        condition = (((rule.get("if") or {}).get("properties") or {}).get("kind") or {})
+        transaction_rule = condition.get("const") == "transaction"
+        requires_kind = "kind" in ((rule.get("if") or {}).get("required") or [])
+        requires_key = "idempotency_key" in ((rule.get("then") or {}).get("required") or [])
+        forbids_key = "idempotency_key" in ((((rule.get("else") or {}).get("not") or {}).get("required") or []))
+        if transaction_rule and requires_kind and requires_key and forbids_key:
+            return True, ""
+    return False, "workItemContext must require idempotency_key iff kind is transaction"
+
+
+def check_adapter_work_item_contract(adapter_cli: Path) -> tuple[bool, str]:
+    task = {
+        "task_id": "work-item-run-1",
+        "actor_id": "runner-a",
+        "role": "work_item_runner",
+        "phase": "work_item",
+        "objective": "Resolve the accepted work item.",
+        "work_item": {
+            "id": "INC-1",
+            "kind": "issue",
+            "objective": "Resolve the incident.",
+            "acceptance_criteria": ["A verified terminal outcome is recorded."],
+            "dependencies": [],
+            "authorization": ["read_repository"],
+        },
+        "run": {
+            "id": "INC-1-R01",
+            "attempt": 1,
+            "lease_id": "lease-1",
+            "lease_expires_at": "2026-08-01T00:30:00Z",
+            "resume_checkpoint_ref": "",
+            "budget": {
+                "checkpoint_at_fraction": 0.40,
+                "handoff_at_fraction": 0.45,
+                "hard_stop_at_fraction": 0.50,
+            },
+        },
+        "constraints": [],
+        "required_skills": [],
+        "required_references": [],
+        "required_mcp": [],
+        "required_tools": [],
+        "ownership": {"writable_paths": [], "read_only_paths": ["."], "forbidden_paths": []},
+        "edits_allowed": False,
+        "expected_output": {"format": "work_item_run_report", "required_fields": [], "must_report": []},
+        "validation": [],
+        "stop_if": [],
+    }
+    valid_contract = {"ccp_version": 4, "next_action": "delegate_read_only", "task": task}
+
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "contract.json"
+        path.write_text(json.dumps(valid_contract), encoding="utf-8")
+        valid = subprocess.run(["node", str(adapter_cli), "validate", str(path)], text=True, capture_output=True)
+        if valid.returncode != 0:
+            return False, f"valid work-item contract was rejected: {valid.stdout or valid.stderr}"
+
+        invalid_budget = json.loads(json.dumps(valid_contract))
+        invalid_budget["task"]["run"]["budget"]["hard_stop_at_fraction"] = 0.51
+        path.write_text(json.dumps(invalid_budget), encoding="utf-8")
+        rejected = subprocess.run(["node", str(adapter_cli), "validate", str(path)], text=True, capture_output=True)
+        if rejected.returncode == 0:
+            return False, "work-item contract above the 50% hard stop was accepted"
+
+        invalid_order = json.loads(json.dumps(valid_contract))
+        invalid_order["task"]["run"]["budget"]["handoff_at_fraction"] = 0.40
+        path.write_text(json.dumps(invalid_order), encoding="utf-8")
+        rejected = subprocess.run(["node", str(adapter_cli), "validate", str(path)], text=True, capture_output=True)
+        if rejected.returncode == 0:
+            return False, "work-item contract with unordered budget thresholds was accepted"
+
+        invalid_kind = json.loads(json.dumps(valid_contract))
+        invalid_kind["task"]["work_item"]["kind"] = "alert"
+        path.write_text(json.dumps(invalid_kind), encoding="utf-8")
+        rejected = subprocess.run(["node", str(adapter_cli), "validate", str(path)], text=True, capture_output=True)
+        if rejected.returncode == 0:
+            return False, "work-item contract with an unsupported kind was accepted"
+
+        transaction_without_key = json.loads(json.dumps(valid_contract))
+        transaction_without_key["task"]["work_item"]["kind"] = "transaction"
+        path.write_text(json.dumps(transaction_without_key), encoding="utf-8")
+        rejected = subprocess.run(["node", str(adapter_cli), "validate", str(path)], text=True, capture_output=True)
+        if rejected.returncode == 0:
+            return False, "transaction work-item contract without idempotency_key was accepted"
+
+        transaction_with_key = json.loads(json.dumps(transaction_without_key))
+        transaction_with_key["task"]["work_item"]["idempotency_key"] = "payment-INC-1-v1"
+        path.write_text(json.dumps(transaction_with_key), encoding="utf-8")
+        accepted = subprocess.run(["node", str(adapter_cli), "validate", str(path)], text=True, capture_output=True)
+        if accepted.returncode != 0:
+            return False, f"transaction work-item contract with idempotency_key was rejected: {accepted.stdout or accepted.stderr}"
+
+        non_transaction_with_key = json.loads(json.dumps(valid_contract))
+        non_transaction_with_key["task"]["work_item"]["idempotency_key"] = "must-not-exist"
+        path.write_text(json.dumps(non_transaction_with_key), encoding="utf-8")
+        rejected = subprocess.run(["node", str(adapter_cli), "validate", str(path)], text=True, capture_output=True)
+        if rejected.returncode == 0:
+            return False, "non-transaction work-item contract with idempotency_key was accepted"
+
+    return True, ""
+
+
+def check_work_item_loop(loop_test: Path) -> tuple[bool, str]:
+    if not loop_test.exists():
+        return False, "work-item loop regression test is missing"
+    executed = subprocess.run(["node", str(loop_test)], text=True, capture_output=True)
+    if executed.returncode != 0:
+        return False, executed.stdout or executed.stderr or "work-item loop regression test failed"
+    return True, ""
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--skill-dir", required=True)
@@ -262,6 +427,71 @@ def main() -> int:
                     collect_paths(value, f"{prefix}[{index}]")
         collect_paths(data)
         check(not path_entries, "S-15", f"Config map must not hardcode path fields: {path_entries}", failures)
+
+        scheduler = data.get("work_item_scheduler_policy") or {}
+        accepted_kinds_ok, accepted_kinds_missing = list_contains_all(
+            scheduler.get("accepted_kinds"),
+            {"issue", "request", "transaction", "ticket"},
+        )
+        terminal_states_ok, terminal_states_missing = list_contains_all(
+            scheduler.get("terminal_states"),
+            {"resolved", "concluded", "duplicate", "blocked", "escalated", "cancelled"},
+        )
+        budget = scheduler.get("budget") or {}
+        continuation = scheduler.get("continuation") or {}
+        programmatic_tool_calling = scheduler.get("programmatic_tool_calling") or {}
+        terminal_gates = scheduler.get("terminal_gates") or {}
+        stop_retry_ok, stop_retry_missing = list_contains_all(
+            terminal_gates.get("stop_auto_retry_for"),
+            {"blocked", "escalated"},
+        )
+        scheduler_owns_ok, scheduler_owns_missing = list_contains_all(
+            scheduler.get("scheduler_owns"),
+            {
+                "intake_normalization",
+                "dependency_gating",
+                "lease_acquisition_and_expiry_recovery",
+                "budget_enforcement",
+                "session_continuation",
+                "terminal_state_transition",
+            },
+        )
+        check(
+            accepted_kinds_ok
+            and terminal_states_ok
+            and scheduler.get("work_item") == "persistent_business_unit"
+            and scheduler.get("run") == "one_session_processing_attempt"
+            and scheduler_owns_ok
+            and (scheduler.get("lease") or {}).get("required") is True
+            and (scheduler.get("dependencies") or {}).get("required_before_lease") is True
+            and budget.get("checkpoint_at_fraction") == 0.40
+            and budget.get("handoff_at_fraction") == 0.45
+            and budget.get("hard_stop_at_fraction") == 0.50
+            and continuation.get("checkpoint_required_before_hard_stop") is True
+            and continuation.get("resume_same_work_item") is True
+            and set(continuation.get("predecessor_must_be") or []) == {"checkpointed", "expired"}
+            and continuation.get("requires_fresh_session") is True
+            and continuation.get("native_resume_allowed") is False
+            and continuation.get("requires_new_run_id") is True
+            and continuation.get("requires_higher_attempt") is True
+            and continuation.get("requires_checkpoint_ref") is True
+            and set(programmatic_tool_calling.get("allowed_for") or []) == {
+                "bounded_read_tool_batches", "filtering", "joining", "aggregation", "mechanical_validation"
+            }
+            and set(programmatic_tool_calling.get("host_only") or []) == {
+                "durable_state", "lease_transition", "session_launch", "approval", "external_write", "semantic_judgment"
+            }
+            and terminal_gates.get("resolved_requires_validation") is True
+            and terminal_gates.get("concluded_requires_evidence") is True
+            and stop_retry_ok
+            and (scheduler.get("transactions") or {}).get("idempotency_required") is True,
+            "S-46",
+            "work_item_scheduler_policy is incomplete: "
+            f"kinds={accepted_kinds_missing}, terminal_states={terminal_states_missing}, "
+            f"scheduler_owns={scheduler_owns_missing}, stop_retry={stop_retry_missing}, "
+            "fresh-session and programmatic-tool-calling policy must be complete",
+            failures,
+        )
 
         contract_schema = data.get("contract_schema") or {}
         schema_must_report = set(contract_schema.get("must_report") or [])
@@ -533,6 +763,16 @@ def main() -> int:
                 "check_id": "S-28",
                 "message": f"Adapter contract schema is not valid JSON: {exc}",
             })
+        try:
+            work_item_schema_ok, work_item_schema_message = check_adapter_work_item_schema(adapter_schema)
+        except Exception as exc:
+            work_item_schema_ok, work_item_schema_message = False, str(exc)
+        check(
+            work_item_schema_ok,
+            "S-49",
+            f"Adapter work-item schema check failed: {work_item_schema_message}",
+            failures,
+        )
     if adapter_cli.exists() and shutil.which("node"):
         try:
             adapter_review_ok, adapter_review_message = check_adapter_review_contract(adapter_cli)
@@ -542,6 +782,26 @@ def main() -> int:
             adapter_review_ok,
             "S-42",
             f"Adapter reviewer-enforcement behavior check failed: {adapter_review_message}",
+            failures,
+        )
+        try:
+            adapter_work_item_ok, adapter_work_item_message = check_adapter_work_item_contract(adapter_cli)
+        except Exception as exc:
+            adapter_work_item_ok, adapter_work_item_message = False, str(exc)
+        check(
+            adapter_work_item_ok,
+            "S-47",
+            f"Adapter work-item scheduling behavior check failed: {adapter_work_item_message}",
+            failures,
+        )
+        try:
+            loop_ok, loop_message = check_work_item_loop(skill / "eval" / "tests" / "work-item-loop.test.js")
+        except Exception as exc:
+            loop_ok, loop_message = False, str(exc)
+        check(
+            loop_ok,
+            "S-50",
+            f"Fresh-session loop behavior check failed: {loop_message}",
             failures,
         )
 
@@ -674,6 +934,18 @@ def main() -> int:
             recorder_ok,
             "S-33",
             f"Conversation recorder behavior check failed: {recorder_message}",
+            failures,
+        )
+
+    if result_schema.exists() and runner.exists():
+        try:
+            trace_contract_ok, trace_contract_message = check_work_item_trace_contract(result_schema, runner)
+        except Exception as exc:
+            trace_contract_ok, trace_contract_message = False, str(exc)
+        check(
+            trace_contract_ok,
+            "S-48",
+            f"Work-item trace contract check failed: {trace_contract_message}",
             failures,
         )
 

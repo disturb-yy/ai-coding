@@ -145,6 +145,33 @@ This guard does not block minimal routing reads, final verification commands, or
 
 Completion criterion: every Large implementation edit is preceded by a visible delegation contract; if the direct-implementation exception was used, every condition is met and the justification is explicit before the first edit.
 
+## Work Item Scheduling
+
+When work arrives from a queue, treat the accepted `issue`, `request`,
+`transaction`, or `ticket` as one durable **work item**. A **run** is only one
+session attempt to process that work item; it is never the durable unit or the
+authority to silently expand the item.
+
+The host Scheduler owns intake normalization, dependency gating, leases,
+budget enforcement, session continuation, and terminal transitions. The
+Orchestrator defines the current run contract; the Runner carries out one
+attempt using the needed research, planning, execution, validation, and
+reflection responsibilities. Do not create a separate Scheduler skill merely
+to repeat those host-control duties.
+
+Use the work-item state model in `references/orchestration-state.md` whenever
+work must be queued, resumed, or protected from duplicate processing. A run
+must write a checkpoint at the configured warning threshold, hand off by the
+configured handoff threshold, and stop at the configured hard budget limit.
+The next session resumes the same work item from that checkpoint. `resolved`
+requires validation evidence; `concluded` requires evidence for the conclusion;
+`blocked` and `escalated` stop automatic retry; `duplicate` and `cancelled` are
+also terminal outcomes.
+
+Completion criterion: the scheduler can distinguish the work item from its
+current run, no active lease is duplicated, and an interrupted or budget-limited
+run can resume without reconstructing state from conversation history.
+
 ## Read-only Exploration Decision
 
 Routing to `exploring-project` does not by itself require a subagent. Before substantive repository discovery for a Large task, choose and state one of these execution modes:
@@ -203,7 +230,7 @@ When modifying this skill, read [`references/maintenance.md`](references/mainten
 2. For Large work, choose the first unsatisfied surface and read only that reference.
    Completion criterion: exactly one active surface is named unless the next action is already implementation with no remaining control surface.
 3. Decide whether orchestration state is required.
-   Completion criterion: orchestration is used for Large delegation, read-only evidence gathering, high-risk implementation planning, specialized skill routing, staged or parallel work, ownership boundaries, persistent state, or reconciliation; it is not used for Small work just because the user asked for agents.
+   Completion criterion: orchestration is used for Large delegation, read-only evidence gathering, high-risk implementation planning, specialized skill routing, staged or parallel work, ownership boundaries, persistent state, reconciliation, or work-item scheduling; it is not used for Small work just because the user asked for agents.
 4. If specialized procedure is needed, read skill orchestration and name `required_skills`.
    Completion criterion: `grilling`, `diagnosing-problem`, `exploring-project`, `reviewing-code`, `coding-project`, or `coding-tdd` is explicit whenever skipping it would change the result.
 5. Apply the selected surface or orchestration state until its completion criterion is met. After implementation or a fix, apply the Reviewer Enforcement Gate before acceptance.
@@ -217,6 +244,11 @@ When a wrapper, task contract, or summary asks for a routing trace, use these me
 
 - `active_surface` is the first unsatisfied surface, not every relevant concern.
 - `orchestration_used` means orchestration state materially shaped delegation, ownership, persistence, dependency ordering, high-risk implementation planning, evidence gathering, or reconciliation.
+- `work_item` means the durable unit of accepted work; `run` means one session attempt. The Scheduler owns lease acquisition, dependency eligibility, normalized budget thresholds, and continuation. The Runner does not take another work item while its current run is active.
+- A work-item run checkpoints by the configured 40% threshold, restricts itself to handoff or final validation by the configured 45% threshold, and stops by the configured 50% hard limit. A successor run resumes the same work item from the checkpoint rather than treating it as a new ticket.
+- A successor is a fresh session, not native resume: start it only after the predecessor is `checkpointed` or `expired`, with a new run id, higher attempt, and durable checkpoint reference. The deterministic host scheduler, not transient model state, controls this transition.
+- Use Programmatic Tool Calling only inside one run for predictable bounded tool batches and mechanical reduction. The host owns persisted work-item state, leases, approvals, writes, semantic judgment, and every session launch.
+- Valid work-item terminal states are `resolved`, `concluded`, `duplicate`, `blocked`, `escalated`, and `cancelled`. Only validation evidence can produce `resolved`; evidence-backed no-change outcomes use `concluded`; `blocked` and `escalated` stop automatic retry.
 - `classification: Tiny` is only for no-artifact interaction. Bounded snippet analysis is `Small`; repository discovery, current-source evidence gathering, and any required downstream skill route are `Large`.
 - If the prompt states a snippet, function, or artifact is provided and says no repository access is needed, classify from that stated boundary as `Small` and use `next_action: direct_answer`; do not ask for the artifact merely because an eval wrapper omitted its body.
 - If the prompt states that a library, repository, proposal, assumption set, or other target exists but the adapter omits its concrete body or name, do not convert the route into a blocking context question when the control decision is already determined.

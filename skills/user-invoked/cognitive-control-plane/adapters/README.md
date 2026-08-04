@@ -1,29 +1,58 @@
 # Adapter Layer
 
-The Cognitive Control Plane skill is portable policy. It decides the next action and emits a task contract, but it must not pretend that every host can start a subagent.
+中文操作手册见 [README.zh-CN.md](README.zh-CN.md)。
 
-The adapter layer is the host-specific bridge:
+The Cognitive Control Plane skill produces portable task contracts. The adapter layer validates a contract, selects a supported host, and can explicitly start a **fresh** worker session.
 
-1. Validate the portable contract in `contract.schema.json`.
-2. Detect platform capabilities.
-3. Convert the contract into a native task, subagent call, or handoff.
-4. Report whether a real worker started.
+## Lifecycle
 
-Every task contract carries a stable `actor_id`. Review-phase contracts also carry `review_of_task_id`, `review_of_actor_id`, `review_iteration`, `supersedes_review_task_id`, and an immutable `review_target`. Adapters must reject a review whose actor matches the reviewed implementation actor, whose target is unversioned, or whose task is write-capable.
+1. `validate` checks the portable contract.
+2. `render` preserves a handoff only; it never starts a worker.
+3. `launch` is dry-run by default and returns the candidate native command shape.
+4. `launch --execute` starts a fresh Codex or OpenCode process after workspace and transaction idempotency checks.
 
-Real delegation is true only when the adapter returns a terminal launch record with a `task_id`. If a platform has no subagent API available to the current run, the adapter must return a handoff result and the orchestrator must stop before implementation instead of claiming that delegation happened.
+```bash
+node scripts/ccp-adapter.js validate contract.json
+node scripts/ccp-adapter.js render --platform codex contract.json
+node scripts/ccp-adapter.js launch --platform codex --workspace /absolute/workspace contract.json
+node scripts/ccp-adapter.js launch --platform codex --workspace /absolute/workspace --execute contract.json
+```
 
-## Result Semantics
+`launch` only supports `codex` and `opencode`. It requires an existing workspace and uses direct argument arrays:
 
-- `started`: a host worker was actually created and a task id is available.
-- `handoff`: the contract is valid, but no host worker was started.
-- `unavailable`: the platform lacks the required capability.
-- `invalid`: the contract is not safe to run.
+- Codex: `codex exec --json -C WORKSPACE -s SANDBOX -a APPROVAL PROMPT`
+- OpenCode: `opencode run --format json --dir WORKSPACE PROMPT`
 
-## Platform Guides
+No adapter command uses resume, continue, or dangerous-bypass flags. `--executable PATH` exists for controlled integration tests or a locally installed client path; it does not alter the platform-specific argument contract.
 
-- `opencode.md`: OpenCode task/subagent bridge.
-- `codex.md`: Codex surfaces and fallback behavior.
-- `claude-code.md`: Claude Code Task-tool bridge.
+## Result semantics
 
-Use `scripts/ccp-adapter.js` for local validation and deterministic rendering.
+- `started` is returned only after the operating system spawned the client and includes a local `pid`.
+- `dry_run`, `handoff`, `invalid`, and `unavailable` never include a `pid` and do not claim a native session ID.
+- `work_id` and `run_id` identify the portable work contract. They are not native client/session IDs.
+
+For a `transaction` work item, a non-empty `task.work_item.idempotency_key` is required before launch. The scheduler remains responsible for dependency, lease, retry, checkpoint, and terminal-state decisions.
+
+## Scheduler bridge
+
+Use the loop bridge after the host has read its durable work-item state and
+created the candidate run contract:
+
+```bash
+node scripts/work-item-loop.js \
+  --platform codex \
+  --workspace /absolute/workspace \
+  state.json contract.json
+```
+
+The default result is a dry run. Add `--execute` only after the Scheduler has
+persisted the lease and run contract. The bridge starts a worker only for a
+`dispatch` or a safe `continue` decision. A continuation must use a new run id,
+a higher attempt, and `resume_checkpoint_ref`; a still-running old session is
+reported as `not_dispatched`.
+
+## Platform guides
+
+- [codex.md](codex.md)
+- [opencode.md](opencode.md)
+- [claude-code.md](claude-code.md)

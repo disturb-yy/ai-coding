@@ -3,8 +3,28 @@ access:
   audience: model
   model_read: false
   model_write: true
-  purpose: skill_reference
+purpose: skill_reference
 ---
+
+## 工作项 Scheduler
+
+Scheduler 是宿主侧的持久工作控制过程，而不是 specialist skill 或 Runner。将
+`issue`、`request`、`transaction` 和 `ticket` 标准化为工作项；一个 `run` 只是
+同一工作项的一次 session 尝试。
+
+启动 run 前，Scheduler 必须确认依赖已满足、取得唯一有效租约、解决重叠写入所有权、
+分配单次预算，并带上先前 checkpoint 创建自包含契约。状态为：
+
+```text
+工作项活动态：ready -> leased -> running -> validating
+工作项终态：resolved | concluded | duplicate | blocked | escalated | cancelled
+run：scheduled | leased | running | checkpointed | completed | expired | cancelled
+```
+
+40% token 时 checkpoint；45% 后停止扩张范围；50% 强制结束本次 run。中断、
+checkpoint 或租约过期时，Scheduler 为同一工作项创建下一 attempt，而非复制工作项。
+`resolved` 需要验证，`concluded` 需要证据，`blocked`/`escalated` 在外部条件改变前
+不得自动重试；写入型 `transaction` 还需要幂等键。
 # 编排状态
 
 当工作需要多个 agent、后台任务、并行编码通道或分阶段协调统一时，使用编排状态。

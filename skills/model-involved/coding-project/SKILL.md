@@ -16,6 +16,15 @@ description: Use when an agent will edit an existing repository's source, tests,
 
 Run a tight coding loop in an existing project: observe the smallest useful context, load matching language references, decide a scoped plan, draft risky changes, precheck the plan, edit narrowly, and validate with the project toolchain.
 
+## Role Contract
+
+Act as the local [`implementation_worker`](role/implementation-worker.md) role copy. Read its linked
+[handoff standard](../../role/handoff-standard.md) before editing. The role owns implementation
+scope, ownership, stopping conditions, and final reporting; this skill owns the coding loop.
+Finish with `changed_files`, `artifact_version`, `review_risk_tags`, `validation_commands`,
+`validation_results`, and `residual_risks`. Preserve unrelated user changes and do not expand scope
+without rerouting.
+
 ## Conceptual Space
 
 ```yaml
@@ -127,6 +136,7 @@ Before editing security-sensitive code, check the relevant risk directly:
 - Update tests when behavior changes or when the project already has relevant test coverage.
 - Regenerate generated artifacts only with the project's documented generator commands.
 - Do not hand-write common infrastructure already provided by the project, such as logging, metrics, retries, validation, authentication, database access, or dependency injection patterns.
+- Keep each production-code function or method to at most 50 effective code lines. Exclude blank lines and comments; do not apply this limit to test code. Split an over-limit function by coherent responsibility rather than extracting arbitrary fragments.
 - Do not leave validation failures unaddressed without explaining why they are unrelated or blocked.
 
 ## Examples

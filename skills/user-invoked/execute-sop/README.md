@@ -38,8 +38,8 @@ $execute-sop
     └── 02-<ticket-slug>.md
 ```
 
-- `STATE.md`：唯一的状态索引，保存阶段、frontier、ticket 状态、证据指针、阻塞项和交接信息。
-- `issues/*.md`：每张 ticket 的完整执行目标、阻塞边和验收条件。
+- `STATE.md`：唯一的状态索引，保存阶段、恢复阶段、frontier、ticket 状态、激活条件、证据指针、阻塞项和交接信息。
+- `issues/*.md`：每张 ticket 的完整执行目标、阻塞边、激活条件和验收条件。
 
 不要在 `STATE.md` 重复 ticket 的详细操作；它只负责回答“当前在哪里、谁该做什么、下一步是什么”。
 
@@ -51,7 +51,8 @@ $execute-sop
 | `awaiting-ticket-approval` | 说明 DAG 和 frontier | 批准、合并、拆分或拒绝 tickets |
 | `ticketed-awaiting-user` | 更新状态并说明可执行 frontier | 执行未被阻塞的 ticket，并提供证据 |
 | `awaiting-verification` | 复核用户提供的证据或按请求进行只读检查 | 补充证据或确认结果 |
-| `blocked` / `resolved` | 记录阻塞或总结关闭状态 | 清除阻塞或明确重开 |
+| `blocked` | 记录阻塞、责任人及恢复阶段 | 清除阻塞；模型返回记录的恢复阶段 |
+| `resolved` | 总结关闭状态 | 明确重开 |
 
 ## 继续处理与交接
 

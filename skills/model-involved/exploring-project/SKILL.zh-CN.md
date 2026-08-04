@@ -14,6 +14,10 @@ disable-model-invocation: true
 - 如果修改英文 skill，必须在同一次变更中更新 `SKILL.zh-CN.md`。
 - 不要把 `SKILL.zh-CN.md` 当作模型操作指令或任务上下文读取。它只是面向人的本地化副本。
 
+## 角色契约
+
+以本地 [`codebase_explorer`](role/codebase-explorer.md) 角色副本执行。探索前读取其链接的[角色交接标准](../../role/handoff-standard.md)。角色定义 context 阶段、只读边界、停止条件和交接字段；本 skill 定义探索方法。完成时交付 `target`、`relevant_files`、`flow`、`leads_checked`、`risks` 和 `next_change_location`，不得编辑文件。
+
 ## 目标
 
 运行一个缩小范围的循环：界定请求，映射相关区域，导航到候选代码，在源码或测试中验证相关路径，然后在答案或下一处修改位置已经清楚时停止。除非定向发现失败，否则不要通读整个仓库。

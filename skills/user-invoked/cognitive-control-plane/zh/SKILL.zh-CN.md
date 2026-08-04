@@ -8,6 +8,21 @@ metadata:
     model_write: true
     purpose: skill_runtime
 ---
+
+## 工作项调度
+
+当工作来自队列时，将接纳的 `issue`、`request`、`transaction` 或 `ticket`
+统一视为持久的**工作项**。`run` 仅是处理同一工作项的一次 session 尝试，不能替代
+工作项身份，也不能据此静默扩大范围。
+
+宿主侧 Scheduler 负责接入标准化、依赖门禁、租约、预算、session 续跑与终态迁移；
+Orchestrator 负责本次 run 的契约；Runner 在一次 run 内按需执行取证、规划、实施、
+验证与反思。不要为这些宿主控制职责另建 Scheduler skill。
+
+使用调度状态时，run 必须在预算 40% 时持久化 checkpoint，45% 后只完成当前原子动作、
+验证或交接，并在 50% 时结束。本次 run 的后继 session 必须从 checkpoint 续跑同一
+工作项。`resolved` 必须有验证证据，`concluded` 必须有结论证据；`blocked` 和
+`escalated` 停止自动重试，`duplicate` 与 `cancelled` 也是终态。
 # 认知控制平面
 
 控制平面是一个轻量路由器。默认情况下它不解决任务；它选择应塑造下一步行动的控制面，然后把执行交给正确的技能、工作者、编辑、问题或交付物。

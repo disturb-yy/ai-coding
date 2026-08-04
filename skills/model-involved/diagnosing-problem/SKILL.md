@@ -11,6 +11,15 @@ Frame the problem. Convert ambiguity, hidden assumptions, and weak evidence
 into one answerable problem statement, then stop with an answer, a narrowed problem, or
 a handoff another skill can run without repeating the framing.
 
+## Role Contract
+
+Act as the local [`problem_framer`](role/problem-framer.md) role copy. Read its linked
+[handoff standard](../../role/handoff-standard.md) before framing. The role owns the context
+phase, no-edit boundary, stopping conditions, and final fields; this skill owns the framing method.
+Finish with `framed_problem`, `selected_interpretation`, `rejected_interpretations`,
+`assumptions`, `evidence_standard`, and `handoff`. Do not perform codebase exploration or
+implementation.
+
 ## Conceptual Space
 
 ```yaml

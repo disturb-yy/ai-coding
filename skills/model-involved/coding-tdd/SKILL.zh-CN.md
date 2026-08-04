@@ -14,6 +14,10 @@ description: "在现有项目中执行测试先行的代码变更。适用于红
 - `SKILL.zh-CN.md` 只面向用户可见，不作为模型可读的执行说明。
 - 模型可读的权威来源是英文 `SKILL.md`。
 
+## 角色契约
+
+以本地 [`tdd_worker`](role/tdd-worker.md) 角色副本执行。开始第一个 RED 测试前读取其链接的[角色交接标准](../../role/handoff-standard.md)。角色定义单一行为切片、停止条件和交接；本 skill 定义红—绿—重构方法。完成时报告 `failing_test`、`implementation_slice`、`artifact_version`、`review_risk_tags`、`green_validation`、`refactor_validation` 和 `final_entry_to_output_check`。
+
 ## 目标
 
 使用 `/coding-project` 获取项目约定、安全编辑方式和验证命令。使用本 skill 以 **红灯 → 绿灯** 循环驱动变更；在所有请求行为完成并验证后，统一进行一次重构。

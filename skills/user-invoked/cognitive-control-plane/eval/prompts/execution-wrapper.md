@@ -20,6 +20,13 @@ Use exactly this format:
   "orchestration_used": false,
   "dependency_graph_created": false,
   "persistent_state_used": false,
+  "work_item_kind": "none",
+  "run_state": "none",
+  "lease_acquired": false,
+  "checkpoint_written": false,
+  "transaction_idempotency_key_present": false,
+  "scheduler_action": "none",
+  "work_item_terminal_state": "none",
   "required_skills": [],
   "next_action": "direct_answer | direct_execute | ask_blocking_question | route_skill | delegate_read_only | delegate_write | verify | deliver",
   "asked_user_question": false,
@@ -37,6 +44,14 @@ Rules:
 - `surfaces_used` lists only surfaces actually applied, not every surface that could apply.
 - `references_read` must reflect actual reads.
 - `required_skills` lists explicitly required specialized skills.
+- For queued work, `work_item_kind` identifies the normalized durable unit and
+  `run_state` identifies only the current session attempt. Report the Scheduler
+  decision in `scheduler_action`; never treat a checkpointed run as a terminal
+  work item. `blocked` and `escalated` are work-item terminal states, never
+  run states.
+- Set `transaction_idempotency_key_present` to `true` only when a transaction
+  work item's non-empty durable `work_item.idempotency_key` was checked. It is
+  `false` for every non-transaction work item, which must not carry that key.
 - A bounded provided artifact is not Tiny. If the case says a snippet, function, plan, or artifact is provided and no repository access is needed, treat the omitted body as an adapter omission: classify `Small`, set `next_action` to `direct_answer`, and do not ask the user to paste it.
 - High-risk implementation planning involving auth, permissions, tenants, payments, migrations, security, data model, or multi-subsystem ownership uses orchestration state before implementation or delegation. Set `orchestration_used` to `true` even when the immediate route is project exploration.
 - `behaviors` may include short stable identifiers such as:
@@ -49,6 +64,17 @@ Rules:
   - `block_final_until_validation`
   - `stop_on_required_skill_unavailable`
   - `event_log_in_persistent_state`
+  - `normalize_work_item_intake`
+  - `lease_before_run`
+  - `respect_dependency_and_lease`
+  - `checkpoint_before_budget_limit`
+  - `resume_same_work_item`
+  - `validate_before_resolved`
+  - `stop_on_blocked_or_escalated`
+  - `fresh_session_from_checkpoint`
+  - `no_native_resume`
+  - `ptc_for_bounded_tool_batch`
+  - `host_scheduler_owns_durable_state`
   - `conservative_reflection`
   - `mandatory_review_after_high_risk_implementation`
   - `enforce_reviewer_independence`

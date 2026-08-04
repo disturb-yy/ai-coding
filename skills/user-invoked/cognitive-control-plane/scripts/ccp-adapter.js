@@ -3,10 +3,12 @@
 
 const fs = require("fs");
 const path = require("path");
+const { spawn } = require("child_process");
 
 const PLATFORMS = new Set(["opencode", "codex", "claude-code", "unknown"]);
 const NEXT_ACTIONS = new Set(["delegate_read_only", "delegate_write", "route_skill", "verify", "deliver"]);
-const PHASES = new Set(["context", "design", "implementation", "review", "verification"]);
+const PHASES = new Set(["context", "design", "implementation", "review", "verification", "work_item"]);
+const WORK_ITEM_KINDS = new Set(["issue", "request", "transaction", "ticket"]);
 
 function usage() {
   return [
@@ -14,21 +16,34 @@ function usage() {
     "  scripts/ccp-adapter.js detect [--platform NAME]",
     "  scripts/ccp-adapter.js validate CONTRACT.json",
     "  scripts/ccp-adapter.js render [--platform NAME] [--task-id ID] CONTRACT.json",
+    "  scripts/ccp-adapter.js launch --platform codex|opencode --workspace WORKSPACE [--sandbox MODE] [--approval POLICY] [--execute] [--executable PATH] CONTRACT.json",
   ].join("\n");
 }
 
 function parseArgs(argv) {
-  const args = { _: [] };
+  const args = { _: [], execute: false, workspace: "", sandbox: "workspace-write", approval: "on-request", executable: "", contractPath: "" };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (arg === "--platform") {
-      args.platform = argv[++i];
-    } else if (arg === "--task-id") {
-      args.taskId = argv[++i];
+    if (["--platform", "--task-id", "--workspace", "--sandbox", "--approval", "--executable", "--contract"].includes(arg)) {
+      const value = argv[++i];
+      if (!value || value.startsWith("--")) throw new Error(`${arg} requires a value`);
+      if (arg === "--platform") args.platform = value;
+      if (arg === "--task-id") args.taskId = value;
+      if (arg === "--workspace") args.workspace = value;
+      if (arg === "--sandbox") args.sandbox = value;
+      if (arg === "--approval") args.approval = value;
+      if (arg === "--executable") args.executable = value;
+      if (arg === "--contract") args.contractPath = value;
+    } else if (arg === "--execute") {
+      args.execute = true;
     } else {
       args._.push(arg);
     }
   }
+  const positionalContracts = args._.slice(1);
+  if (args.contractPath && positionalContracts.length) throw new Error("contract must be supplied once");
+  if (!args.contractPath && positionalContracts.length > 1) throw new Error("contract must be supplied once");
+  if (!args.contractPath && positionalContracts.length === 1) args.contractPath = positionalContracts[0];
   return args;
 }
 
@@ -99,6 +114,53 @@ function validateReviewTarget(target, label, errors) {
     return;
   }
   errors.push(`${label}.kind must be git_range or stable_artifact`);
+}
+
+function validateWorkItemContext(workItem, label, errors) {
+  if (!requireObject(workItem, label, errors)) return;
+  for (const key of ["id", "kind", "objective", "acceptance_criteria", "dependencies", "authorization"]) {
+    if (!(key in workItem)) errors.push(`${label}.${key} is required`);
+  }
+  if (typeof workItem.id !== "string" || !workItem.id) errors.push(`${label}.id must be a non-empty string`);
+  if (!WORK_ITEM_KINDS.has(workItem.kind)) errors.push(`${label}.kind must be issue, request, transaction, or ticket`);
+  if (typeof workItem.objective !== "string" || !workItem.objective) errors.push(`${label}.objective must be a non-empty string`);
+  for (const key of ["acceptance_criteria", "dependencies", "authorization"]) requireArray(workItem[key], `${label}.${key}`, errors);
+  if (workItem.kind === "transaction" && !nonEmptyString(workItem.idempotency_key)) {
+    errors.push(`${label}.idempotency_key must be a non-empty string for transaction work items`);
+  }
+  if (workItem.kind !== "transaction" && "idempotency_key" in workItem) {
+    errors.push(`${label}.idempotency_key is allowed only for transaction work items`);
+  }
+}
+
+function validateRunContext(run, label, errors) {
+  if (!requireObject(run, label, errors)) return;
+  for (const key of ["id", "attempt", "lease_id", "lease_expires_at", "resume_checkpoint_ref", "budget"]) {
+    if (!(key in run)) errors.push(`${label}.${key} is required`);
+  }
+  if (typeof run.id !== "string" || !run.id) errors.push(`${label}.id must be a non-empty string`);
+  if (!Number.isInteger(run.attempt) || run.attempt < 1) errors.push(`${label}.attempt must be a positive integer`);
+  if (typeof run.lease_id !== "string" || !run.lease_id) errors.push(`${label}.lease_id must be a non-empty string`);
+  if (typeof run.lease_expires_at !== "string" || !run.lease_expires_at) errors.push(`${label}.lease_expires_at must be a non-empty string`);
+  if (typeof run.resume_checkpoint_ref !== "string") errors.push(`${label}.resume_checkpoint_ref must be a string`);
+  if (!requireObject(run.budget, `${label}.budget`, errors)) return;
+  const budget = run.budget;
+  for (const key of ["checkpoint_at_fraction", "handoff_at_fraction", "hard_stop_at_fraction"]) {
+    if (typeof budget[key] !== "number" || !Number.isFinite(budget[key]) || budget[key] <= 0) {
+      errors.push(`${label}.budget.${key} must be a positive number`);
+    }
+  }
+  if (typeof budget.hard_stop_at_fraction === "number" && budget.hard_stop_at_fraction > 0.5) {
+    errors.push(`${label}.budget.hard_stop_at_fraction must not exceed 0.5`);
+  }
+  if (
+    typeof budget.checkpoint_at_fraction === "number"
+    && typeof budget.handoff_at_fraction === "number"
+    && typeof budget.hard_stop_at_fraction === "number"
+    && !(budget.checkpoint_at_fraction < budget.handoff_at_fraction && budget.handoff_at_fraction < budget.hard_stop_at_fraction)
+  ) {
+    errors.push(`${label}.budget must satisfy checkpoint_at_fraction < handoff_at_fraction < hard_stop_at_fraction`);
+  }
 }
 
 function hasRequirement(items, name) {
@@ -175,6 +237,11 @@ function validateContract(contract) {
     }
   }
 
+  if (task.phase === "work_item") {
+    validateWorkItemContext(task.work_item, "$.task.work_item", errors);
+    validateRunContext(task.run, "$.task.run", errors);
+  }
+
   if (contract.next_action === "delegate_write" && task.edits_allowed !== true) {
     errors.push("delegate_write requires $.task.edits_allowed=true");
   }
@@ -185,22 +252,122 @@ function validateContract(contract) {
   return errors;
 }
 
-function render(contract, platform, taskId) {
-  const launchable = Boolean(taskId);
+function render(contract, platform) {
   return {
-    status: launchable ? "started" : "handoff",
+    status: "handoff",
     platform,
-    task_id: taskId || "",
-    subagent_started: launchable,
-    reason: launchable
-      ? "Host adapter reported a native task id."
-      : "No native subagent task id was provided; preserve this as a handoff contract and stop before delegated implementation.",
+    subagent_started: false,
+    reason: "Render only preserves a handoff contract. It never starts a native session; use launch --execute for an explicit launch.",
     contract,
   };
 }
 
+function nonEmptyString(value) {
+  return typeof value === "string" && value.length > 0;
+}
+
+function launchIds(contract) {
+  const task = contract.task;
+  const workId = task.phase === "work_item" && task.work_item ? task.work_item.id : task.task_id;
+  const runId = task.phase === "work_item" && task.run ? task.run.id : `${task.task_id}:run`;
+  return { work_id: workId, run_id: runId };
+}
+
+function transactionIdempotencyError(contract) {
+  const task = contract.task;
+  if (task.phase !== "work_item" || !task.work_item || task.work_item.kind !== "transaction") return "";
+  if (!nonEmptyString(task.work_item.idempotency_key)) {
+    return "transaction work items require task.work_item.idempotency_key before launch";
+  }
+  return "";
+}
+
+function resolveExecutable(executable, platform) {
+  const candidate = executable || platform;
+  if (candidate.includes(path.sep)) {
+    const absolute = path.resolve(candidate);
+    try {
+      fs.accessSync(absolute, fs.constants.X_OK);
+      return absolute;
+    } catch (_) {
+      return "";
+    }
+  }
+  for (const directory of (process.env.PATH || "").split(path.delimiter)) {
+    if (!directory) continue;
+    const absolute = path.join(directory, candidate);
+    try {
+      fs.accessSync(absolute, fs.constants.X_OK);
+      return absolute;
+    } catch (_) {
+      // Continue searching PATH. A missing host client is an unavailable launch, not a false start.
+    }
+  }
+  return "";
+}
+
+function launchPrompt(contract, ids) {
+  return [
+    "You are a fresh Cognitive Control Plane worker session.",
+    `Work id: ${ids.work_id}`,
+    `Run id: ${ids.run_id}`,
+    "Follow this portable contract exactly. Do not claim native-session metadata that the adapter did not supply.",
+    JSON.stringify(contract),
+  ].join("\n\n");
+}
+
+function nativeCommand(platform, executable, workspace, sandbox, approval, prompt) {
+  if (platform === "codex") {
+    return { command: executable, args: ["exec", "--json", "-C", workspace, "-s", sandbox, "-a", approval, prompt] };
+  }
+  if (platform === "opencode") {
+    return { command: executable, args: ["run", "--format", "json", "--dir", workspace, prompt] };
+  }
+  return null;
+}
+
+function launch(contract, args) {
+  const platform = detectPlatform(args.platform);
+  const ids = launchIds(contract);
+  const base = { platform, ...ids, subagent_started: false };
+  if (!new Set(["codex", "opencode"]).has(platform)) {
+    return { status: "unavailable", ...base, reason: "launch supports only codex or opencode" };
+  }
+  if (!nonEmptyString(args.workspace)) {
+    return { status: "invalid", ...base, reason: "launch requires --workspace" };
+  }
+  const workspace = path.resolve(args.workspace);
+  try {
+    if (!fs.statSync(workspace).isDirectory()) throw new Error("not a directory");
+  } catch (_) {
+    return { status: "invalid", ...base, reason: "workspace must be an existing directory" };
+  }
+  const idempotencyError = transactionIdempotencyError(contract);
+  if (idempotencyError) return { status: "invalid", ...base, reason: idempotencyError };
+
+  const executable = resolveExecutable(args.executable, platform);
+  if (!executable) return { status: "unavailable", ...base, reason: `native ${platform} executable is not available` };
+  const command = nativeCommand(platform, executable, workspace, args.sandbox, args.approval, launchPrompt(contract, ids));
+  if (!args.execute) {
+    return { status: "dry_run", ...base, dry_run: true, command: command.command, args: command.args.slice(0, -1) };
+  }
+  try {
+    const child = spawn(command.command, command.args, { cwd: workspace, detached: true, stdio: "ignore" });
+    if (!Number.isInteger(child.pid) || child.pid <= 0) throw new Error("native process did not provide a pid");
+    child.unref();
+    return { status: "started", ...base, subagent_started: true, pid: child.pid };
+  } catch (error) {
+    return { status: "unavailable", ...base, reason: `native ${platform} launch failed: ${error.message}` };
+  }
+}
+
 function main() {
-  const args = parseArgs(process.argv.slice(2));
+  let args;
+  try {
+    args = parseArgs(process.argv.slice(2));
+  } catch (error) {
+    fail(error.message, 1);
+  }
   const command = args._[0];
   if (!command) fail(usage(), 1);
 
@@ -210,7 +377,7 @@ function main() {
     return;
   }
 
-  const file = args._[1];
+  const file = args.contractPath;
   if (!file) fail(usage(), 1);
   const contract = readJson(path.resolve(file));
   const errors = validateContract(contract);
@@ -226,11 +393,19 @@ function main() {
 
   if (command === "render") {
     const platform = detectPlatform(args.platform);
-    process.stdout.write(`${JSON.stringify(render(contract, platform, args.taskId || ""), null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify(render(contract, platform), null, 2)}\n`);
     return;
+  }
+
+  if (command === "launch") {
+    const output = launch(contract, args);
+    process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+    process.exit(output.status === "started" || output.status === "dry_run" ? 0 : 2);
   }
 
   fail(usage(), 1);
 }
 
-main();
+if (require.main === module) main();
+
+module.exports = { launch, nativeCommand, parseArgs, render, validateContract };

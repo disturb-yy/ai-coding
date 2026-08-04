@@ -142,6 +142,11 @@ items:
   mode: auto
   fail_action: quality_flag
   description: Repository discovery records why it is direct or delegated, and delegates only when breadth or independent evidence lanes materially warrant it.
+- id: R-27
+  name: Work-item scheduler safety
+  mode: auto
+  fail_action: hard_fail
+  description: Generic work items use durable identity, dependency and lease gates, 40/45/50 budget checkpoints, fresh-session continuation, Programmatic Tool Calling only for bounded in-run work, and evidence-gated terminal states.
 - id: H-01
   name: Materially improves next action
   mode: judge

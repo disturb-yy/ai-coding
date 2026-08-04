@@ -17,6 +17,10 @@ metadata:
 
 英文文件是 canonical、面向模型的指令。修改此 skill 时，必须在同一次变更中同步更新 `zh/` 下对应的中文镜像，供人类维护者阅读。
 
+## 角色契约
+
+以本地 [`code_reviewer`](../role/code-reviewer.md) 角色副本执行。审查前读取其链接的[角色交接标准](../../../role/handoff-standard.md)和[审查者约束](../../../user-invoked/cognitive-control-plane/references/reviewer-enforcement.md)。角色定义审查者独立性、不可变审查目标、只读边界、停止条件和交接字段；本 skill 定义审查方法。完成时交付验证矩阵、发现、跳过/阻塞检查、残余风险、固定的 `review_target` 和 `gate_decision`；不得审查自己的实施改动。
+
 ## 概念空间
 
 ```yaml

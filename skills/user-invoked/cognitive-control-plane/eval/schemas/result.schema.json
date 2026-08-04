@@ -60,6 +60,60 @@
         "persistent_state_used": {
           "type": "boolean"
         },
+        "work_item_kind": {
+          "type": "string",
+          "enum": [
+            "none",
+            "issue",
+            "request",
+            "transaction",
+            "ticket"
+          ]
+        },
+        "run_state": {
+          "type": "string",
+          "enum": [
+            "none",
+            "leased",
+            "running",
+            "checkpointed",
+            "continued",
+            "completed"
+          ]
+        },
+        "lease_acquired": {
+          "type": "boolean"
+        },
+        "checkpoint_written": {
+          "type": "boolean"
+        },
+        "transaction_idempotency_key_present": {
+          "type": "boolean"
+        },
+        "scheduler_action": {
+          "type": "string",
+          "enum": [
+            "none",
+            "dispatch",
+            "wait",
+            "continue",
+            "verify",
+            "close",
+            "wait_for_human"
+          ]
+        },
+        "work_item_terminal_state": {
+          "type": "string",
+          "enum": [
+            "none",
+            "resolved",
+            "concluded",
+            "duplicate",
+            "blocked",
+            "escalated",
+            "cancelled"
+          ]
+        },
         "required_skills": {
           "type": "array",
           "items": {
@@ -110,6 +164,13 @@
         "orchestration_used",
         "dependency_graph_created",
         "persistent_state_used",
+        "work_item_kind",
+        "run_state",
+        "lease_acquired",
+        "checkpoint_written",
+        "transaction_idempotency_key_present",
+        "scheduler_action",
+        "work_item_terminal_state",
         "required_skills",
         "next_action",
         "asked_user_question",

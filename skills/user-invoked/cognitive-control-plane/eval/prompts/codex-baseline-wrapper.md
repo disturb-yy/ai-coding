@@ -41,6 +41,13 @@ Field rules:
 - `trace.surfaces_used`: only surfaces actually applied
 - `trace.references_read`: actual skill reference paths read, not references that merely could apply
 - `trace.orchestration_used`: whether orchestration state shaped the next action
+- `trace.work_item_kind`: normalized durable work-item kind, or `none` when no scheduler is involved
+- `trace.run_state`: current session-attempt state (`none`, `leased`, `running`, `checkpointed`, `continued`, or `completed`), never a substitute for work-item terminal state; `blocked` and `escalated` are terminal work-item states only
+- `trace.lease_acquired`: whether the Scheduler acquired the one live lease before dispatch
+- `trace.checkpoint_written`: whether the current run persisted resumable state
+- `trace.transaction_idempotency_key_present`: true only when a transaction work item's non-empty durable `work_item.idempotency_key` was checked; false for all non-transaction work items, which must not carry that key
+- `trace.scheduler_action`: dispatch, wait, continue, verify, close, or wait_for_human
+- `trace.work_item_terminal_state`: evidence-gated terminal state, or `none`
 - `trace.required_skills`: specialized downstream skills explicitly required by the route
 - `trace.next_action`: the immediate next action after control
 - `trace.stopped_routing`: true when no additional control surface should run before the next action
@@ -60,6 +67,17 @@ Useful behavior identifiers include:
 - `stop_on_required_skill_unavailable`
 - `event_log_in_persistent_state`
 - `conservative_reflection`
+- `normalize_work_item_intake`
+- `lease_before_run`
+- `respect_dependency_and_lease`
+- `checkpoint_before_budget_limit`
+- `resume_same_work_item`
+- `validate_before_resolved`
+- `stop_on_blocked_or_escalated`
+- `fresh_session_from_checkpoint`
+- `no_native_resume`
+- `ptc_for_bounded_tool_batch`
+- `host_scheduler_owns_durable_state`
 
 ## User case
 

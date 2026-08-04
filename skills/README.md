@@ -8,8 +8,8 @@
 
 | 目录 | 定位 | 使用方式 | 技能数 |
 | --- | --- | --- | ---: |
-| [model-involved](model-involved/README.md) | 可由模型根据请求自动匹配的通用工作流 | 描述命中时自动使用，也可显式点名 | 8 |
-| [user-invoked](user-invoked/README.md) | 需要用户明确发起的高控制度工作流 | 在请求中写 `$skill-name` | 11 |
+| [model-involved](model-involved/README.md) | 可由模型根据请求自动匹配的通用工作流 | 描述命中时自动使用，也可显式点名 | 9 |
+| [user-invoked](user-invoked/README.md) | 需要用户明确发起的高控制度工作流 | 在请求中写 `$skill-name` | 18 |
 | [third-skill](third-skill/README.md) | 引入的第三方或复用型技能 | 依照该技能自身的安装与调用说明 | 8 |
 
 目录名 `model-involved` 是当前仓库的实际路径，保留其既有拼写。
@@ -19,11 +19,19 @@
 | 你的目标 | 优先技能 | 不该替代它的相近技能 |
 | --- | --- | --- |
 | 在代码库中定位功能、调用链或安全修改点 | `exploring-project` / `explore-project` | 不要用全量索引代替一次范围明确的探索 |
+| 以代码库探索者角色追踪已验证的流程和改动点 | `codebase-explorer-exploring-project` | 只读探索完成后才交给实施技能 |
 | 修改已有项目的源码、测试或实现文档 | `coding-project` | 单纯解释或导航代码时用探索技能 |
+| 以实施执行者角色完成已确认的普通仓库改动 | `implementation-worker-coding-project` | 要求红绿循环时用 `coding-tdd` |
 | 以测试驱动完成一个小行为切片 | `coding-tdd` | 一般实现并不强制走 TDD 流程 |
+| 以测试驱动执行者角色完成一个行为切片 | `tdd-worker-coding-tdd` | 不适合未明确测试优先的普通实现 |
+| 从已完成工作中沉淀安全、可复用的长期记忆 | `memory-generator` | 未验证结论、原始聊天或短暂状态不应保存 |
+| 以记忆生成者角色治理记忆写入与交接 | `memory-generator-memory-generator` | 写入前必须明确来源、范围、生命周期和权限 |
 | 审查变更、PR、分支或安全风险 | `reviewing-code` | 没有具体代码或 diff 的设计讨论不属于代码审查 |
+| 以代码审查者角色给出不可变变更的门禁结论 | `code-reviewer-reviewing-code` | 需要修复时应转回实施技能 |
 | 先澄清问题、假设和证据要求 | `diagnosing-problem` | 排查运行时故障应转给专门的根因诊断流程 |
+| 以问题建模者角色界定症状、假设和证据标准 | `problem-framer-diagnosing-problem` | 功能需求不清时用需求访谈技能 |
 | 质询方案直到决策清晰 | `grilling`、`grill-me` | 已经需要落地设计文档时选带 docs 的变体 |
+| 以需求访谈者角色将需求收敛为验收标准与下一路由 | `requirements-interviewer-grilling` | 不要用它开始项目实施 |
 | 为仓库生成或刷新 AI 导航索引 | `gen-index` | 普通 README 写作不需要生成完整索引 |
 | 维护有 YAML frontmatter 的知识文档 | `okf-frontmatter` | 只查一个精确术语时先用 `rg` |
 | 把复杂过程做成可离线打开的交互式说明页 | `work-canvas` | 交付产品页面应使用前端构建技能 |

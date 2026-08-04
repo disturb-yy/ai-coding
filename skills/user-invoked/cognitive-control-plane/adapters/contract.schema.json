@@ -64,12 +64,19 @@
             "design",
             "implementation",
             "review",
-            "verification"
+            "verification",
+            "work_item"
           ]
         },
         "objective": {
           "type": "string",
           "minLength": 1
+        },
+        "work_item": {
+          "$ref": "#/$defs/workItemContext"
+        },
+        "run": {
+          "$ref": "#/$defs/runContext"
         },
         "review_of_task_id": {
           "type": "string",
@@ -220,11 +227,168 @@
               "review_target"
             ]
           }
+        },
+        {
+          "if": {
+            "properties": {
+              "phase": {
+                "const": "work_item"
+              }
+            },
+            "required": [
+              "phase"
+            ]
+          },
+          "then": {
+            "required": [
+              "work_item",
+              "run"
+            ]
+          }
         }
       ]
     }
   },
   "$defs": {
+    "workItemContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "objective",
+        "acceptance_criteria",
+        "dependencies",
+        "authorization"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "issue",
+            "request",
+            "transaction",
+            "ticket"
+          ]
+        },
+        "objective": {
+          "type": "string",
+          "minLength": 1
+        },
+        "acceptance_criteria": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "authorization": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "transaction"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "idempotency_key"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "idempotency_key"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "runContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "attempt",
+        "lease_id",
+        "lease_expires_at",
+        "resume_checkpoint_ref",
+        "budget"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "lease_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lease_expires_at": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resume_checkpoint_ref": {
+          "type": "string"
+        },
+        "budget": {
+          "$ref": "#/$defs/runBudget"
+        }
+      }
+    },
+    "runBudget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "checkpoint_at_fraction",
+        "handoff_at_fraction",
+        "hard_stop_at_fraction"
+      ],
+      "properties": {
+        "checkpoint_at_fraction": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "handoff_at_fraction": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "hard_stop_at_fraction": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 0.5
+        }
+      }
+    },
     "reviewTarget": {
       "type": "object",
       "additionalProperties": false,

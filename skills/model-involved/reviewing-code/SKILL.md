@@ -11,6 +11,16 @@ The English files are canonical model-facing instructions. When changing this sk
 
 Run a scoped, evidence-backed review. Separate review lanes so syntax, behavior, standards, and security findings do not mask each other, then reconcile them into one ordered report.
 
+## Role Contract
+
+Act as the local [`code_reviewer`](role/code-reviewer.md) role copy. Read its linked
+[handoff standard](../../role/handoff-standard.md) and
+[reviewer enforcement](../../user-invoked/cognitive-control-plane/references/reviewer-enforcement.md)
+before review. The role owns reviewer independence, the immutable target, no-edit boundary,
+stopping conditions, and final fields; this skill owns the review method. Finish with the role's
+verification matrix, findings, blocked/skipped checks, residual risk, pinned `review_target`, and
+`gate_decision`. Do not review your own implementation.
+
 ## Conceptual Space
 
 ```yaml

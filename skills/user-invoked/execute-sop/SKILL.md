@@ -68,7 +68,11 @@ stateDiagram-v2
   Analyze --> Blocked
   AwaitingTicketApproval --> Blocked
   TicketedAwaitingUser --> Blocked
-  Blocked --> Analyze: blocker cleared
+  AwaitingVerification --> Blocked
+  Blocked --> Analyze: resume phase = analyze
+  Blocked --> AwaitingTicketApproval: resume phase = awaiting-ticket-approval
+  Blocked --> TicketedAwaitingUser: resume phase = ticketed-awaiting-user
+  Blocked --> AwaitingVerification: resume phase = awaiting-verification
   Resolved --> [*]
 ```
 
@@ -78,7 +82,7 @@ stateDiagram-v2
 | `awaiting-ticket-approval` | Explain the proposed tickets and wait. | Explicitly approve, merge, split, or reject the ticket DAG. |
 | `ticketed-awaiting-user` | Maintain statuses and explain the ready frontier. | Execute an unblocked ticket and report its outcome/evidence. |
 | `awaiting-verification` | Review user-supplied evidence; perform only requested read-only checks. | Supply missing evidence or acknowledge the result. |
-| `blocked` | Record the blocker and its owner. | Clear the blocker or change scope. |
+| `blocked` | Record the blocker, its owner, and the phase to resume. | Clear the blocker or change scope. |
 | `resolved` | Read and summarize the closed case. | Reopen explicitly if new evidence changes the problem. |
 
 Never cross an approval or execution gate from inference. Record the request that authorized a transition in the case-file history.
@@ -92,7 +96,7 @@ Never cross an approval or execution gate from inference. Record the request tha
 | **Draft the ticket DAG** | Cut the work into vertical, user-executable tickets. Give each ticket a named outcome and acceptance criteria. Create ticket nodes first, then add only true blocking edges. | The DAG is acyclic; every ticket is reachable from the initial frontier and leads to a resolution or a bounded escalation. |
 | **Gate** | Set phase to `awaiting-ticket-approval`; present titles, outcomes, blockers, and the frontier. | The case file names the exact approval or change request required from the user. |
 | **Materialize** | After explicit user approval only, write one ticket file per approved node under `issues/`, ordered with blockers first. Set every ticket to `ready-for-user`, then set phase to `ticketed-awaiting-user`. | Ticket files and the STATE index agree on names, blockers, statuses, and frontier. |
-| **Track user execution** | When the user reports work, update only the named ticket's status, evidence pointer, and the frontier. Mark a reported failure or missing prerequisite as `blocked`. | STATE.md records who reported what, the evidence location, and each newly unblocked ticket. |
+| **Track user execution** | When the user reports work, update only the named ticket's status, evidence pointer, and the frontier. On a reported failure or missing prerequisite, set phase to `blocked` and preserve the current phase as `Resume phase`. | STATE.md records who reported what, the evidence location, each newly unblocked ticket, and the phase to restore after a blocker clears. |
 | **Verify and close** | Move to `awaiting-verification` only after the user reports the applicable frontier complete. Review supplied evidence and requested read-only checks; resolve or return to `ticketed-awaiting-user`. | The case reaches `resolved` only when every applicable ticket has acceptance evidence, or it records a user-approved scope change. |
 | **Hand off** | Update the compact history and report the case-file path, phase, frontier, blockers, and next user action. | A fresh model can continue from STATE.md without relying on earlier chat. |
 
@@ -101,6 +105,7 @@ Never cross an approval or execution gate from inference. Record the request tha
 - A ticket is a **vertical slice**: one narrow, complete, independently verifiable user outcome—not a vague layer task.
 - An edge `A → B` means B cannot start until A's output exists. Do not use an edge for a preferred order, reference, or convenience.
 - The **frontier** contains tickets whose blockers are `done` and whose activation conditions apply. Those tickets may be worked in parallel only when their outputs do not conflict.
+- Record every activation condition in the ticket and the STATE index. Use `always` only when a ticket is applicable whenever its blockers are done.
 - Keep implementation instructions in the ticket; keep the status index in STATE.md. Refer to tickets by name in prose, with IDs only for file identity.
 - A scope change that invalidates a ticket marks it `superseded` with a reason; it does not silently rewrite history.
 
@@ -122,6 +127,7 @@ Never cross an approval or execution gate from inference. Record the request tha
 ## Phase
 
 - Current: `<analyze | awaiting-ticket-approval | ticketed-awaiting-user | awaiting-verification | blocked | resolved>`
+- Resume phase: `<required when Current is blocked; otherwise None>`
 - Next permitted action: <specific agent or user action>
 - Awaiting from: <owner, or `None`>
 
@@ -133,9 +139,9 @@ Never cross an approval or execution gate from inference. Record the request tha
 
 ## Ticket DAG
 
-| Ticket | Status | Blocked by | Evidence / note |
-|---|---|---|---|
-| <01 — ticket name> | <draft | ready-for-user | in-progress | done | blocked | superseded> | <None or ticket names> | <pointer or concise reason> |
+| Ticket | Status | Blocked by | Activation condition | Evidence / note |
+|---|---|---|---|---|
+| <01 — ticket name> | <draft | ready-for-user | in-progress | done | blocked | superseded> | <None or ticket names> | <always or named gate outcome> | <pointer or concise reason> |
 
 ## Frontier
 
@@ -168,6 +174,10 @@ Write one file per approved ticket at `issues/<NN>-<slug>.md`.
 ## Blocked by
 
 <Ticket names, or `None — frontier ticket`>
+
+## Activation condition
+
+<`always` or the named decision/gate outcome that makes this ticket applicable.>
 
 ## Status
 

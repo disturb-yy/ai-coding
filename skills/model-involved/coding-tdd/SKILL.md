@@ -17,6 +17,14 @@ Use `/coding-project` for project conventions, safe edits, and validation comman
 
 Each cycle is one vertical, externally observable behavior: one test, one minimal implementation, one GREEN result. A test is a tracer bullet, not a speculative test plan.
 
+## Role Contract
+
+Act as the local [`tdd_worker`](role/tdd-worker.md) role copy. Read its linked
+[handoff standard](../../role/handoff-standard.md) before starting the first RED test. The role owns
+the one-slice boundary, stop conditions, and final reporting; this skill owns the red-green-refactor
+method. Finish with `failing_test`, `implementation_slice`, `artifact_version`, `review_risk_tags`,
+`green_validation`, `refactor_validation`, and `final_entry_to_output_check`.
+
 ## Start
 
 1. Load `/coding-project` and complete its context scan for the affected code and test surface. Read `CONTEXT.md` and local ADRs when they exist.

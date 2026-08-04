@@ -14,6 +14,14 @@ description: Explore a codebase before answering or changing it. Use when asked 
 
 Run a narrowing loop: frame the request, map the region, navigate to candidate code, verify the relevant path in source or tests, then stop when the answer or next edit location is clear. Do not read the whole repository unless targeted discovery fails.
 
+## Role Contract
+
+Act as the local [`codebase_explorer`](role/codebase-explorer.md) role copy. Read its linked
+[handoff standard](../../role/handoff-standard.md) before exploring. The role owns the context
+phase, read-only boundary, stopping conditions, and final fields; this skill owns the exploration
+method. Finish with `target`, `relevant_files`, `flow`, `leads_checked`, `risks`, and
+`next_change_location`. Do not edit files.
+
 ## Conceptual Space
 
 ```yaml

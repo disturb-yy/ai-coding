@@ -106,6 +106,41 @@ exploration_policy:
     - broad_search_boundary
     - independent_report_materially_reduces_risk
 
+work_item_scheduler_policy:
+  accepted_kinds: [issue, request, transaction, ticket]
+  work_item: persistent_business_unit
+  run: one_session_processing_attempt
+  scheduler_owns: [intake_normalization, dependency_gating, lease_acquisition_and_expiry_recovery, budget_enforcement, session_continuation, terminal_state_transition]
+  active_states: [ready, leased, running, validating]
+  terminal_states: [resolved, concluded, duplicate, blocked, escalated, cancelled]
+  lease:
+    required: true
+    recover_expired_run: true
+  dependencies:
+    required_before_lease: true
+  budget:
+    checkpoint_at_fraction: 0.40
+    handoff_at_fraction: 0.45
+    hard_stop_at_fraction: 0.50
+  continuation:
+    checkpoint_required_before_hard_stop: true
+    resume_same_work_item: true
+    predecessor_must_be: [checkpointed, expired]
+    requires_fresh_session: true
+    native_resume_allowed: false
+    requires_new_run_id: true
+    requires_higher_attempt: true
+    requires_checkpoint_ref: true
+  programmatic_tool_calling:
+    allowed_for: [bounded_read_tool_batches, filtering, joining, aggregation, mechanical_validation]
+    host_only: [durable_state, lease_transition, session_launch, approval, external_write, semantic_judgment]
+  terminal_gates:
+    resolved_requires_validation: true
+    concluded_requires_evidence: true
+    stop_auto_retry_for: [blocked, escalated]
+  transactions:
+    idempotency_required: true
+
 skill_registry:
   grilling:
     role: requirements_interviewer

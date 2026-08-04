@@ -39,6 +39,15 @@ cases -> run -> auto score -> judge/human review -> failure taxonomy
 
 Do not treat every failure as a prompt failure. Classify it first as a routing rule defect, case ambiguity, missing context, runtime instrumentation gap, evaluator defect, or architecture ceiling.
 
+## Work-item scheduling regression set
+
+`06-work-item-scheduler.yaml` protects the generic scheduler contract. A work
+item is the durable unit accepted as an `issue`, `request`, `transaction`, or
+`ticket`; a run is one session attempt. The cases require lease and dependency
+gates, checkpoint/handoff/hard-stop thresholds at 40%/45%/50%, continuation of
+the same work item in a fresh session, Programmatic Tool Calling boundaries,
+and evidence-gated terminal states.
+
 ## Directory layout
 
 ```text
@@ -53,7 +62,8 @@ eval/
 │   ├── 02-surface-routing.yaml
 │   ├── 03-orchestration-skill-routing.yaml
 │   ├── 04-negative-controls-maintenance.yaml
-│   └── 05-reviewer-enforcement.yaml
+│   ├── 05-reviewer-enforcement.yaml
+│   └── 06-work-item-scheduler.yaml
 ├── prompts/
 │   ├── execution-wrapper.md
 │   └── judge.md
@@ -145,7 +155,7 @@ python skills/cognitive-control-plane/eval/scripts/run_codex_baseline.py \
   --run-id baseline-smoke
 ```
 
-Run the full 55 runtime cases:
+Run the full 62 runtime cases:
 
 ```bash
 python skills/cognitive-control-plane/eval/scripts/run_codex_baseline.py \
@@ -214,7 +224,7 @@ The Codex baseline schema is strict: every object sets `additionalProperties: fa
 ```text
 baseline-smoke (10 cases)
     -> fix harness only
-baseline-v0 (55 cases)
+baseline-v0 (62 cases)
     -> diagnose failures
 one hypothesis / one change
     -> regression run on targeted + negative-control cases
