@@ -1,0 +1,4 @@
+interface:
+  display_name: "Memory Generator"
+  short_description: "Persist verified long-term memory safely"
+  default_prompt: "Use $memory-generator-memory-generator to extract, deduplicate, and safely persist verified memory from this completed task."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Problem Framer Diagnosis"
+  short_description: "Frame an uncertain problem with evidence"
+  default_prompt: "Use $problem-framer-diagnosing-problem to frame this symptom, assumptions, evidence standard, and next handoff."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "TDD Worker Coding"
+  short_description: "Implement one behavior through red-green-refactor"
+  default_prompt: "Use $tdd-worker-coding-tdd to implement this behavior with red-green-refactor evidence and final validation."

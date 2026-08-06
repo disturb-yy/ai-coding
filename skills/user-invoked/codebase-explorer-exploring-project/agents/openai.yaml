@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codebase Explorer"
+  short_description: "Trace a codebase before a safe change"
+  default_prompt: "Use $codebase-explorer-exploring-project to locate the verified flow, change point, tests, and risks for this task."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Code Reviewer"
+  short_description: "Review a pinned code change with evidence"
+  default_prompt: "Use $code-reviewer-reviewing-code to review this immutable diff or PR and return an evidence-backed gate decision."

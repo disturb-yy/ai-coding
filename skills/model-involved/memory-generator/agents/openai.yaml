@@ -1,0 +1,4 @@
+interface:
+  display_name: "记忆生成"
+  short_description: "将稳定偏好、项目决策和可信来源沉淀为安全可复用的长期记忆"
+  default_prompt: "使用 $memory-generator 从本次已完成任务中沉淀稳定且已验证的记忆。"

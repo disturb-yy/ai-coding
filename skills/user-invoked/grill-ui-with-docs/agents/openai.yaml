@@ -1,0 +1,4 @@
+interface:
+  display_name: "Grill UI with Docs"
+  short_description: "Interview UI decisions and approve design handoffs"
+  default_prompt: "Use $grill-ui-with-docs to design and approve the alert-center page before implementation."

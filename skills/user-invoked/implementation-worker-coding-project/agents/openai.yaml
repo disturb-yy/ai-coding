@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implementation Worker Coding"
+  short_description: "Implement bounded repository changes with evidence"
+  default_prompt: "Use $implementation-worker-coding-project to implement this approved repository change and report validation evidence."

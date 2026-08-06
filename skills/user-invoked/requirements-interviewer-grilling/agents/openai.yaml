@@ -1,0 +1,4 @@
+interface:
+  display_name: "Requirements Interview Grilling"
+  short_description: "Clarify requirements into an actionable handoff"
+  default_prompt: "Use $requirements-interviewer-grilling to clarify this request into acceptance criteria and a next route."
