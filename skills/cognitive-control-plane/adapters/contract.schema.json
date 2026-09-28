@@ -1,0 +1,490 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cognitive-control-plane.local/adapters/contract.schema.json",
+  "title": "Cognitive Control Plane Adapter Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "ccp_version",
+    "next_action",
+    "task"
+  ],
+  "properties": {
+    "ccp_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "next_action": {
+      "type": "string",
+      "enum": [
+        "delegate_read_only",
+        "delegate_write",
+        "route_skill",
+        "verify",
+        "deliver"
+      ]
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_id",
+        "actor_id",
+        "role",
+        "phase",
+        "objective",
+        "constraints",
+        "required_skills",
+        "required_references",
+        "required_mcp",
+        "required_tools",
+        "ownership",
+        "edits_allowed",
+        "expected_output",
+        "validation",
+        "stop_if"
+      ],
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actor_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "phase": {
+          "type": "string",
+          "enum": [
+            "context",
+            "design",
+            "implementation",
+            "review",
+            "verification",
+            "work_item"
+          ]
+        },
+        "objective": {
+          "type": "string",
+          "minLength": 1
+        },
+        "work_item": {
+          "$ref": "#/$defs/workItemContext"
+        },
+        "run": {
+          "$ref": "#/$defs/runContext"
+        },
+        "review_of_task_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "review_of_actor_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "review_iteration": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "supersedes_review_task_id": {
+          "type": "string"
+        },
+        "review_fallback": {
+          "type": "string",
+          "enum": [
+            "none",
+            "independent_read_only_reviewer"
+          ]
+        },
+        "review_target": {
+          "$ref": "#/$defs/reviewTarget"
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "required_skills": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/requirement"
+          }
+        },
+        "required_references": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/requirement"
+          }
+        },
+        "required_mcp": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/requirement"
+          }
+        },
+        "required_tools": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/requirement"
+          }
+        },
+        "ownership": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "writable_paths",
+            "read_only_paths",
+            "forbidden_paths"
+          ],
+          "properties": {
+            "writable_paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "read_only_paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "forbidden_paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "edits_allowed": {
+          "type": "boolean"
+        },
+        "expected_output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "format",
+            "required_fields",
+            "must_report"
+          ],
+          "properties": {
+            "format": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required_fields": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "must_report": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "validation": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "stop_if": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "phase": {
+                "const": "review"
+              }
+            },
+            "required": [
+              "phase"
+            ]
+          },
+          "then": {
+            "required": [
+              "review_of_task_id",
+              "review_of_actor_id",
+              "review_iteration",
+              "supersedes_review_task_id",
+              "review_fallback",
+              "review_target"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "phase": {
+                "const": "work_item"
+              }
+            },
+            "required": [
+              "phase"
+            ]
+          },
+          "then": {
+            "required": [
+              "work_item",
+              "run"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "workItemContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "objective",
+        "acceptance_criteria",
+        "dependencies",
+        "authorization"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "issue",
+            "request",
+            "transaction",
+            "ticket"
+          ]
+        },
+        "objective": {
+          "type": "string",
+          "minLength": 1
+        },
+        "acceptance_criteria": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "authorization": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "transaction"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "idempotency_key"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "idempotency_key"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "runContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "attempt",
+        "lease_id",
+        "lease_expires_at",
+        "resume_checkpoint_ref",
+        "budget"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "lease_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lease_expires_at": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resume_checkpoint_ref": {
+          "type": "string"
+        },
+        "budget": {
+          "$ref": "#/$defs/runBudget"
+        }
+      }
+    },
+    "runBudget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "checkpoint_at_fraction",
+        "handoff_at_fraction",
+        "hard_stop_at_fraction"
+      ],
+      "properties": {
+        "checkpoint_at_fraction": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "handoff_at_fraction": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "hard_stop_at_fraction": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 0.5
+        }
+      }
+    },
+    "reviewTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "git_range",
+            "stable_artifact"
+          ]
+        },
+        "base_sha": {
+          "type": "string",
+          "minLength": 1
+        },
+        "head_sha": {
+          "type": "string",
+          "minLength": 1
+        },
+        "diff_hash": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stable_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "git_range"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "base_sha",
+              "head_sha",
+              "diff_hash"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "stable_artifact"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "stable_id"
+            ]
+          }
+        }
+      ]
+    },
+    "requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "source",
+        "required",
+        "reason"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "available_skill",
+            "file_reference",
+            "repo_skill",
+            "mcp",
+            "tool",
+            "none"
+          ]
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

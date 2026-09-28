@@ -1,0 +1,5 @@
+{
+  "protected_files": ["README.md"],
+  "protected_directories": ["zh"],
+  "mirror_stale_ms": 2000
+}
