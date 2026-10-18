@@ -10,9 +10,5 @@ export default async function cognitiveControlPlaneGuard(context = {}) {
       const result = inspect("PreToolUse", input.tool, output.args || {}, cwd);
       if (result.block) throw new Error(result.message);
     },
-    "tool.execute.after": async (input) => {
-      const result = inspect("PostToolUse", input.tool, input.args || {}, cwd);
-      if (result.message) process.stderr.write(result.message + "\n");
-    },
   };
 }

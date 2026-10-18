@@ -128,16 +128,40 @@ function uniqueSibling(target, suffix) {
   return candidate;
 }
 
-function installCopy(target) {
+const defaultFiles = [
+  "SKILL.md",
+  "README.md",
+  "references/context-control.md",
+  "references/epistemic-control.md",
+  "references/adversarial-control.md",
+  "references/output-control.md",
+  "references/memory-routing.md",
+  "references/skill-orchestration.md",
+  "references/orchestration-state.md",
+  "references/reviewer-enforcement.md",
+  "scripts/setup-memory.js",
+];
+
+function installCopy(target, choice) {
   fs.mkdirSync(path.dirname(target), { recursive: true });
   const stage = uniqueSibling(target, `stage-${process.pid}`);
   const targetExists = fs.existsSync(target);
   let backup = null;
   try {
-    fs.cpSync(sourceDir, stage, {
-      recursive: true,
-      filter: item => path.basename(item) !== ".git",
-    });
+    if (choice === "skill-only") {
+      fs.mkdirSync(stage, { recursive: true });
+      for (const relative of defaultFiles) {
+        const destination = path.join(stage, relative);
+        fs.mkdirSync(path.dirname(destination), { recursive: true });
+        fs.copyFileSync(path.join(sourceDir, relative), destination);
+      }
+    } else {
+      fs.cpSync(sourceDir, stage, {
+        recursive: true,
+        force: true,
+        filter: item => path.basename(item) !== ".git",
+      });
+    }
     if (targetExists) {
       backup = uniqueSibling(target, "bak-ccp");
       fs.renameSync(target, backup);
@@ -230,7 +254,7 @@ async function main() {
 
   const targetDir = options.installDir === null ? sourceDir : resolveInstallDir(options.installDir);
   planLinks(targetDir);
-  if (targetDir !== sourceDir) installCopy(targetDir);
+  if (targetDir !== sourceDir) installCopy(targetDir, options.choice);
   const host = { codex: "codex", opencode: "opencode", all: "all" }[options.choice];
   if (host) installHost(host, targetDir);
   installLinks(targetDir);

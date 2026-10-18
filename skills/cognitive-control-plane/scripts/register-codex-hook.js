@@ -6,21 +6,27 @@ function register(doc, hookScript) {
   const quote = (value) => "'" + value.replaceAll("'", "'\\''") + "'";
   const command = `${quote(process.execPath)} ${quote(hookScript)}`;
   doc.hooks ||= {};
-  for (const event of ["PreToolUse", "PostToolUse"]) {
-    const entries = doc.hooks[event] ||= [];
-    if (!Array.isArray(entries)) throw new Error(`${event} must be an array`);
-    let found = false;
-    for (const entry of entries) {
-      for (const hook of entry.hooks || []) {
-        if (String(hook.command || "").includes("cognitive-control-plane-guard.js")) {
-          // 保留注册位置和宿主已有的启用/信任状态。
-          const legacy = `${JSON.stringify(process.execPath)} ${JSON.stringify(hookScript)}`;
-          if (hook.command !== legacy) hook.command = command;
-          found = true;
-        }
+  const entries = doc.hooks.PreToolUse ||= [];
+  if (!Array.isArray(entries)) throw new Error("PreToolUse must be an array");
+  let found = false;
+  for (const entry of entries) {
+    for (const hook of entry.hooks || []) {
+      if (String(hook.command || "").includes("cognitive-control-plane-guard.js")) {
+        // 保留注册位置和宿主已有的启用/信任状态。
+        const legacy = `${JSON.stringify(process.execPath)} ${JSON.stringify(hookScript)}`;
+        if (hook.command !== legacy) hook.command = command;
+        found = true;
       }
     }
-    if (!found) entries.push({ matcher: "", hooks: [{ type: "command", command, timeout: 10 }] });
+  }
+  if (!found) entries.push({ matcher: "", hooks: [{ type: "command", command, timeout: 10 }] });
+  if (Array.isArray(doc.hooks.PostToolUse)) {
+    doc.hooks.PostToolUse = doc.hooks.PostToolUse.flatMap((entry) => {
+      if (!Array.isArray(entry.hooks)) return [entry];
+      const hooks = entry.hooks.filter((hook) => !String(hook.command || "").includes("cognitive-control-plane-guard.js"));
+      return hooks.length ? [{ ...entry, hooks }] : [];
+    });
+    if (!doc.hooks.PostToolUse.length) delete doc.hooks.PostToolUse;
   }
   return doc;
 }

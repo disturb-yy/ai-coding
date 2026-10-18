@@ -36,6 +36,4 @@ Carry forward the goal, known evidence, accepted decisions, scope, and validatio
 
 For a real delegated task, use the single [task contract](orchestration-state.md) rather than copying a template per role. Add a skill or reference only when the worker actually needs it. The parent reconciles the returned artifacts and evidence; a worker's statement that it followed a skill does not prove correctness.
 
-When a caller needs named role responsibilities or an existing role-based handoff, consult the [role catalog](../role/index.md) and only the selected role. These optional role descriptions do not require delegation, fixed output fields, or a pause between authorized phases; current runtime rules and the consumer's explicit contract govern.
-
-For the bundled host adapter only, use [the machine map](../config/skill-orchestration-map.yaml) and [contract schema](../adapters/contract.schema.json). Its explicit host profile is not the default conversational workflow. Resolve skills from the active environment before filling the contract.
+When a caller needs named responsibilities, describe the actual task and owner using [coordination](orchestration-state.md). A role name does not create another actor, fixed output fields, or a pause between authorized phases.

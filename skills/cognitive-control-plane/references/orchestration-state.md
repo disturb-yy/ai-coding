@@ -14,7 +14,6 @@ Use for real delegated work, dependent stages, or a durable handoff. A single ag
 - The coordinating agent owns the user goal, task boundaries, dependencies, and reconciliation. It may perform useful local execution while a worker handles independent work.
 - A worker owns one bounded result and its validation, within the supplied write scope.
 - A required independent reviewer inspects a stable version read-only and follows [reviewer enforcement](reviewer-enforcement.md).
-- A host Scheduler exists only for managed queues; its leases and sessions follow [work-item scheduling](work-item-scheduling.md).
 
 A role label does not create a process, permission, or independent actor. Claim delegation only after an actual worker starts. If optional delegation is unavailable, execute serially. If independence is required but unavailable, finish authorized preparation and report the remaining review gate accurately.
 
@@ -33,7 +32,7 @@ validation: []
 stop_if: [] # material scope expansion or an indispensable missing input
 ```
 
-Use a real task id to track delegated work. Add dependencies and actor ids for multi-worker coordination; add producer identity and a pinned target when independent review is required. Add required references/tools only if the worker needs an exact capability. The portable host adapter's full schema is linked from [skill routing](skill-orchestration.md); do not manufacture its empty fields in ordinary conversation.
+Use a real task id to track delegated work. Add dependencies and actor ids for multi-worker coordination; add producer identity and a pinned target when independent review is required. Add required references/tools only if the worker needs an exact capability.
 
 ## Dependencies and Ownership
 

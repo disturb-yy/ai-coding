@@ -19,5 +19,3 @@ Read only when a caller requests routing telemetry. Use the caller's schema; the
 - Worker start, lease acquisition, checkpoint persistence, and review completion require runtime evidence. A proposed contract is not an executed action. In a routing-only simulation describe proposed behavior separately and leave unperformed action fields false.
 
 Only host-managed work uses the work-item/run fields described in [work-item scheduling](work-item-scheduling.md). Report unknown telemetry as unknown where the schema permits it; never claim a configured threshold was enforced merely because it is documented.
-
-Evaluation fixtures must supply artifacts for execution tests. A routing-only fixture may declare an artifact's boundary without its body, but can test only the proposed route. Production analysis or edits require the actual material. Keep test-fixture exceptions in the evaluation harness, not in runtime routing rules.

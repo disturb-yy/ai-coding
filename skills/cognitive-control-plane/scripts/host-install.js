@@ -5,7 +5,6 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 const { pathToFileURL } = require("node:url");
-const { spawnSync } = require("node:child_process");
 const { register: codexRegister } = require("./register-codex-hook.js");
 const { register: opencodeRegister } = require("./register-opencode-plugin.js");
 const root = path.resolve(process.env.CCP_SKILL_DIR || path.join(__dirname, ".."));
@@ -24,7 +23,6 @@ function launchers() {
   return {
     [locations.hook]: `#!/usr/bin/env node\nrequire(${JSON.stringify(core)}).main().catch(error => { console.error(error.message); process.exitCode = 0; });\n`,
     [path.join(locations.plugin, "index.mjs")]: `export { default } from ${JSON.stringify(plugin)};\n`,
-    [path.join(locations.plugin, "check-mirrors.cjs")]: `module.exports = require(${JSON.stringify(path.join(root, "scripts", "check-mirrors.js"))});\n`,
     [path.join(locations.plugin, "package.json")]: fs.readFileSync(path.join(root, "scripts", "opencode-plugin-package.json"), "utf8"),
   };
 }
@@ -56,11 +54,6 @@ function verify(files) {
   for (const [file, content] of Object.entries(files)) {
     if (!fs.existsSync(file) || fs.readFileSync(file, "utf8") !== content) throw new Error(`Missing or outdated registration/launcher: ${file}`);
   }
-  const check = spawnSync(process.execPath, [path.join(root, "scripts", "check-mirrors.js")], { encoding: "utf8" });
-  if (check.status !== 0) {
-    const details = check.stderr || check.stdout || check.error?.message || "Mirror check failed";
-    process.stderr.write(`Warning: host integration is installed, but the optional mirror check reported:\n${details.trim()}\n`);
-  }
 }
 
 function main() {
@@ -68,7 +61,7 @@ function main() {
   if (!["install", "verify"].includes(action) || !["all", "codex", "opencode"].includes(host)) {
     throw new Error("Usage: host-install.js install|verify [all|codex|opencode]");
   }
-  for (const file of ["scripts/guard-core.js", "scripts/opencode-plugin.mjs", "config/guard-policy.json"]) {
+  for (const file of ["scripts/guard-core.js", "scripts/opencode-plugin.mjs"]) {
     if (!fs.existsSync(path.join(root, file))) throw new Error(`Missing skill dependency: ${file}`);
   }
   const files = desiredFiles(host);

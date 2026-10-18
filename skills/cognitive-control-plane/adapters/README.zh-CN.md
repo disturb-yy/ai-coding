@@ -203,16 +203,3 @@ PTC 仅属于一次 run 内部。例如：批量读取 30 个服务状态、过�
 下列事项不能放进 PTC 循环：持久状态、租约转换、启动/停止会话、审批、外部写入
 以及需要新模型判断的语义决策。原因是 PTC 运行环境不承担这些持久化和权限职责。
 详见 [OpenAI Programmatic Tool Calling 指南](https://developers.openai.com/api/docs/guides/tools-programmatic-tool-calling)。
-
-## 验证本地改动
-
-```bash
-node eval/tests/work-item-scheduler.test.js
-node eval/tests/work-item-loop.test.js
-node eval/tests/ccp-adapter-launch.test.js
-python3 eval/scripts/static_checks.py --skill-dir .
-node scripts/check-mirrors.js
-```
-
-模型型 eval 位于 `eval/cases/06-work-item-scheduler.yaml`，当前共有 62 个运行时
-案例。运行完整基线会调用模型，应在允许相应外部成本后再执行。

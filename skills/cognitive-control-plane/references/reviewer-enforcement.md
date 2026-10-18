@@ -13,7 +13,7 @@ Use when deciding whether consequential implementation needs independent review,
 
 Identify the source and scope of the requirement. Security or authorization changes, tenant isolation, destructive migrations, public compatibility changes, and deployment/rollback behavior merit independent review when failure has material consequences. Assess actual behavior and impact; crossing two files or modules alone does not establish this risk.
 
-A user, repository, or explicit host policy may require stricter review. The bundled host profile retains its mandatory risk tags in [the machine map](../config/skill-orchestration-map.yaml); load that map only when the host profile applies. This skill adds no authority above user instructions or host restrictions.
+A user, repository, or explicit host policy may require stricter review. Check the applicable source before treating review as mandatory. This skill adds no authority above user instructions or host restrictions.
 
 When independent review is required, check reviewer availability early. Prefer `reviewing-code` for code. If it is unavailable, a distinct read-only reviewer may use this reference and the project standards; record the substitution. If no independent reviewer can run, complete authorized implementation and checks that do not depend on review, then report the artifact as awaiting independent review. Do not label self-checking as independent review or claim a required gate cleared.
 

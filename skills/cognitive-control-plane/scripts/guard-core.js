@@ -2,10 +2,9 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const policy = require("../config/guard-policy.json");
-const { SKILL_DIR, checkMirrors, mirrorForCanonical } = require("./check-mirrors.js");
+const SKILL_DIR = path.resolve(process.env.CCP_SKILL_DIR || path.join(__dirname, ".."));
+const PROTECTED_FILES = ["README.md"];
 const READ_TOOLS = /^(read|read_file|open|grep|search|view|view_image)$/i;
-const WRITE_TOOLS = /^(write|write_file|edit|apply_patch|notebookedit)$/i;
 const SHELL_TOOLS = /^(bash|shell|exec_command)$/i;
 const READ_COMMANDS = new Set(["cat", "sed", "awk", "grep", "rg", "head", "tail", "less", "more", "nl", "bat"]);
 
@@ -19,10 +18,8 @@ function inside(file, dir) {
 
 function protectedTarget(file, cwd, root) {
   const target = realPath(path.resolve(cwd, file));
-  const protectedFiles = policy.protected_files.map((item) => path.join(root, item));
-  const protectedDirs = policy.protected_directories.map((item) => path.join(root, item));
-  return protectedFiles.some((item) => target === item || inside(item, target)) ||
-    protectedDirs.some((item) => inside(target, item) || inside(item, target));
+  const protectedFiles = PROTECTED_FILES.map((item) => path.join(root, item));
+  return protectedFiles.some((item) => target === item || inside(item, target));
 }
 
 function structuredPaths(args) {
@@ -51,17 +48,6 @@ function shellReads(command) {
   return files;
 }
 
-function touchedCanonicals(tool, args, cwd, root) {
-  if (!WRITE_TOOLS.test(tool)) return [];
-  const files = structuredPaths(args);
-  const patch = typeof args === "string" ? args : args.patch || args.input || "";
-  if (tool === "apply_patch" && typeof patch === "string") {
-    for (const match of patch.matchAll(/^\*\*\* (?:Add File|Update File|Delete File|Move to): (.+)$/gm)) files.push(match[1]);
-  }
-  return [...new Set(files.map((file) => realPath(path.resolve(cwd, file))))]
-    .filter((file) => inside(file, root) && mirrorForCanonical(file, root));
-}
-
 function inspect(event, tool, args = {}, cwd = process.cwd(), skillDir = SKILL_DIR) {
   const root = realPath(skillDir);
   const name = String(tool).split(".").pop();
@@ -69,16 +55,7 @@ function inspect(event, tool, args = {}, cwd = process.cwd(), skillDir = SKILL_D
   const paths = READ_TOOLS.test(name) ? structuredPaths(args) :
     SHELL_TOOLS.test(name) ? shellReads(args.cmd || args.command) : [];
   if (event === "PreToolUse" && paths.some((file) => protectedTarget(file, cwd, root))) {
-    return { block: true, message: "CCP: read the canonical SKILL.md/references instead of human-only README.md or zh/ mirrors." };
-  }
-  if (event === "PostToolUse") {
-    const files = touchedCanonicals(name, args, cwd, root);
-    if (files.length) {
-      let problems;
-      try { problems = checkMirrors(root, files); }
-      catch (error) { return { block: false, message: `CCP mirror check deferred: ${error.message}` }; }
-      if (problems.length) return { block: false, message: "CCP maintenance reminder: update Chinese mirrors before finishing the batch.\n" + problems.join("\n") };
-    }
+    return { block: true, message: "CCP: read SKILL.md/references for model instructions instead of the human-facing README.md." };
   }
   return { block: false, message: "" };
 }
