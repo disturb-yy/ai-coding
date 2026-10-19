@@ -131,12 +131,7 @@ function uniqueSibling(target, suffix) {
 const defaultFiles = [
   "SKILL.md",
   "README.md",
-  "references/context-control.md",
-  "references/epistemic-control.md",
-  "references/adversarial-control.md",
-  "references/output-control.md",
   "references/memory-routing.md",
-  "references/skill-orchestration.md",
   "references/orchestration-state.md",
   "references/reviewer-enforcement.md",
   "scripts/setup-memory.js",

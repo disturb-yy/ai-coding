@@ -1,18 +1,21 @@
----
-access:
-  audience: model
-  model_read: true
-  model_write: true
-  purpose: skill_reference
----
-# Memory Routing
+# Memory routing
 
-Use the configured memory directory when configuration, user preferences, usage habits, or connection metadata could change the next action. Codex's global `AGENTS.md` block names the directory's `index.md`; the setup script can install or change that path. A skill invocation is not required for the global instruction to apply.
+Read this when preferences, configuration, usage habits, or connection metadata could change the approach.
 
-Read `index.md` first, then only the records whose topic and scope match the current task. A record is a lead, not current authority: check its source, last verified date, and review date. Verify a drift-prone fact against the current configuration or service before acting. If the index or a referenced record is unavailable, say so where it affects the result; do not invent a remembered setting or connection.
+## Retrieve
 
-For a requested memory write, update, or retirement, use the available `memory-generator` skill and obey the host's storage rules. Keep each record focused, link it from `index.md`, and update the index in the same change when the host permits writing there. Search for an equivalent record before adding one. If the host requires a different write location, report that boundary; do not claim the configured index was updated. Store connection identifiers or configuration paths only; never persist credentials, tokens, or full connection strings.
+Use the index named by current host instructions. Read only records matching the task's topic and scope, then check their source and verification date. Verify facts likely to drift against the current workspace or service before relying on them. Current user instructions and observed facts take precedence over older records.
 
-A connection record may hold a service name, account alias, approved credential file path, and intended login origin. Keep the file path in that scoped record rather than the root index. The path is a locator, not authorization to inspect its contents or sign in. When a current task authorizes login, confirm the target service and permitted file access, then prefer a trusted local login tool that consumes the file directly and returns status without exposing secret values. If the tool needs a different format, inspect structure without printing values. Respect sandbox and host approval decisions; do not copy credentials into prompts, logs, command arguments, or memory.
+An unavailable index or record is missing evidence, not a reason to invent a setting or stop unrelated work. Retrieve the fact from current sources where possible; disclose a memory gap only where it affects the result. Do not create a memory store just to finish a lookup.
 
-The host work-item checkpoint is separate from this durable memory directory. Checkpoints preserve one task's continuation state; the memory index routes stable guidance across tasks.
+## Persist
+
+Write, update, or retire persistent memory only with user authorization and within host storage rules. If available, use the memory-authoring skill that matches the request. Otherwise keep the authorized record focused on a stable fact, its scope, source, and verification date; include a review date for facts likely to drift. Check for an equivalent record before adding one.
+
+Update the configured index in the same change when permitted. If the host instead requires a designated update-note location, use it and report that the index has not been changed. A task checkpoint holds continuation state; it is not automatically a durable preference or project fact.
+
+## Connection records
+
+Store service identifiers, account aliases, and configuration locations, never credentials, tokens, or full connection strings. Keep a credential-file locator in the scoped record rather than the root index. A locator grants neither file access nor login authority.
+
+For an authorized login, verify the intended service and permitted file access, then use a trusted tool that consumes the credential file directly and returns status only. Keep values out of prompts, command arguments, logs, and memory. If secure use or permitted access is unavailable, report that boundary and continue independent work.

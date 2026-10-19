@@ -9,7 +9,7 @@ access:
 
 Read only when a caller requests routing telemetry. Use the caller's schema; these field names preserve the bundled adapter vocabulary. A trace records decisions and observed actions, not hidden reasoning or invented execution.
 
-- `classification`: Tiny, Small, or Large using the entrypoint's proportional classification. A required skill does not force Large.
+- `classification`: the caller's task-size label, if its schema requires one. The conversational skill defines no size classes; use the caller's definitions or report the field as unknown.
 - `active_surface`: the bottleneck shaping the immediate action, or `none` when execution is ready. `surfaces_used` lists only applied surfaces.
 - `required_skills`: exact currently resolved skill ids needed by the next action, not a fixed allowlist. `references_read` contains actual reads.
 - `next_action`: `direct_answer`, `direct_execute`, `ask_blocking_question`, `route_skill`, `delegate_read_only`, `delegate_write`, `verify`, or `deliver`. Skill routing is not delegation; research can be direct.

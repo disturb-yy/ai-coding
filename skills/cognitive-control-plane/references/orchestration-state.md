@@ -1,51 +1,27 @@
----
-access:
-  audience: model
-  model_read: true
-  model_write: true
-  purpose: skill_reference
----
-# Orchestration State
+# Coordination
 
-Use for real delegated work, dependent stages, or a durable handoff. A single agent applying a skill or performing a source lookup does not need this layer.
+Read before actual delegation or concurrent work. A single agent changing skills or phases needs no coordination record. A continuation handoff uses the fields in `SKILL.md`.
 
-## Responsibilities
+## Dispatch
 
-- The coordinating agent owns the user goal, task boundaries, dependencies, and reconciliation. It may perform useful local execution while a worker handles independent work.
-- A worker owns one bounded result and its validation, within the supplied write scope.
-- A required independent reviewer inspects a stable version read-only and follows [reviewer enforcement](reviewer-enforcement.md).
+Delegate only within current authorization and available capabilities. Give each worker a bounded result with:
 
-A role label does not create a process, permission, or independent actor. Claim delegation only after an actual worker starts. If optional delegation is unavailable, execute serially. If independence is required but unavailable, finish authorized preparation and report the remaining review gate accurately.
+- the objective and checkable success condition;
+- source artifacts, relevant evidence, and accepted decisions;
+- writable paths or an explicit read-only scope;
+- dependencies, constraints, and any indispensable skill or tool;
+- expected artifact or findings, validation, and conditions requiring escalation.
 
-## Task Contract
+Plain prose is enough unless a host requires a schema. Use the real worker/task identifier returned by the host; a prepared prompt or contract is not a started worker. If optional delegation is unavailable, proceed serially. If independent review is required, follow [review rules](reviewer-enforcement.md).
 
-Before delegation, provide enough information to work without guessing. Plain prose is sufficient unless a runtime requires a schema:
+## Ownership
 
-```yaml
-objective: "One bounded result"
-scope: [] # target artifacts and writable paths; read-only when none
-inputs: [] # source locations, accepted decisions, relevant evidence
-constraints: [] # permissions, ownership, explicit non-goals
-required_skills: [] # only needed skills, resolved in the current environment
-expected_output: "Artifact or findings with evidence"
-validation: []
-stop_if: [] # material scope expansion or an indispensable missing input
-```
+Parallelize independent work with disjoint write ownership. Files can still conflict through a shared API, schema, or generated output: establish the shared contract first or serialize the dependent work. Discovery overlapping edits must identify the version it inspected; final review waits for a stable target.
 
-Use a real task id to track delegated work. Add dependencies and actor ids for multi-worker coordination; add producer identity and a pinned target when independent review is required. Add required references/tools only if the worker needs an exact capability.
+Before replacing a failed or cancelled writer, inspect its partial changes. Cancellation is not rollback. Keep one owner for each integration decision.
 
-## Dependencies and Ownership
+## Reconcile
 
-Parallelize only independent work. A producer must establish a shared API or schema before dependent implementation consumes it. Two writers must not own overlapping files or a shared mutable interface at the same time; narrow or serialize their scopes. Independent files can still conflict through generated artifacts or integration behavior.
+The parent retains responsibility for the user outcome. Inspect returned artifacts and validation against the assignment, resolve conflicts, and check affected integration behavior. A worker's completion message or list of skills used is not sufficient evidence.
 
-Read-only discovery may overlap writing, but its conclusions must identify the inspected version. A required final review waits for a stable target. Before replacing a cancelled or failed writer, inspect partial changes: cancellation is not rollback.
-
-## State and Reconciliation
-
-For multiple tasks, keep a compact board: task id, owner, scope, dependency, state, result/evidence. Persist it only when needed for interruption, long-running coordination, or a consumer handoff. Reuse an existing project artifact when appropriate.
-
-A durable handoff records the goal, constraints, completed work, artifact identities, validation, unresolved questions, and the next action. Include an event log for concurrent state transitions or audit requirements; ordinary serial work needs no scheduler-shaped database.
-
-When a worker returns, compare its result with the contract, inspect relevant artifacts and verification evidence, resolve conflicts, and integrate the useful result. Self-reported skill/tool use is a lead, not proof. Recheck material dependent behavior after integration. Apply required review gates from their single [policy reference](reviewer-enforcement.md).
-
-Finish when the authorized outputs are reconciled, applicable validation is reported, and any outstanding dependency has an explicit continuation or blocker. Return one coherent result to the user.
+Track task, owner, dependency, status, and result only as needed for actual concurrency. Persist state when interruption or a consumer requires it. Finish with one coherent result and identify any unresolved dependency.

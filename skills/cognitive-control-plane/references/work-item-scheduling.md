@@ -9,7 +9,7 @@ access:
 
 Load only when a host actually manages a queue, leases, or fresh-session continuation. Ordinary conversation, a long task, or a user mentioning a ticket does not install a Scheduler.
 
-The host's configured budget and state are authoritative. Do not apply this bundled profile's percentages to unrelated sessions or invent telemetry. For the portable adapter use [the machine map](../config/skill-orchestration-map.yaml) and [contract schema](../adapters/contract.schema.json). The scripts validate host decisions; this document grants no launch or write permission.
+The host's configured budget and state are authoritative. Do not apply this bundled profile's percentages to unrelated sessions or invent telemetry. For portable contracts use the [contract schema](../adapters/contract.schema.json); [the scheduler](../scripts/work-item-scheduler.js) implements the bundled decision rules. The scripts validate host decisions; this document grants no launch or write permission.
 
 ## Work Item Scheduler
 
